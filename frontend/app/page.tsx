@@ -22,6 +22,8 @@ import { SupportModal } from '@/components/support/SupportModal';
 import { SearchModal } from '@/components/ui/SearchModal';
 import { MobileNav } from '@/components/ui/MobileNav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { TeamCrest } from '@/components/ui/TeamCrest';
+import { CountryFlag } from '@/components/ui/CountryFlag';
 import { getCachedData, setCachedData } from '@/lib/cache';
 import {
   Radio,
@@ -580,26 +582,42 @@ export default function HomePage() {
               {/* Match Header Bar & Pop-out PiP Button */}
               <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
                 <div className="flex items-center justify-between mb-3 text-xs">
-                  <span className="text-muted-foreground font-mono">
-                    {selectedMatch.league.name} • {selectedMatch.venue || 'Stadium'}
-                  </span>
+                  <div className="flex items-center gap-1.5 font-mono text-muted-foreground truncate">
+                    <CountryFlag country={selectedMatch.league.country} size="xs" />
+                    <span className="font-bold text-foreground truncate">{selectedMatch.league.name}</span>
+                    {selectedMatch.venue && <span className="hidden sm:inline">• {selectedMatch.venue}</span>}
+                  </div>
 
-                  <button
-                    onClick={() => openPiP('floating-pip-widget')}
-                    className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border text-foreground text-xs font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                    <span>Pop Out</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Link
+                      href={`/match/${selectedMatch.id}`}
+                      className="flex items-center gap-1 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-xs font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Full Stats Page</span>
+                    </Link>
+
+                    <button
+                      onClick={() => openPiP('floating-pip-widget')}
+                      className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border text-foreground text-xs font-bold px-2 py-1 rounded-lg transition-all cursor-pointer"
+                      title="Pop out Floating PiP"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Main Match Header Score Banner */}
                 <div className="flex items-center justify-between gap-4 py-2">
-                  <div className="text-center flex-1">
-                    <div className="w-11 h-11 mx-auto rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center font-mono font-bold text-sm text-indigo-700 dark:text-indigo-300 mb-1 uppercase">
-                      {selectedMatch.home_team.short_name || selectedMatch.home_team.name.slice(0, 3)}
-                    </div>
-                    <p className="text-xs font-bold text-foreground truncate">{selectedMatch.home_team.name}</p>
+                  <div className="text-center flex-1 flex flex-col items-center">
+                    <TeamCrest
+                      name={selectedMatch.home_team.name}
+                      shortName={selectedMatch.home_team.short_name}
+                      logoUrl={selectedMatch.home_team.logo}
+                      size="lg"
+                      className="mb-1"
+                    />
+                    <p className="text-xs font-bold text-foreground truncate w-full px-1">{selectedMatch.home_team.name}</p>
                   </div>
 
                   <div className="text-center font-mono">
@@ -617,11 +635,15 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <div className="text-center flex-1">
-                    <div className="w-11 h-11 mx-auto rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 flex items-center justify-center font-mono font-bold text-sm text-orange-700 dark:text-orange-300 mb-1 uppercase">
-                      {selectedMatch.away_team.short_name || selectedMatch.away_team.name.slice(0, 3)}
-                    </div>
-                    <p className="text-xs font-bold text-foreground truncate">{selectedMatch.away_team.name}</p>
+                  <div className="text-center flex-1 flex flex-col items-center">
+                    <TeamCrest
+                      name={selectedMatch.away_team.name}
+                      shortName={selectedMatch.away_team.short_name}
+                      logoUrl={selectedMatch.away_team.logo}
+                      size="lg"
+                      className="mb-1"
+                    />
+                    <p className="text-xs font-bold text-foreground truncate w-full px-1">{selectedMatch.away_team.name}</p>
                   </div>
                 </div>
 

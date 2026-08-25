@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Radio, ChevronRight, TrendingUp, Volume2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useEffect, useRef } from 'react';
+import { TeamCrest } from './TeamCrest';
+import { CountryFlag } from './CountryFlag';
 
 interface LiveScoreCardProps {
   match: Match;
@@ -53,6 +55,7 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
       {/* Header Info */}
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
         <div className="flex items-center gap-2">
+          <CountryFlag country={match.league.country} size="xs" />
           <span className="font-semibold uppercase tracking-wider text-foreground text-[11px] font-mono">
             {match.league.name}
           </span>
@@ -84,9 +87,12 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
       <div className="grid grid-cols-12 items-center gap-2 my-2">
         {/* Home Team */}
         <div className="col-span-5 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center font-mono font-bold text-xs text-indigo-700 dark:text-indigo-300 shrink-0 uppercase tracking-tighter">
-            {match.home_team.short_name || match.home_team.name.slice(0, 3)}
-          </div>
+          <TeamCrest
+            name={match.home_team.name}
+            shortName={match.home_team.short_name}
+            logoUrl={match.home_team.logo}
+            size="md"
+          />
           <div className="min-w-0">
             <p className="text-xs sm:text-sm font-bold text-foreground truncate">{match.home_team.name}</p>
             <div className="flex items-center gap-1.5">
@@ -157,9 +163,12 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
               )}
             </div>
           </div>
-          <div className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 flex items-center justify-center font-mono font-bold text-xs text-orange-700 dark:text-orange-300 shrink-0 uppercase tracking-tighter">
-            {match.away_team.short_name || match.away_team.name.slice(0, 3)}
-          </div>
+          <TeamCrest
+            name={match.away_team.name}
+            shortName={match.away_team.short_name}
+            logoUrl={match.away_team.logo}
+            size="md"
+          />
         </div>
       </div>
 
