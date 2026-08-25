@@ -184,7 +184,8 @@ export default function MatchDetailPage() {
                 className="mb-2"
               />
               <h2 className="text-sm sm:text-lg font-bold text-foreground truncate w-full px-1">
-                {match.home_team.name}
+                <span className="inline sm:hidden">{match.home_team.short_name || match.home_team.name.slice(0, 3)}</span>
+                <span className="hidden sm:inline">{match.home_team.name}</span>
               </h2>
               {match.home_team.country && (
                 <div className="flex items-center justify-center gap-1 mt-0.5">
@@ -220,7 +221,8 @@ export default function MatchDetailPage() {
                 className="mb-2"
               />
               <h2 className="text-sm sm:text-lg font-bold text-foreground truncate w-full px-1">
-                {match.away_team.name}
+                <span className="inline sm:hidden">{match.away_team.short_name || match.away_team.name.slice(0, 3)}</span>
+                <span className="hidden sm:inline">{match.away_team.name}</span>
               </h2>
               {match.away_team.country && (
                 <div className="flex items-center justify-center gap-1 mt-0.5">

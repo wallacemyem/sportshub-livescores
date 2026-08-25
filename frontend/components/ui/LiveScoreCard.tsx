@@ -94,7 +94,10 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
             size="md"
           />
           <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-bold text-foreground truncate">{match.home_team.name}</p>
+            <p className="text-xs sm:text-sm font-bold text-foreground truncate">
+              <span className="inline sm:hidden">{match.home_team.short_name || match.home_team.name.slice(0, 3)}</span>
+              <span className="hidden sm:inline">{match.home_team.name}</span>
+            </p>
             <div className="flex items-center gap-1.5">
               {match.stats.yellow_cards_home > 0 && (
                 <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-yellow-600 dark:text-yellow-400">
@@ -147,7 +150,10 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
         {/* Away Team */}
         <div className="col-span-5 flex items-center justify-end gap-2.5 text-right">
           <div className="min-w-0">
-            <p className="text-xs sm:text-sm font-bold text-foreground truncate">{match.away_team.name}</p>
+            <p className="text-xs sm:text-sm font-bold text-foreground truncate">
+              <span className="inline sm:hidden">{match.away_team.short_name || match.away_team.name.slice(0, 3)}</span>
+              <span className="hidden sm:inline">{match.away_team.name}</span>
+            </p>
             <div className="flex items-center justify-end gap-1.5">
               {match.stats.yellow_cards_away > 0 && (
                 <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-yellow-600 dark:text-yellow-400">

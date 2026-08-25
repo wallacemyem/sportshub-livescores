@@ -17,6 +17,8 @@ import {
   Calendar,
   Sparkles,
 } from 'lucide-react';
+import { TeamCrest } from './TeamCrest';
+import { CountryFlag } from './CountryFlag';
 import Link from 'next/link';
 
 interface SearchModalProps {
@@ -243,14 +245,26 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                       : 'bg-surface border-surface-border hover:bg-surface-subtle'
                   }`}
                 >
-                  {/* Left: Sport Icon & Teams */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-700 dark:text-indigo-300 shrink-0">
-                      <SportIcon className="w-4 h-4 text-muted-foreground" />
+                  {/* Left: Team Crests & Match Title */}
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center -space-x-1.5 shrink-0">
+                      <TeamCrest
+                        name={m.home_team.name}
+                        shortName={m.home_team.short_name}
+                        logoUrl={m.home_team.logo}
+                        size="sm"
+                      />
+                      <TeamCrest
+                        name={m.away_team.name}
+                        shortName={m.away_team.short_name}
+                        logoUrl={m.away_team.logo}
+                        size="sm"
+                      />
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono mb-0.5">
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-mono mb-0.5">
+                        <CountryFlag country={m.league.country} size="xs" />
                         <span className="uppercase font-bold text-blue-600 dark:text-blue-400">{m.sport}</span>
                         <span>•</span>
                         <span className="truncate">{m.league.name}</span>
@@ -262,10 +276,12 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-foreground">
-                        <span className="truncate">{m.home_team.name}</span>
+                      <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-foreground truncate">
+                        <span className="truncate inline sm:hidden">{m.home_team.short_name || m.home_team.name.slice(0, 3)}</span>
+                        <span className="truncate hidden sm:inline">{m.home_team.name}</span>
                         <span className="text-muted-foreground font-mono font-normal">vs</span>
-                        <span className="truncate">{m.away_team.name}</span>
+                        <span className="truncate inline sm:hidden">{m.away_team.short_name || m.away_team.name.slice(0, 3)}</span>
+                        <span className="truncate hidden sm:inline">{m.away_team.name}</span>
                       </div>
                     </div>
                   </div>

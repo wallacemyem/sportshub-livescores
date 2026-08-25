@@ -2,6 +2,7 @@
 
 import { Match } from '@/types';
 import { Activity } from 'lucide-react';
+import { TeamCrest } from './TeamCrest';
 
 interface TickerStripProps {
   matches: Match[];
@@ -34,11 +35,13 @@ export function TickerStrip({ matches, onSelectMatch }: TickerStripProps) {
                 {m.minute}&apos;
               </span>
               <div className="flex items-center gap-1.5 font-medium text-foreground text-xs font-mono">
-                <span>{m.home_team.short_name}</span>
+                <TeamCrest name={m.home_team.name} shortName={m.home_team.short_name} logoUrl={m.home_team.logo} size="xs" />
+                <span>{m.home_team.short_name || m.home_team.name.slice(0, 3)}</span>
                 <span className="font-bold bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 px-1.5 rounded">
                   {m.home_score}-{m.away_score}
                 </span>
-                <span>{m.away_team.short_name}</span>
+                <span>{m.away_team.short_name || m.away_team.name.slice(0, 3)}</span>
+                <TeamCrest name={m.away_team.name} shortName={m.away_team.short_name} logoUrl={m.away_team.logo} size="xs" />
               </div>
               {m.stats.attacking_pressure && (
                 <span className="text-[9px] font-mono uppercase bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 px-1 py-0.5 rounded text-amber-600 dark:text-amber-400">

@@ -128,7 +128,8 @@ export function HeadToHead({ match }: HeadToHeadProps) {
             />
             <div>
               <p className="text-xs font-bold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
-                {match.home_team.name}
+                <span className="inline sm:hidden">{match.home_team.short_name || match.home_team.name.slice(0, 3)}</span>
+                <span className="hidden sm:inline">{match.home_team.name}</span>
               </p>
               <span className="text-[10px] font-mono text-muted-foreground uppercase">Home Side</span>
             </div>
@@ -137,7 +138,8 @@ export function HeadToHead({ match }: HeadToHeadProps) {
           <div className="flex items-center gap-3 text-right">
             <div>
               <p className="text-xs font-bold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
-                {match.away_team.name}
+                <span className="inline sm:hidden">{match.away_team.short_name || match.away_team.name.slice(0, 3)}</span>
+                <span className="hidden sm:inline">{match.away_team.name}</span>
               </p>
               <span className="text-[10px] font-mono text-muted-foreground uppercase">Away Side</span>
             </div>
