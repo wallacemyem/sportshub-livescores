@@ -104,6 +104,7 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
               name={match.home_team.name}
               shortName={match.home_team.short_name}
               logoUrl={match.home_team.logo}
+              sport={match.sport}
               size="sm"
             />
             <div className="min-w-0 flex-1 flex items-center gap-2">
@@ -156,6 +157,7 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
               name={match.away_team.name}
               shortName={match.away_team.short_name}
               logoUrl={match.away_team.logo}
+              sport={match.sport}
               size="sm"
             />
             <div className="min-w-0 flex-1 flex items-center gap-2">

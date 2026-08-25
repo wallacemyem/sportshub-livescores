@@ -180,6 +180,7 @@ export default function MatchDetailPage() {
                 name={match.home_team.name}
                 shortName={match.home_team.short_name}
                 logoUrl={match.home_team.logo}
+                sport={match.sport}
                 size="xl"
                 className="mb-2"
               />
@@ -217,6 +218,7 @@ export default function MatchDetailPage() {
                 name={match.away_team.name}
                 shortName={match.away_team.short_name}
                 logoUrl={match.away_team.logo}
+                sport={match.sport}
                 size="xl"
                 className="mb-2"
               />

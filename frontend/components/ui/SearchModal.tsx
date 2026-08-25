@@ -16,6 +16,7 @@ import {
   Circle,
   Calendar,
   Sparkles,
+  Flag,
 } from 'lucide-react';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
@@ -36,6 +37,7 @@ const SPORT_ICONS: Record<SportType, React.ComponentType<{ className?: string }>
   nfl: Shield,
   cricket: Layers,
   baseball: Circle,
+  golf: Flag,
 };
 
 export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchModalProps) {
@@ -200,7 +202,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
           >
             All Sports ({matches.length})
           </button>
-          {(['soccer', 'basketball', 'tennis', 'nfl', 'cricket', 'baseball'] as SportType[]).map((s) => {
+          {(['soccer', 'basketball', 'tennis', 'nfl', 'cricket', 'baseball', 'golf'] as SportType[]).map((s) => {
             const count = matches.filter((m) => m.sport === s).length;
             const Icon = SPORT_ICONS[s];
             const isSelected = sportFilter === s;

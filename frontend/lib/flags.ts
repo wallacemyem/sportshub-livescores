@@ -408,6 +408,98 @@ export const TEAM_BRANDING_REGISTRY: Record<string, TeamBranding> = {
     iconType: 'bat',
     crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/lad.png&w=120&h=120',
   },
+
+  // PGA Tour Golf (Player Headshots)
+  SCH: {
+    name: 'Scottie Scheffler',
+    shortName: 'SCH',
+    primaryColor: '#00539B',
+    secondaryColor: '#FFFFFF',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/9478.png&w=350&h=254',
+  },
+  RORY: {
+    name: 'Rory McIlroy',
+    shortName: 'RORY',
+    primaryColor: '#006644',
+    secondaryColor: '#D4AF37',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/3470.png&w=350&h=254',
+  },
+  RAHM: {
+    name: 'Jon Rahm',
+    shortName: 'RAHM',
+    primaryColor: '#AA151B',
+    secondaryColor: '#F1BF00',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/9780.png&w=350&h=254',
+  },
+  XAN: {
+    name: 'Xander Schauffele',
+    shortName: 'XAN',
+    primaryColor: '#1D428A',
+    secondaryColor: '#FFC72C',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/10140.png&w=350&h=254',
+  },
+  HOV: {
+    name: 'Viktor Hovland',
+    shortName: 'HOV',
+    primaryColor: '#BA0C2F',
+    secondaryColor: '#00205B',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/10557.png&w=350&h=254',
+  },
+  BRY: {
+    name: 'Bryson DeChambeau',
+    shortName: 'BRY',
+    primaryColor: '#002B49',
+    secondaryColor: '#41B6E6',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/10046.png&w=350&h=254',
+  },
+  TIG: {
+    name: 'Tiger Woods',
+    shortName: 'TIG',
+    primaryColor: '#CC0000',
+    secondaryColor: '#000000',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/462.png&w=350&h=254',
+  },
+  MOR: {
+    name: 'Collin Morikawa',
+    shortName: 'MOR',
+    primaryColor: '#003366',
+    secondaryColor: '#C0C0C0',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/10592.png&w=350&h=254',
+  },
+  KOEP: {
+    name: 'Brooks Koepka',
+    shortName: 'KOEP',
+    primaryColor: '#2B2B2B',
+    secondaryColor: '#00C853',
+    textColor: '#FFFFFF',
+    badgeType: 'circle',
+    iconType: 'crown',
+    crestUrl: 'https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/6798.png&w=350&h=254',
+  },
 };
 
 /**
@@ -472,9 +564,36 @@ export async function fetchPublicTeamBadge(teamName: string): Promise<string | n
 }
 
 /**
+ * Fetch public player headshot from TheSportsDB Public API
+ */
+export async function fetchPublicPlayerHeadshot(playerName: string): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+
+  const cached = localStorage.getItem(`sportshub_headshot_${playerName.toLowerCase()}`);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/searchplayers.php?p=${encodeURIComponent(playerName)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.player && data.player.length > 0) {
+        const headshot = data.player[0].strCutout || data.player[0].strThumb;
+        if (headshot) {
+          localStorage.setItem(`sportshub_headshot_${playerName.toLowerCase()}`, headshot);
+          return headshot;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Public player headshot lookup fallback:', e);
+  }
+  return null;
+}
+
+/**
  * Get guaranteed team branding with high-fidelity colors, monogram, and crest styling
  */
-export function getTeamBranding(teamName: string, shortName?: string): TeamBranding {
+export function getTeamBranding(teamName: string, shortName?: string, isGolf?: boolean): TeamBranding {
   const short = (shortName || '').trim().toUpperCase();
   const nameUpper = teamName.trim().toUpperCase();
 

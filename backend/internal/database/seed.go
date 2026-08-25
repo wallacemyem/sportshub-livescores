@@ -14,6 +14,7 @@ var InitialSports = []models.SportType{
 	models.SportNFL,
 	models.SportCricket,
 	models.SportBaseball,
+	models.SportGolf,
 }
 
 var InitialLeagues = []models.League{
@@ -25,6 +26,7 @@ var InitialLeagues = []models.League{
 	{ID: "nfl", Name: "NFL Football", Sport: models.SportNFL, Country: "USA", Logo: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=100&auto=format&fit=crop&q=60"},
 	{ID: "ipl", Name: "Indian Premier League", Sport: models.SportCricket, Country: "India", Logo: "https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=100&auto=format&fit=crop&q=60"},
 	{ID: "mlb", Name: "Major League Baseball", Sport: models.SportBaseball, Country: "USA", Logo: "https://images.unsplash.com/photo-1593341646782-e0b495cff86d?w=100&auto=format&fit=crop&q=60"},
+	{ID: "pga-tour", Name: "PGA Tour Championship", Sport: models.SportGolf, Country: "USA", Logo: "https://images.unsplash.com/photo-1587174486073-ae5e5cff23aa?w=100&auto=format&fit=crop&q=60"},
 }
 
 func GetInitialMatches() []models.Match {
@@ -325,6 +327,64 @@ func GetInitialMatches() []models.Match {
 				{ID: "ev-fin-2", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 51, TeamSide: "HOME", PlayerName: "Darwin Núñez", Detail: "Header from corner", CreatedAt: now.Add(-190 * time.Minute)},
 				{ID: "ev-fin-3", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 72, TeamSide: "AWAY", PlayerName: "Cole Palmer", Detail: "Penalty", CreatedAt: now.Add(-170 * time.Minute)},
 				{ID: "ev-fin-4", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 88, TeamSide: "HOME", PlayerName: "Luis Díaz", Detail: "Counter attack volley", CreatedAt: now.Add(-150 * time.Minute)},
+			},
+		},
+		// 9. Live PGA Tour Golf Match (Scottie Scheffler vs Rory McIlroy)
+		{
+			ID:    "match-pga-01",
+			Sport: models.SportGolf,
+			League: models.League{
+				ID: "pga-tour", Name: "PGA Tour Championship", Sport: models.SportGolf, Country: "USA",
+			},
+			HomeTeam: models.Team{ID: "sch", Name: "Scottie Scheffler", ShortName: "SCH", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/9478.png&w=350&h=254", Country: "USA"},
+			AwayTeam: models.Team{ID: "mci-golf", Name: "Rory McIlroy", ShortName: "RORY", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/3470.png&w=350&h=254", Country: "NIR"},
+			HomeScore: 16,
+			AwayScore: 14,
+			PeriodScores: []string{"SCH: -16 (Thru 16)", "RORY: -14 (Thru 15)"},
+			Status:    models.StatusLive,
+			Period:    "Final Round",
+			Minute:    16,
+			StartTime: now.Add(-180 * time.Minute),
+			Venue:     "East Lake Golf Club, Atlanta, GA",
+			HasLiveAudio: true,
+			Stats: models.MatchStats{
+				PossessionHome: 52, PossessionAway: 48,
+				AttackingPressure: "HOME",
+			},
+			Events: []models.MatchEvent{
+				{ID: "ev-golf-1", MatchID: "match-pga-01", Type: models.EventPoint, Minute: 14, TeamSide: "HOME", PlayerName: "Scottie Scheffler", Detail: "Birdie on Hole 14 (Par 4, 12ft putt)", CreatedAt: now.Add(-25 * time.Minute)},
+				{ID: "ev-golf-2", MatchID: "match-pga-01", Type: models.EventPoint, Minute: 15, TeamSide: "AWAY", PlayerName: "Rory McIlroy", Detail: "Eagle on Hole 15 (Par 5, 28ft putt)", CreatedAt: now.Add(-10 * time.Minute)},
+			},
+			Odds: &models.MatchOdds{
+				MatchID: "match-pga-01",
+				Consensus: models.BookmakerOdds{
+					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
+					HomeWin: 1.40, AwayWin: 2.95,
+				},
+			},
+		},
+		// 10. Scheduled The Masters Golf Matchup (Jon Rahm vs Xander Schauffele)
+		{
+			ID:    "match-pga-02",
+			Sport: models.SportGolf,
+			League: models.League{
+				ID: "pga-tour", Name: "The Masters Tournament", Sport: models.SportGolf, Country: "USA",
+			},
+			HomeTeam: models.Team{ID: "rahm", Name: "Jon Rahm", ShortName: "RAHM", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/9780.png&w=350&h=254", Country: "ESP"},
+			AwayTeam: models.Team{ID: "scha", Name: "Xander Schauffele", ShortName: "XAN", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/10140.png&w=350&h=254", Country: "USA"},
+			HomeScore: 0,
+			AwayScore: 0,
+			Status:    models.StatusScheduled,
+			Period:    "Round 1",
+			Minute:    0,
+			StartTime: now.Add(4 * time.Hour),
+			Venue:     "Augusta National Golf Club, GA",
+			Odds: &models.MatchOdds{
+				MatchID: "match-pga-02",
+				Consensus: models.BookmakerOdds{
+					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
+					HomeWin: 1.95, AwayWin: 1.85,
+				},
 			},
 		},
 	}

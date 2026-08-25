@@ -13,6 +13,7 @@ const (
 	SportNFL        SportType = "nfl"
 	SportCricket    SportType = "cricket"
 	SportBaseball   SportType = "baseball"
+	SportGolf       SportType = "golf"
 )
 
 type MatchStatus string

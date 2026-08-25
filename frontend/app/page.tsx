@@ -46,6 +46,7 @@ import {
   CircleDot,
   Target,
   Circle,
+  Flag,
   Newspaper,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -57,6 +58,7 @@ const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ classN
   { id: 'nfl', label: 'NFL', icon: Shield },
   { id: 'cricket', label: 'Cricket', icon: Layers },
   { id: 'baseball', label: 'Baseball', icon: Circle },
+  { id: 'golf', label: 'Golf', icon: Flag },
 ];
 
 export default function HomePage() {
@@ -608,6 +610,7 @@ export default function HomePage() {
                       name={selectedMatch.home_team.name}
                       shortName={selectedMatch.home_team.short_name}
                       logoUrl={selectedMatch.home_team.logo}
+                      sport={selectedMatch.sport}
                       size="lg"
                       className="mb-1"
                     />
@@ -637,6 +640,7 @@ export default function HomePage() {
                       name={selectedMatch.away_team.name}
                       shortName={selectedMatch.away_team.short_name}
                       logoUrl={selectedMatch.away_team.logo}
+                      sport={selectedMatch.sport}
                       size="lg"
                       className="mb-1"
                     />

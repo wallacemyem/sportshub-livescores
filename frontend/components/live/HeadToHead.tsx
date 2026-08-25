@@ -76,6 +76,18 @@ export function HeadToHead({ match }: HeadToHeadProps) {
           { label: 'Walks (BB)', home: '4', away: '2', homeVal: 4, awayVal: 2 },
         ];
       }
+      case 'golf': {
+        return [
+          { label: 'Score to Par', home: '-16', away: '-14', homeVal: 16, awayVal: 14 },
+          { label: 'Avg Driving Distance', home: '318.4 yds', away: '305.2 yds', homeVal: 318.4, awayVal: 305.2 },
+          { label: 'Fairways in Regulation', home: '71.4% (10/14)', away: '64.3% (9/14)', homeVal: 71.4, awayVal: 64.3 },
+          { label: 'Greens in Regulation (GIR)', home: '77.8% (14/18)', away: '72.2% (13/18)', homeVal: 77.8, awayVal: 72.2 },
+          { label: 'Putts Per GIR', home: '1.65', away: '1.72', homeVal: 1.72, awayVal: 1.65, reverse: true },
+          { label: 'Total Birdies / Eagles', home: '22 / 1', away: '19 / 0', homeVal: 23, awayVal: 19 },
+          { label: 'Sand Save %', home: '80.0% (4/5)', away: '66.7% (2/3)', homeVal: 80, awayVal: 66.7 },
+          { label: 'Scrambling %', home: '75.0% (6/8)', away: '68.5% (5/7)', homeVal: 75, awayVal: 68.5 },
+        ];
+      }
       default: {
         // Standard Soccer Match Stats
         return [
@@ -124,6 +136,7 @@ export function HeadToHead({ match }: HeadToHeadProps) {
               name={match.home_team.name}
               shortName={match.home_team.short_name}
               logoUrl={match.home_team.logo}
+              sport={match.sport}
               size="md"
             />
             <div>
@@ -131,7 +144,7 @@ export function HeadToHead({ match }: HeadToHeadProps) {
                 <span className="inline sm:hidden">{match.home_team.short_name || match.home_team.name.slice(0, 3)}</span>
                 <span className="hidden sm:inline">{match.home_team.name}</span>
               </p>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">Home Side</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">{match.sport === 'golf' ? 'Golfer 1' : 'Home Side'}</span>
             </div>
           </div>
 
@@ -141,12 +154,13 @@ export function HeadToHead({ match }: HeadToHeadProps) {
                 <span className="inline sm:hidden">{match.away_team.short_name || match.away_team.name.slice(0, 3)}</span>
                 <span className="hidden sm:inline">{match.away_team.name}</span>
               </p>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">Away Side</span>
+              <span className="text-[10px] font-mono text-muted-foreground uppercase">{match.sport === 'golf' ? 'Golfer 2' : 'Away Side'}</span>
             </div>
             <TeamCrest
               name={match.away_team.name}
               shortName={match.away_team.short_name}
               logoUrl={match.away_team.logo}
+              sport={match.sport}
               size="md"
             />
           </div>
