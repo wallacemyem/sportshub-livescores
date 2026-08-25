@@ -31,20 +31,32 @@ var SupportedBookmakers = []string{
 	"bet9ja",
 	"1xbet",
 	"betking",
+	"msport",
+	"mozzartbet",
 }
 
-// Regex patterns for validation per bookmaker
+// Regex patterns reflecting real-world booking code structures:
+// - SportyBet: 6-8 chars, alphanumeric (e.g. BC99214, BC7721A, 68AB12, SB8921F)
+// - Bet9ja: 6-7 chars, alphanumeric mix of letters & numbers (e.g. 557877Y, 5578F8D, B9JA-44912)
+// - 1xBet: 4-6 concise alphanumeric characters (e.g. DPK3Q, 1X-88231, A1B2C, 5X7Q9)
+// - BetKing: 5-8 chars, alphanumeric (e.g. DPK3Q, BK-10294, 7Q2K9, BK9821)
+// - MSport: 6-8 chars, alphanumeric (e.g. MS-88192, MS39104)
+// - MozzartBet: 6-8 chars, alphanumeric or numeric dash (e.g. MZ-44912, 2001-99218)
 var (
-	sportyPattern  = regexp.MustCompile(`^(BC|SB)?[A-Za-z0-9]{5,8}$`)
-	bet9jaPattern  = regexp.MustCompile(`^(B9JA|B9)?[0-9A-Za-z\-]{5,10}$`)
-	oneXPattern    = regexp.MustCompile(`^(1X|1XBET)?[0-9A-Za-z\-]{5,10}$`)
-	betKingPattern = regexp.MustCompile(`^(BK|BETKING)?[0-9A-Za-z\-]{5,10}$`)
+	sportyPattern     = regexp.MustCompile(`^(BC|SB)?[A-Za-z0-9]{5,8}$`)
+	bet9jaPattern     = regexp.MustCompile(`^(B9JA|B9)?[0-9A-Za-z\-]{5,8}$`)
+	oneXPattern       = regexp.MustCompile(`^(1X|1XBET)?[0-9A-Za-z\-]{4,8}$`)
+	betKingPattern    = regexp.MustCompile(`^(BK|BETKING)?[0-9A-Za-z\-]{4,8}$`)
+	msportPattern     = regexp.MustCompile(`^(MS)?[0-9A-Za-z\-]{5,8}$`)
+	mozzartPattern    = regexp.MustCompile(`^(MZ)?[0-9A-Za-z\-]{5,10}$`)
+	genericCodePattern = regexp.MustCompile(`^[A-Za-z0-9\-]{4,12}$`)
 )
 
 // ValidateFormat checks if a code syntactically matches a bookmaker
 func (p *BetSlipParser) MatchesBookmakerFormat(bookmaker, code string) bool {
 	clean := strings.ToUpper(strings.TrimSpace(code))
-	if len(clean) < 4 || len(clean) > 16 {
+	cleanNoDash := strings.ReplaceAll(clean, "-", "")
+	if len(cleanNoDash) < 4 || len(cleanNoDash) > 12 {
 		return false
 	}
 
@@ -69,12 +81,22 @@ func (p *BetSlipParser) MatchesBookmakerFormat(bookmaker, code string) bool {
 			return true
 		}
 		return betKingPattern.MatchString(clean)
+	case "msport":
+		if strings.HasPrefix(clean, "MS") {
+			return true
+		}
+		return msportPattern.MatchString(clean)
+	case "mozzartbet":
+		if strings.HasPrefix(clean, "MZ") {
+			return true
+		}
+		return mozzartPattern.MatchString(clean)
 	default:
-		return false
+		return genericCodePattern.MatchString(clean)
 	}
 }
 
-// DetectBookmaker runs detection heuristics or defaults to multi-bookmaker loop
+// DetectBookmaker runs detection heuristics based on known prefix signatures
 func (p *BetSlipParser) DetectBookmaker(code string) string {
 	clean := strings.ToUpper(strings.TrimSpace(code))
 	if strings.HasPrefix(clean, "B9JA") || strings.HasPrefix(clean, "B9") {
@@ -88,6 +110,12 @@ func (p *BetSlipParser) DetectBookmaker(code string) string {
 	}
 	if strings.HasPrefix(clean, "BC") || strings.HasPrefix(clean, "SB") {
 		return "sportybet"
+	}
+	if strings.HasPrefix(clean, "MS") {
+		return "msport"
+	}
+	if strings.HasPrefix(clean, "MZ") {
+		return "mozzartbet"
 	}
 	return ""
 }

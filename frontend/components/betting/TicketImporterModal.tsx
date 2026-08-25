@@ -12,10 +12,12 @@ interface TicketImporterModalProps {
 }
 
 const SAMPLE_CODES = [
-  { bookmaker: 'sportybet', code: 'BC99214', label: 'BC99214 (SportyBet EPL + UCL + NBA)' },
-  { bookmaker: 'bet9ja', code: 'B9JA-44912', label: 'B9JA-44912 (Bet9ja Weekend Multi)' },
-  { bookmaker: '1xbet', code: '1X-88231', label: '1X-88231 (1xBet High Multiplier)' },
-  { bookmaker: 'betking', code: 'BK-10294', label: 'BK-10294 (BetKing Over/Under Combo)' },
+  { bookmaker: 'sportybet', code: 'BC99214', label: 'BC99214 (SportyBet • 6-8 Alphanumeric)' },
+  { bookmaker: 'bet9ja', code: '557877Y', label: '557877Y (Bet9ja • 6-7 Alphanumeric / B9JA)' },
+  { bookmaker: '1xbet', code: 'DPK3Q', label: 'DPK3Q (1xBet • 5-Char Bet Slip Download)' },
+  { bookmaker: 'betking', code: 'BK-10294', label: 'BK-10294 (BetKing • 5-8 Alphanumeric Code Zone)' },
+  { bookmaker: 'msport', code: 'MS-88192', label: 'MS-88192 (MSport • 6-8 Alphanumeric)' },
+  { bookmaker: 'mozzartbet', code: 'MZ-44912', label: 'MZ-44912 (MozzartBet • Alphanumeric Multi)' },
 ];
 
 export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: TicketImporterModalProps) {
@@ -38,13 +40,14 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
     setIsLoading(true);
     setError(null);
-    setScanStep('Connecting to parser engine...');
+    setScanStep('Connecting to multi-bookmaker resolver...');
 
     const scanSteps = [
-      'Scanning SportyBet registry...',
-      'Scanning Bet9ja booking registry...',
-      'Scanning 1xBet global fixtures...',
+      'Scanning SportyBet registry (6-8 char format)...',
+      'Scanning Bet9ja booking registry (6-7 char format)...',
+      'Scanning 1xBet bet slip registry (5-char format)...',
       'Scanning BetKing accumulator database...',
+      'Scanning MSport and MozzartBet feeds...',
     ];
 
     let stepIdx = 0;
@@ -53,7 +56,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
         setScanStep(scanSteps[stepIdx]);
         stepIdx++;
       }
-    }, 400);
+    }, 350);
 
     try {
       const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -73,7 +76,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
         const data = await res.json();
         throw new Error(
           data.error ||
-          `No matching bookmaker found for code "${cleanCode}". Scanned across SportyBet, Bet9ja, 1xBet, and BetKing.`
+          `No matching bookmaker found for code "${cleanCode}". Scanned across SportyBet, Bet9ja, 1xBet, BetKing, MSport, and MozzartBet.`
         );
       }
 
@@ -99,21 +102,21 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-md overflow-hidden shadow-elevated animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-lg overflow-hidden shadow-elevated animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-surface-border">
+        <div className="p-4 border-b border-surface-border flex items-center justify-between bg-surface-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-surface-subtle border border-surface-border flex items-center justify-center text-foreground">
+            <div className="w-8 h-8 rounded-lg bg-surface border border-surface-border flex items-center justify-center text-foreground font-black">
               <Ticket className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground text-sm">Bet Slip & Accumulator Resolver</h3>
-              <p className="text-[11px] text-muted-foreground">Auto-detects bookmaker & tracks live match legs</p>
+              <h3 className="font-bold text-foreground text-sm font-mono">Multi-Bookmaker Bet Slip Resolver</h3>
+              <p className="text-[11px] text-muted-foreground font-mono">Automatic looping across global bookmakers</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -135,26 +138,26 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
           {/* Bookmaker Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider font-mono">
                 Bookmaker Resolution Mode
               </label>
               <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
-                <Zap className="w-3 h-3 text-foreground" /> Multi-Bookmaker Loop
+                <Zap className="w-3 h-3 text-foreground" /> Auto-Looping
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {/* Auto-Detect Button */}
               <button
                 type="button"
                 onClick={() => setBookmaker('auto')}
-                className={`col-span-2 py-2 px-3 rounded-lg text-xs font-bold border text-left flex items-center justify-between transition-all cursor-pointer ${
+                className={`col-span-2 sm:col-span-3 py-2 px-3 rounded-lg text-xs font-bold border text-left flex items-center justify-between transition-all cursor-pointer ${
                   bookmaker === 'auto'
                     ? 'bg-foreground text-background border-foreground shadow-subtle'
                     : 'bg-surface-subtle border-surface-border text-foreground hover:bg-surface-hover'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 font-mono">
                   <span>Auto-Detect (Loop All Bookmakers)</span>
                 </span>
                 {bookmaker === 'auto' && <Check className="w-3.5 h-3.5" />}
@@ -166,6 +169,8 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
                 { id: 'bet9ja', name: 'Bet9ja' },
                 { id: '1xbet', name: '1xBet' },
                 { id: 'betking', name: 'BetKing' },
+                { id: 'msport', name: 'MSport' },
+                { id: 'mozzartbet', name: 'MozzartBet' },
               ].map((b) => (
                 <button
                   type="button"
@@ -173,7 +178,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
                   onClick={() => setBookmaker(b.id)}
                   className={`py-1.5 px-2.5 rounded-lg text-xs font-medium border text-left flex items-center justify-between transition-all cursor-pointer ${
                     bookmaker === b.id
-                      ? 'bg-surface-hover border-foreground text-foreground font-bold'
+                      ? 'bg-surface-hover border-foreground text-foreground font-bold shadow-subtle'
                       : 'bg-surface-subtle border-surface-border text-muted-foreground hover:bg-surface-hover hover:text-foreground'
                   }`}
                 >
