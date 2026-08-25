@@ -1,5 +1,5 @@
-# Stage 1: Build binary
-FROM golang:1.22-alpine AS builder
+# Stage 1: Build binary with latest Go 1.23
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
@@ -12,8 +12,8 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/server ./cmd/server
 
-# Stage 2: Minimal runtime
-FROM alpine:3.19
+# Stage 2: Minimal runtime with modern Alpine
+FROM alpine:3.20
 
 RUN apk --no-cache add ca-certificates tzdata curl
 
