@@ -270,12 +270,12 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground pb-20 md:pb-0">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-border">
-        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-3">
+      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-border w-full max-w-full overflow-hidden">
+        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2 sm:gap-3 w-full min-w-0">
           {/* Logo & Live Gateway Status */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-500 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-500 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20 shrink-0">
                 <Activity className="w-4 h-4" />
               </div>
               <div className="hidden sm:block">
@@ -296,23 +296,23 @@ export default function HomePage() {
           </div>
 
           {/* Global Search Bar */}
-          <div className="flex items-center flex-1 max-w-md relative">
+          <div className="flex items-center flex-1 max-w-md min-w-0 relative">
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="w-full bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 rounded-xl pl-9 pr-3 py-1.5 text-xs text-left text-muted-foreground flex items-center justify-between transition-all cursor-pointer"
+              className="w-full bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 rounded-xl pl-8 sm:pl-9 pr-2 sm:pr-3 py-1.5 text-xs text-left text-muted-foreground flex items-center justify-between transition-all cursor-pointer min-w-0"
             >
-              <div className="flex items-center gap-2">
-                <Search className="w-4 h-4 text-muted-foreground absolute left-3 pointer-events-none" />
-                <span className="truncate">Search games, teams, leagues...</span>
+              <div className="flex items-center gap-2 min-w-0 truncate">
+                <Search className="w-4 h-4 text-muted-foreground absolute left-2.5 sm:left-3 pointer-events-none shrink-0" />
+                <span className="truncate text-[11px] sm:text-xs">Search games, teams, leagues...</span>
               </div>
-              <kbd className="hidden sm:inline font-mono text-[10px] bg-surface border border-surface-border text-muted-foreground px-1.5 py-0.5 rounded shadow-sm">
+              <kbd className="hidden sm:inline font-mono text-[10px] bg-surface border border-surface-border text-muted-foreground px-1.5 py-0.5 rounded shadow-sm shrink-0 ml-1">
                 ⌘K
               </kbd>
             </button>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <ThemeToggle />
 
             <Link
@@ -325,10 +325,10 @@ export default function HomePage() {
 
             <button
               onClick={() => setIsImporterOpen(true)}
-              className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
             >
               <Ticket className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import</span>
+              <span className="hidden md:inline">Import</span>
               {betSlips.length > 0 && (
                 <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 rounded-full min-w-[18px] text-center">
                   {betSlips.length}
@@ -338,10 +338,10 @@ export default function HomePage() {
 
             <button
               onClick={() => setIsProModalOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 shadow-md shadow-violet-500/20"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 shadow-md shadow-violet-500/20"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>{isProUser ? 'PRO' : 'PRO'}</span>
+              <span>PRO</span>
             </button>
 
             <a
@@ -356,36 +356,38 @@ export default function HomePage() {
         </div>
 
         {/* Multi-Sport Navigation Strip */}
-        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 flex items-center gap-1 overflow-x-auto scrollbar-none py-1.5 border-t border-surface-border">
-          {SPORTS.map((sport) => {
-            const isSelected = selectedSport === sport.id;
-            const count = matches.filter((m) => m.sport === sport.id && m.status === 'LIVE').length;
-            const Icon = sport.icon;
+        <div className="w-full overflow-x-auto scrollbar-none border-t border-surface-border">
+          <div className="max-w-[1720px] mx-auto px-3 sm:px-4 flex items-center gap-1 py-1.5 w-max">
+            {SPORTS.map((sport) => {
+              const isSelected = selectedSport === sport.id;
+              const count = matches.filter((m) => m.sport === sport.id && m.status === 'LIVE').length;
+              const Icon = sport.icon;
 
-            return (
-              <button
-                key={sport.id}
-                onClick={() => setSelectedSport(sport.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{sport.label}</span>
-                {count > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+              return (
+                <button
+                  key={sport.id}
+                  onClick={() => setSelectedSport(sport.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
                     isSelected
-                      ? 'bg-red-500 text-white'
-                      : 'bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400'
-                  }`}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                      ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{sport.label}</span>
+                  {count > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                      isSelected
+                        ? 'bg-red-500 text-white'
+                        : 'bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </header>
 
