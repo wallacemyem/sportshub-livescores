@@ -107,7 +107,7 @@ export default function ArticleReaderPage() {
       />
 
       {/* Top Navbar */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between">
+      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 md:pl-20 xl:px-8 py-3 flex items-center justify-between">
         <Link
           href="/blog"
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs font-semibold"
@@ -142,7 +142,7 @@ export default function ArticleReaderPage() {
       </header>
 
       {/* Main Article Container */}
-      <main className="flex-1 max-w-4xl mx-auto w-full px-4 lg:px-6 py-8 space-y-6">
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 lg:px-6 md:pl-20 xl:px-6 py-8 space-y-6">
         {/* Article Header */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">

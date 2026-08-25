@@ -90,7 +90,7 @@ export default function MatchDetailPage() {
   const isLive = match.status === 'LIVE';
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-3 sm:p-4 md:p-8 pb-24 md:pb-8">
+    <div className="min-h-screen bg-background text-foreground p-3 sm:p-4 md:p-8 md:pl-24 pb-24 md:pb-8">
       <div className="max-w-5xl mx-auto space-y-5">
         {/* Navigation & Status */}
         <div className="flex items-center justify-between">

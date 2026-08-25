@@ -271,7 +271,7 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background text-foreground pb-20 md:pb-0">
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-border w-full max-w-full overflow-hidden">
-        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2 sm:gap-3 w-full min-w-0">
+        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 md:pl-20 xl:px-4 py-2 flex items-center justify-between gap-2 sm:gap-3 w-full min-w-0">
           {/* Logo & Live Gateway Status */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="flex items-center gap-2">
@@ -357,7 +357,7 @@ export default function HomePage() {
 
         {/* Multi-Sport Navigation Strip */}
         <div className="w-full overflow-x-auto scrollbar-none border-t border-surface-border">
-          <div className="max-w-[1720px] mx-auto px-3 sm:px-4 flex items-center gap-1 py-1.5 w-max">
+          <div className="max-w-[1720px] mx-auto px-3 sm:px-4 md:pl-20 xl:px-4 flex items-center gap-1 py-1.5 w-max">
             {SPORTS.map((sport) => {
               const isSelected = selectedSport === sport.id;
               const count = matches.filter((m) => m.sport === sport.id && m.status === 'LIVE').length;
@@ -395,7 +395,7 @@ export default function HomePage() {
       <TickerStrip matches={matches} onSelectMatch={(m) => setSelectedMatchId(m.id)} />
 
       {/* Main Three-Column Workspace Layout */}
-      <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 py-4 grid grid-cols-12 gap-5">
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 md:pl-20 xl:px-4 py-4 grid grid-cols-12 gap-5">
         {/* LEFT COLUMN: Leagues, Calendar & Accumulator Tracker */}
         <div className="hidden xl:col-span-3 xl:flex flex-col gap-4">
           {/* Top Leagues Card */}

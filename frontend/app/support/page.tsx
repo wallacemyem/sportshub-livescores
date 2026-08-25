@@ -154,7 +154,7 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-8">
       {/* Header */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between">
+      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 md:pl-20 xl:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -186,7 +186,7 @@ export default function SupportPage() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 lg:px-8 md:pl-20 xl:px-8 py-6 space-y-6">
         {/* Top Hero Banner */}
         <div className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-violet-50 dark:from-blue-500/5 dark:via-indigo-500/5 dark:to-violet-500/5 border border-blue-200/80 dark:border-blue-500/20 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-subtle">
           <div className="max-w-xl">
