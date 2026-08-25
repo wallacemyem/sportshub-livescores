@@ -57,11 +57,6 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
           : 'bg-surface border-surface-border hover:border-blue-400 dark:hover:border-blue-600 hover:bg-surface-subtle shadow-xs'
       }`}
     >
-      {/* Live left accent bar */}
-      {isLive && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-red-500 via-red-400 to-orange-400 rounded-l-xl" />
-      )}
-
       {/* Header Info */}
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
         <div className="flex items-center gap-2">
