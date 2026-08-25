@@ -1,7 +1,7 @@
 'use client';
 
 import { Match } from '@/types';
-import { BarChart3, Activity } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 interface HeadToHeadProps {
   match: Match;
@@ -21,10 +21,10 @@ export function HeadToHead({ match }: HeadToHeadProps) {
   ];
 
   return (
-    <div className="bg-surface rounded-xl border border-surface-border p-4">
+    <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <Activity className="w-3.5 h-3.5 text-emerald-neon" /> Live Match Statistics & Performance
+        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 font-mono">
+          <Activity className="w-3.5 h-3.5 text-muted-foreground" /> Match Statistics & Performance
         </h4>
       </div>
 
@@ -36,18 +36,18 @@ export function HeadToHead({ match }: HeadToHeadProps) {
 
           return (
             <div key={row.label} className="text-xs">
-              <div className="flex items-center justify-between font-mono mb-1 text-slate-300">
-                <span className="font-bold text-emerald-400">{row.home}</span>
-                <span className="text-[11px] text-slate-400 font-sans">{row.label}</span>
-                <span className="font-bold text-cyan-400">{row.away}</span>
+              <div className="flex items-center justify-between font-mono mb-1">
+                <span className="font-bold text-indigo-600 dark:text-indigo-400">{row.home}</span>
+                <span className="text-[11px] text-muted-foreground font-sans font-medium">{row.label}</span>
+                <span className="font-bold text-orange-600 dark:text-orange-400">{row.away}</span>
               </div>
-              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden flex gap-0.5">
+              <div className="w-full h-1.5 bg-surface-subtle rounded-full overflow-hidden flex">
                 <div
-                  className="bg-emerald-500 rounded-l-full transition-all duration-500"
+                  className="bg-indigo-500 rounded-l-full transition-all duration-500"
                   style={{ width: `${homePct}%` }}
                 />
                 <div
-                  className="bg-cyan-500 rounded-r-full transition-all duration-500"
+                  className="bg-orange-400 rounded-r-full transition-all duration-500"
                   style={{ width: `${awayPct}%` }}
                 />
               </div>

@@ -25,50 +25,51 @@ export function MobileNav({
   const isSupport = pathname === '/support';
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-lg border-t border-surface-border px-2 py-2 select-none safe-area-pb">
-      <div className="flex items-center justify-around">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-xl border-t border-surface-border safe-area-pb">
+      <div className="flex items-center justify-around px-1 py-1.5">
         {/* Scores / Home */}
         <Link
           href="/"
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl transition-colors ${
-            isHome ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px] ${
+            isHome ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
           }`}
         >
-          <Activity className="w-4 h-4" />
-          <span className="text-[9px] tracking-tight">Scores</span>
+          <Activity className="w-5 h-5" />
+          <span className="text-[9px] font-medium">Scores</span>
         </Link>
 
         {/* Global Game Search */}
         {onOpenSearchModal ? (
           <button
             onClick={onOpenSearchModal}
-            className="flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-muted-foreground active:text-foreground transition-colors cursor-pointer min-w-[48px]"
           >
-            <Search className="w-4 h-4" />
-            <span className="text-[9px] tracking-tight">Search</span>
+            <Search className="w-5 h-5" />
+            <span className="text-[9px] font-medium">Search</span>
           </button>
         ) : (
           <Link
             href="/"
-            className="flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-muted-foreground hover:text-foreground"
+            className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl text-muted-foreground min-w-[48px]"
           >
-            <Search className="w-4 h-4" />
-            <span className="text-[9px] tracking-tight">Search</span>
+            <Search className="w-5 h-5" />
+            <span className="text-[9px] font-medium">Search</span>
           </Link>
         )}
 
         {/* Live Filter Shortcut */}
         <Link
           href="/?filter=LIVE"
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl transition-colors relative ${
-            isHome ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
-          }`}
+          className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors relative min-w-[48px]"
         >
-          <Radio className="w-4 h-4 text-foreground animate-pulse" />
-          <span className="text-[9px] tracking-tight flex items-center gap-1">
+          <div className="relative">
+            <Radio className="w-5 h-5 text-red-500" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          </div>
+          <span className="text-[9px] font-medium text-foreground flex items-center gap-1">
             Live
             {liveCount > 0 && (
-              <span className="bg-surface-subtle text-foreground text-[8px] font-mono font-bold px-1 rounded border border-surface-border">
+              <span className="bg-red-500 text-white text-[8px] font-mono font-bold px-1 rounded-full min-w-[14px] text-center">
                 {liveCount}
               </span>
             )}
@@ -78,46 +79,43 @@ export function MobileNav({
         {/* Editorial Blog */}
         <Link
           href="/blog"
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl transition-colors ${
-            isBlog ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px] ${
+            isBlog ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
           }`}
         >
-          <Newspaper className="w-4 h-4" />
-          <span className="text-[9px] tracking-tight">Blog</span>
+          <Newspaper className="w-5 h-5" />
+          <span className="text-[9px] font-medium">Blog</span>
         </Link>
 
         {/* Support Helpdesk */}
         <Link
           href="/support"
-          className={`flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl transition-colors ${
-            isSupport ? 'text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'
+          className={`flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl transition-colors min-w-[48px] ${
+            isSupport ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
           }`}
         >
-          <Headphones className="w-4 h-4" />
-          <span className="text-[9px] tracking-tight">Support</span>
+          <Headphones className="w-5 h-5" />
+          <span className="text-[9px] font-medium">Support</span>
         </Link>
 
         {/* PRO */}
         {onOpenProModal ? (
           <button
             onClick={onOpenProModal}
-            className="flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-foreground font-bold hover:opacity-80 transition-opacity cursor-pointer"
+            className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl cursor-pointer min-w-[48px]"
           >
-            <Shield className="w-4 h-4" />
-            <span className="text-[9px] tracking-tight font-bold">PRO</span>
+            <Shield className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            <span className="text-[9px] font-bold text-violet-600 dark:text-violet-400">PRO</span>
           </button>
         ) : (
           <Link
             href="/"
-            className="flex flex-col items-center gap-1 py-1 px-1.5 rounded-xl text-foreground font-bold"
+            className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-xl min-w-[48px]"
           >
-            <Shield className="w-4 h-4" />
-            <span className="text-[9px] tracking-tight font-bold">PRO</span>
+            <Shield className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+            <span className="text-[9px] font-bold text-violet-600 dark:text-violet-400">PRO</span>
           </Link>
         )}
-
-        {/* Theme Toggle */}
-        <ThemeToggle className="!p-1 !w-6 !h-6" />
       </div>
     </nav>
   );

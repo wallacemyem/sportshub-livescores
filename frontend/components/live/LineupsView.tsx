@@ -8,7 +8,6 @@ interface LineupsViewProps {
 }
 
 export function LineupsView({ match }: LineupsViewProps) {
-  // Sample tactical lineups for home and away
   const homeFormation = '4-3-3';
   const awayFormation = '4-2-3-1';
 
@@ -41,52 +40,56 @@ export function LineupsView({ match }: LineupsViewProps) {
   ];
 
   return (
-    <div className="bg-surface rounded-xl border border-surface-border p-4">
+    <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <Users className="w-3.5 h-3.5 text-emerald-neon" /> Starting Lineups & Formations
+        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 font-mono">
+          <Users className="w-3.5 h-3.5 text-muted-foreground" /> Lineups & Formations
         </h4>
         <div className="flex items-center gap-3 text-xs font-mono">
-          <span className="text-emerald-400 font-bold">{homeFormation}</span>
-          <span className="text-slate-500">vs</span>
-          <span className="text-cyan-400 font-bold">{awayFormation}</span>
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30">
+            {homeFormation}
+          </span>
+          <span className="text-muted-foreground">vs</span>
+          <span className="text-orange-600 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 rounded border border-orange-200 dark:border-orange-500/30">
+            {awayFormation}
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-xs">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs">
         {/* Home Lineup */}
-        <div className="bg-surface-subtle/50 rounded-lg p-3 border border-surface-border/60">
-          <p className="font-bold text-white mb-2 flex items-center justify-between border-b border-surface-border/40 pb-1">
-            <span>{match.home_team.name}</span>
-            <span className="text-[10px] text-slate-400 font-normal">Manager: M. Arteta</span>
+        <div className="bg-surface-subtle rounded-xl p-3 border border-surface-border">
+          <p className="font-bold text-foreground mb-2 flex items-center justify-between border-b border-surface-border pb-1.5">
+            <span className="truncate">{match.home_team.name}</span>
+            <span className="text-[10px] text-muted-foreground font-mono font-normal">M. Arteta</span>
           </p>
           <ul className="space-y-1.5">
             {homeStarters.map((p) => (
-              <li key={p.num} className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-2">
-                  <span className="w-4 font-mono text-[10px] text-slate-500 text-right">{p.num}</span>
-                  <span className="text-white">{p.name}</span>
+              <li key={p.num} className="flex items-center justify-between text-muted-foreground hover:text-foreground transition-colors">
+                <span className="flex items-center gap-2 truncate">
+                  <span className="w-4 font-mono text-[10px] text-indigo-600 dark:text-indigo-400 text-right font-bold">{p.num}</span>
+                  <span className="text-foreground truncate font-medium">{p.name}</span>
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">{p.pos}</span>
+                <span className="text-[10px] text-muted-foreground font-mono px-1 bg-surface rounded border border-surface-border shrink-0">{p.pos}</span>
               </li>
             ))}
           </ul>
         </div>
 
         {/* Away Lineup */}
-        <div className="bg-surface-subtle/50 rounded-lg p-3 border border-surface-border/60">
-          <p className="font-bold text-white mb-2 flex items-center justify-between border-b border-surface-border/40 pb-1">
-            <span>{match.away_team.name}</span>
-            <span className="text-[10px] text-slate-400 font-normal">Manager: P. Guardiola</span>
+        <div className="bg-surface-subtle rounded-xl p-3 border border-surface-border">
+          <p className="font-bold text-foreground mb-2 flex items-center justify-between border-b border-surface-border pb-1.5">
+            <span className="truncate">{match.away_team.name}</span>
+            <span className="text-[10px] text-muted-foreground font-mono font-normal">P. Guardiola</span>
           </p>
           <ul className="space-y-1.5">
             {awayStarters.map((p) => (
-              <li key={p.num} className="flex items-center justify-between text-slate-300">
-                <span className="flex items-center gap-2">
-                  <span className="w-4 font-mono text-[10px] text-slate-500 text-right">{p.num}</span>
-                  <span className="text-white">{p.name}</span>
+              <li key={p.num} className="flex items-center justify-between text-muted-foreground hover:text-foreground transition-colors">
+                <span className="flex items-center gap-2 truncate">
+                  <span className="w-4 font-mono text-[10px] text-orange-600 dark:text-orange-400 text-right font-bold">{p.num}</span>
+                  <span className="text-foreground truncate font-medium">{p.name}</span>
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">{p.pos}</span>
+                <span className="text-[10px] text-muted-foreground font-mono px-1 bg-surface rounded border border-surface-border shrink-0">{p.pos}</span>
               </li>
             ))}
           </ul>

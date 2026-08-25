@@ -67,10 +67,10 @@ export default function BlogHubPage() {
   const featuredPost = posts[0];
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16 md:pb-0">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-8">
       {/* Editorial Navigation Header */}
       <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
           <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs font-semibold">
             <ArrowLeft className="w-4 h-4" />
             <span>Scores</span>
@@ -79,7 +79,7 @@ export default function BlogHubPage() {
           <div className="h-4 w-px bg-surface-border" />
 
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center font-black shadow-subtle">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
               <Newspaper className="w-4 h-4" />
             </div>
             <div>
@@ -92,15 +92,15 @@ export default function BlogHubPage() {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
-          <div className="hidden sm:flex items-center relative w-64">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="hidden sm:flex items-center relative w-56 md:w-64">
             <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search analysis, tactics..."
-              className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors"
+              className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors"
             />
           </div>
 
@@ -108,10 +108,11 @@ export default function BlogHubPage() {
 
           <Link
             href="/blog/editor"
-            className="flex items-center gap-1.5 bg-foreground text-background hover:opacity-90 font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-subtle transition-all cursor-pointer"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-md shadow-blue-500/20 transition-all cursor-pointer"
           >
             <PenTool className="w-3.5 h-3.5" />
-            <span>Write Story</span>
+            <span className="hidden sm:inline">Write Story</span>
+            <span className="sm:hidden">Write</span>
           </Link>
         </div>
       </header>
@@ -120,19 +121,22 @@ export default function BlogHubPage() {
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 space-y-6">
         {/* Category Pills Bar */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setSelectedCategory(c)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategory === c
-                  ? 'bg-foreground text-background shadow-subtle'
-                  : 'bg-surface border border-surface-border text-muted-foreground hover:text-foreground hover:bg-surface-hover'
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+          {CATEGORIES.map((c) => {
+            const isSelected = selectedCategory === c;
+            return (
+              <button
+                key={c}
+                onClick={() => setSelectedCategory(c)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                    : 'bg-surface border border-surface-border text-muted-foreground hover:text-foreground hover:bg-surface-hover'
+                }`}
+              >
+                {c}
+              </button>
+            );
+          })}
         </div>
 
         {/* Featured Story Hero Card */}
@@ -146,7 +150,7 @@ export default function BlogHubPage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2 font-mono">
-              <Activity className="w-4 h-4" />
+              <Activity className="w-4 h-4 text-blue-500" />
               <span>Latest Insights ({filteredPosts.length})</span>
             </h2>
           </div>

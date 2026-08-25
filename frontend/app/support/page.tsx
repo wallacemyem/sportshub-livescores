@@ -109,10 +109,10 @@ export default function SupportPage() {
         setTimeout(() => setTicketCreatedSuccess(false), 4000);
 
         confetti({
-          particleCount: 35,
+          particleCount: 40,
           spread: 60,
           origin: { y: 0.6 },
-          colors: ['#FFFFFF', '#A1A1AA', '#71717A'],
+          colors: ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'],
         });
       }
     } catch (err) {
@@ -152,7 +152,7 @@ export default function SupportPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-16 md:pb-0">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-8">
       {/* Header */}
       <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -164,7 +164,7 @@ export default function SupportPage() {
           <div className="h-4 w-px bg-surface-border" />
 
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center font-black shadow-subtle">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
               <Headphones className="w-4 h-4" />
             </div>
             <div>
@@ -178,8 +178,8 @@ export default function SupportPage() {
 
         <div className="flex items-center gap-2.5">
           <ThemeToggle />
-          <div className="flex items-center gap-2 font-mono text-xs text-foreground bg-surface-subtle px-3 py-1 rounded-full border border-surface-border">
-            <span className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
+          <div className="flex items-center gap-2 font-mono text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>Desk Online</span>
           </div>
         </div>
@@ -188,9 +188,9 @@ export default function SupportPage() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 space-y-6">
         {/* Top Hero Banner */}
-        <div className="bg-surface border border-surface-border rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-subtle">
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-violet-50 dark:from-blue-500/5 dark:via-indigo-500/5 dark:to-violet-500/5 border border-blue-200/80 dark:border-blue-500/20 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-subtle">
           <div className="max-w-xl">
-            <span className="bg-surface-subtle text-foreground border border-surface-border text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-3 inline-block">
+            <span className="bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider mb-3 inline-block">
               24/7 Dedicated Response
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-foreground">
@@ -202,12 +202,12 @@ export default function SupportPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-surface-subtle border border-surface-border p-3 rounded-xl text-center min-w-[110px]">
-              <p className="text-xl font-black text-foreground font-mono">&lt; 3 min</p>
+            <div className="bg-surface border border-surface-border p-3.5 rounded-xl text-center min-w-[120px] shadow-sm">
+              <p className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono">&lt; 3 min</p>
               <p className="text-[10px] text-muted-foreground font-mono">Avg Reply Time</p>
             </div>
-            <div className="bg-surface-subtle border border-surface-border p-3 rounded-xl text-center min-w-[110px]">
-              <p className="text-xl font-black text-foreground font-mono">99.8%</p>
+            <div className="bg-surface border border-surface-border p-3.5 rounded-xl text-center min-w-[120px] shadow-sm">
+              <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">99.8%</p>
               <p className="text-[10px] text-muted-foreground font-mono">Resolution Rate</p>
             </div>
           </div>
@@ -219,15 +219,15 @@ export default function SupportPage() {
           <div className="lg:col-span-5 bg-surface border border-surface-border rounded-2xl p-6 shadow-subtle flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <LifeBuoy className="w-5 h-5 text-foreground" />
+                <LifeBuoy className="w-5 h-5 text-muted-foreground" />
                 <h3 className="text-sm font-bold text-foreground uppercase tracking-wider font-mono">
                   Submit New Inquiry
                 </h3>
               </div>
 
               {ticketCreatedSuccess && (
-                <div className="p-3 bg-surface-subtle border border-surface-border text-foreground text-xs rounded-xl flex items-center gap-2 mb-4 animate-in fade-in">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs rounded-xl flex items-center gap-2 mb-4 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
                   <span>Ticket opened successfully! Agent assigned.</span>
                 </div>
               )}
@@ -240,7 +240,7 @@ export default function SupportPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                    className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                   >
                     {DEPARTMENTS.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -255,7 +255,7 @@ export default function SupportPage() {
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none font-mono"
+                    className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none font-mono"
                   >
                     <option value="urgent">Urgent (Match In Progress)</option>
                     <option value="high">High</option>
@@ -273,7 +273,7 @@ export default function SupportPage() {
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. WebSocket score delta question"
-                    className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                    className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                     required
                   />
                 </div>
@@ -287,7 +287,7 @@ export default function SupportPage() {
                     onChange={(e) => setMessage(e.target.value)}
                     rows={4}
                     placeholder="Provide details about your query..."
-                    className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                    className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                     required
                   />
                 </div>
@@ -295,7 +295,7 @@ export default function SupportPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-2.5 bg-foreground hover:opacity-90 text-background font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                  className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-blue-500/20"
                 >
                   {isLoading ? 'Opening Ticket...' : 'Open Support Ticket'}
                 </button>
@@ -308,14 +308,14 @@ export default function SupportPage() {
             {/* Header */}
             <div className="p-4 border-b border-surface-border bg-surface-subtle flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-foreground" />
+                <MessageSquare className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
                   Live Ticket Center
                 </h3>
               </div>
 
               {selectedTicket && (
-                <span className="text-[10px] font-mono font-bold text-foreground bg-surface px-2 py-0.5 rounded border border-surface-border">
+                <span className="text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-0.5 rounded border border-blue-200 dark:border-blue-500/30">
                   {selectedTicket.status.toUpperCase()}
                 </span>
               )}
@@ -331,7 +331,7 @@ export default function SupportPage() {
                     onClick={() => setSelectedTicket(t)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer border ${
                       isSelected
-                        ? 'bg-foreground text-background border-foreground font-bold'
+                        ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-sm shadow-blue-500/20'
                         : 'bg-surface border-surface-border text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -359,7 +359,7 @@ export default function SupportPage() {
                       <div
                         className={`p-3 rounded-2xl max-w-md text-xs leading-relaxed ${
                           isUser
-                            ? 'bg-foreground text-background rounded-br-none shadow-subtle'
+                            ? 'bg-blue-600 text-white rounded-br-none shadow-sm shadow-blue-500/20'
                             : 'bg-surface-subtle border border-surface-border text-foreground rounded-bl-none shadow-subtle'
                         }`}
                       >
@@ -370,7 +370,7 @@ export default function SupportPage() {
                 })
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground font-mono text-xs">
-                  <Headphones className="w-8 h-8 mb-2 opacity-50" />
+                  <Headphones className="w-8 h-8 mb-2 opacity-40 text-muted-foreground" />
                   <p>No messages in this ticket yet.</p>
                 </div>
               )}
@@ -384,12 +384,12 @@ export default function SupportPage() {
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Type a response to the support agent..."
-                  className="flex-1 bg-surface border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                  className="flex-1 bg-surface border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!replyText.trim()}
-                  className="bg-foreground hover:opacity-90 text-background font-bold p-2 rounded-lg transition-opacity disabled:opacity-40 cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-lg transition-opacity disabled:opacity-40 cursor-pointer shadow-sm shadow-blue-500/20"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -401,7 +401,7 @@ export default function SupportPage() {
         {/* Knowledge Base FAQs */}
         <div className="bg-surface border border-surface-border rounded-2xl p-6 sm:p-8 space-y-4 shadow-subtle">
           <div className="flex items-center gap-2 mb-2">
-            <HelpCircle className="w-5 h-5 text-foreground" />
+            <HelpCircle className="w-5 h-5 text-muted-foreground" />
             <h3 className="text-sm font-bold text-foreground uppercase tracking-wider font-mono">
               Frequently Asked Questions & Quick Solutions
             </h3>
@@ -420,7 +420,7 @@ export default function SupportPage() {
                     className="w-full p-4 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-foreground hover:opacity-80 transition-opacity cursor-pointer"
                   >
                     <span>{faq.q}</span>
-                    {isOpen ? <ChevronUp className="w-4 h-4 shrink-0 text-foreground" /> : <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />}
+                    {isOpen ? <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />}
                   </button>
                   {isOpen && (
                     <div className="px-4 pb-4 text-xs text-muted-foreground leading-relaxed border-t border-surface-border pt-3">

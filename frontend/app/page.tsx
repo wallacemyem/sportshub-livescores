@@ -268,47 +268,42 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground pb-16 md:pb-0">
+    <div className="flex flex-col min-h-screen bg-background text-foreground pb-20 md:pb-0">
       {/* Top Header */}
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-border">
-        <div className="max-w-[1720px] mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
+        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-3">
           {/* Logo & Live Gateway Status */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center font-black shadow-subtle">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-blue-500 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
                 <Activity className="w-4 h-4" />
               </div>
-              <div>
-                <h1 className="text-sm font-black text-foreground tracking-tight flex items-center gap-1.5 font-mono">
+              <div className="hidden sm:block">
+                <h1 className="text-sm font-black text-foreground tracking-tight font-mono">
                   SPORTSHUB
-                  <span className="text-[10px] font-mono font-bold bg-surface-subtle text-muted-foreground px-1.5 py-0.5 rounded border border-surface-border">
-                    17080
-                  </span>
                 </h1>
                 <p className="text-[10px] text-muted-foreground">Multi-Sport Live Tracker</p>
               </div>
             </div>
 
             {/* Gateway Status Badge */}
-            <div className="hidden sm:flex items-center gap-2">
-              <div className="flex items-center gap-2 bg-surface-subtle border border-surface-border px-2.5 py-1 rounded-full text-[11px] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
-                <span className="text-foreground">
-                  {isConnected ? 'WS Hub: 18443' : 'Connecting WS...'}
-                </span>
-              </div>
+            <div className="hidden md:flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1 rounded-full text-[11px] font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                {isConnected ? 'Live Connected' : 'Connecting...'}
+              </span>
             </div>
           </div>
 
-          {/* Global Search Bar (Opens Command Palette on Click or Cmd+K) */}
+          {/* Global Search Bar */}
           <div className="flex items-center flex-1 max-w-md relative">
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="w-full bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-foreground/40 rounded-xl pl-9 pr-3 py-1.5 text-xs text-left text-muted-foreground flex items-center justify-between transition-all cursor-pointer"
+              className="w-full bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 rounded-xl pl-9 pr-3 py-1.5 text-xs text-left text-muted-foreground flex items-center justify-between transition-all cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <Search className="w-4 h-4 text-muted-foreground absolute left-3 pointer-events-none" />
-                <span className="truncate">Search games, teams, leagues, players...</span>
+                <span className="truncate">Search games, teams, leagues...</span>
               </div>
               <kbd className="hidden sm:inline font-mono text-[10px] bg-surface border border-surface-border text-muted-foreground px-1.5 py-0.5 rounded shadow-sm">
                 ⌘K
@@ -316,34 +311,26 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Action Buttons: Theme Toggle, Sports Blog, Import Ticket, Support, Pro Upgrade, Admin Link */}
-          <div className="flex items-center gap-2">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <ThemeToggle />
 
             <Link
               href="/blog"
-              className="hidden sm:flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
             >
               <Newspaper className="w-3.5 h-3.5" />
-              <span>Editorial</span>
-            </Link>
-
-            <Link
-              href="/support"
-              className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
-            >
-              <Headphones className="w-3.5 h-3.5" />
-              <span>Support</span>
+              <span>Blog</span>
             </Link>
 
             <button
               onClick={() => setIsImporterOpen(true)}
-              className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
+              className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground transition-all cursor-pointer"
             >
               <Ticket className="w-3.5 h-3.5" />
-              <span>Import Ticket</span>
+              <span className="hidden sm:inline">Import</span>
               {betSlips.length > 0 && (
-                <span className="bg-foreground text-background text-[10px] font-bold px-1.5 rounded">
+                <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 rounded-full min-w-[18px] text-center">
                   {betSlips.length}
                 </span>
               )}
@@ -351,26 +338,25 @@ export default function HomePage() {
 
             <button
               onClick={() => setIsProModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-foreground text-background hover:opacity-90 shadow-subtle"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 shadow-md shadow-violet-500/20"
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>{isProUser ? 'PRO Active' : 'PRO'}</span>
+              <span>{isProUser ? 'PRO' : 'PRO'}</span>
             </button>
 
             <a
               href="http://localhost:19080"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:flex items-center gap-1 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2.5 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              className="hidden xl:flex items-center gap-1 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
-              <span>Admin</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
         </div>
 
         {/* Multi-Sport Navigation Strip */}
-        <div className="max-w-[1720px] mx-auto px-4 flex items-center gap-1 overflow-x-auto scrollbar-none py-1 border-t border-surface-border">
+        <div className="max-w-[1720px] mx-auto px-3 sm:px-4 flex items-center gap-1 overflow-x-auto scrollbar-none py-1.5 border-t border-surface-border">
           {SPORTS.map((sport) => {
             const isSelected = selectedSport === sport.id;
             const count = matches.filter((m) => m.sport === sport.id && m.status === 'LIVE').length;
@@ -380,16 +366,20 @@ export default function HomePage() {
               <button
                 key={sport.id}
                 onClick={() => setSelectedSport(sport.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shrink-0 cursor-pointer ${
                   isSelected
-                    ? 'bg-surface-hover text-foreground border-b-2 border-foreground shadow-subtle'
+                    ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30'
                     : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{sport.label}</span>
                 {count > 0 && (
-                  <span className="bg-foreground text-background text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                    isSelected
+                      ? 'bg-red-500 text-white'
+                      : 'bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400'
+                  }`}>
                     {count}
                   </span>
                 )}
@@ -413,20 +403,20 @@ export default function HomePage() {
             </h3>
             <ul className="space-y-1 text-xs text-foreground">
               {[
-                { name: 'Premier League', code: 'ENG', count: 4 },
-                { name: 'UEFA Champions League', code: 'EUR', count: 2 },
-                { name: 'La Liga', code: 'ESP', count: 3 },
-                { name: 'NBA Basketball', code: 'USA', count: 1 },
-                { name: 'ATP Tour Masters', code: 'GLB', count: 1 },
-                { name: 'NFL Football', code: 'USA', count: 1 },
-                { name: 'IPL Cricket', code: 'IND', count: 1 },
+                { name: 'Premier League', code: 'ENG', count: 4, color: 'bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30' },
+                { name: 'UEFA Champions League', code: 'EUR', count: 2, color: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
+                { name: 'La Liga', code: 'ESP', count: 3, color: 'bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30' },
+                { name: 'NBA Basketball', code: 'USA', count: 1, color: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30' },
+                { name: 'ATP Tour Masters', code: 'GLB', count: 1, color: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
+                { name: 'NFL Football', code: 'USA', count: 1, color: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' },
+                { name: 'IPL Cricket', code: 'IND', count: 1, color: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' },
               ].map((l) => (
                 <li
                   key={l.name}
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-muted-foreground bg-surface-subtle px-1 rounded border border-surface-border font-bold">
+                    <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border font-bold ${l.color}`}>
                       {l.code}
                     </span>
                     <span className="font-medium">{l.name}</span>
@@ -447,7 +437,7 @@ export default function HomePage() {
               </h3>
               <button
                 onClick={() => setIsImporterOpen(true)}
-                className="text-[11px] text-foreground font-bold hover:underline cursor-pointer"
+                className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
               >
                 + Add Slip
               </button>
@@ -477,10 +467,10 @@ export default function HomePage() {
         <div className="col-span-12 xl:col-span-5 flex flex-col gap-4">
           {/* Sub-Filters: Live, All, Scheduled, Finished */}
           <div className="flex items-center justify-between bg-surface p-2 rounded-xl border border-surface-border shadow-subtle">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               {[
-                { id: 'LIVE', label: `Live (${liveCount})` },
-                { id: 'ALL', label: 'All Matches' },
+                { id: 'LIVE', label: `Live (${liveCount})`, color: 'bg-red-500 text-white shadow-sm shadow-red-500/30' },
+                { id: 'ALL', label: 'All' },
                 { id: 'SCHEDULED', label: 'Upcoming' },
                 { id: 'FINISHED', label: 'Finished' },
               ].map((tab) => (
@@ -489,7 +479,7 @@ export default function HomePage() {
                   onClick={() => setStatusFilter(tab.id as any)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     statusFilter === tab.id
-                      ? 'bg-foreground text-background shadow-subtle'
+                      ? (tab.id === 'LIVE' ? (tab as any).color : 'bg-blue-600 text-white shadow-sm shadow-blue-500/30')
                       : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
                   }`}
                 >
@@ -511,30 +501,30 @@ export default function HomePage() {
                   onClick={() => setTicketFilterMode('MY_TICKETS')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     ticketFilterMode === 'MY_TICKETS'
-                      ? 'bg-foreground text-background shadow-subtle'
+                      ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
                       : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
                   }`}
                 >
                   <Ticket className="w-3.5 h-3.5" />
-                  <span>My Ticket Matches ({ticketLiveCount})</span>
+                  <span>My Tickets ({ticketLiveCount})</span>
                 </button>
 
                 <button
                   onClick={() => setTicketFilterMode('ALL_GLOBAL')}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     ticketFilterMode === 'ALL_GLOBAL'
-                      ? 'bg-foreground text-background shadow-subtle'
+                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
                       : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
                   }`}
                 >
                   <Radio className="w-3.5 h-3.5" />
-                  <span>All Global Live ({liveCount})</span>
+                  <span>All Live ({liveCount})</span>
                 </button>
               </div>
             ) : (
-              <div className="bg-surface border border-surface-border rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-subtle">
+              <div className="bg-gradient-to-r from-violet-50 to-blue-50 dark:from-violet-500/5 dark:to-blue-500/5 border border-violet-200 dark:border-violet-500/20 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-surface-subtle border border-surface-border flex items-center justify-center text-foreground shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-violet-100 dark:bg-violet-500/15 border border-violet-200 dark:border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
                     <Ticket className="w-4 h-4" />
                   </div>
                   <div>
@@ -546,14 +536,14 @@ export default function HomePage() {
                   <button
                     onClick={handleLoadSampleTicket}
                     disabled={isImportingSample}
-                    className="flex-1 sm:flex-none px-3 py-1.5 bg-foreground text-background hover:opacity-90 font-bold text-xs rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5"
+                    className="flex-1 sm:flex-none px-3 py-1.5 bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 font-bold text-xs rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 shadow-md shadow-violet-500/20"
                   >
                     <Zap className="w-3.5 h-3.5" />
-                    <span>{isImportingSample ? 'Loading...' : 'Load Sample Ticket'}</span>
+                    <span>{isImportingSample ? 'Loading...' : 'Load Sample'}</span>
                   </button>
                   <button
                     onClick={() => setIsImporterOpen(true)}
-                    className="px-2.5 py-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border text-foreground font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                   >
                     Import Code
                   </button>
@@ -592,7 +582,6 @@ export default function HomePage() {
                     {selectedMatch.league.name} • {selectedMatch.venue || 'Stadium'}
                   </span>
 
-                  {/* Pop Out Scoreboard (PiP) */}
                   <button
                     onClick={() => openPiP('floating-pip-widget')}
                     className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border text-foreground text-xs font-bold px-2.5 py-1 rounded-lg transition-all cursor-pointer"
@@ -605,23 +594,29 @@ export default function HomePage() {
                 {/* Main Match Header Score Banner */}
                 <div className="flex items-center justify-between gap-4 py-2">
                   <div className="text-center flex-1">
-                    <div className="w-10 h-10 mx-auto rounded-lg bg-surface-subtle border border-surface-border flex items-center justify-center font-mono font-bold text-sm text-foreground mb-1 uppercase">
+                    <div className="w-11 h-11 mx-auto rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center font-mono font-bold text-sm text-indigo-700 dark:text-indigo-300 mb-1 uppercase">
                       {selectedMatch.home_team.short_name || selectedMatch.home_team.name.slice(0, 3)}
                     </div>
                     <p className="text-xs font-bold text-foreground truncate">{selectedMatch.home_team.name}</p>
                   </div>
 
                   <div className="text-center font-mono">
-                    <div className="text-2xl font-black text-foreground tracking-wider bg-surface-subtle px-3.5 py-1 rounded-xl border border-surface-border inline-block">
+                    <div className={`text-2xl font-black tracking-wider px-4 py-1.5 rounded-xl border inline-block ${
+                      selectedMatch.status === 'LIVE'
+                        ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30'
+                        : 'text-foreground bg-surface-subtle border-surface-border'
+                    }`}>
                       {selectedMatch.home_score} : {selectedMatch.away_score}
                     </div>
-                    <p className="text-xs text-foreground font-bold mt-1 uppercase font-mono">
+                    <p className={`text-xs font-bold mt-1.5 uppercase font-mono ${
+                      selectedMatch.status === 'LIVE' ? 'text-red-500' : 'text-muted-foreground'
+                    }`}>
                       {selectedMatch.status === 'LIVE' ? `${selectedMatch.period} ${selectedMatch.minute}'` : selectedMatch.status}
                     </p>
                   </div>
 
                   <div className="text-center flex-1">
-                    <div className="w-10 h-10 mx-auto rounded-lg bg-surface-subtle border border-surface-border flex items-center justify-center font-mono font-bold text-sm text-foreground mb-1 uppercase">
+                    <div className="w-11 h-11 mx-auto rounded-lg bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 flex items-center justify-center font-mono font-bold text-sm text-orange-700 dark:text-orange-300 mb-1 uppercase">
                       {selectedMatch.away_team.short_name || selectedMatch.away_team.name.slice(0, 3)}
                     </div>
                     <p className="text-xs font-bold text-foreground truncate">{selectedMatch.away_team.name}</p>
@@ -642,7 +637,7 @@ export default function HomePage() {
                       onClick={() => setDetailTab(tab.id as any)}
                       className={`py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
                         detailTab === tab.id
-                          ? 'bg-foreground text-background font-bold shadow-subtle'
+                          ? 'bg-blue-600 text-white font-bold shadow-sm shadow-blue-500/30'
                           : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
                       }`}
                     >

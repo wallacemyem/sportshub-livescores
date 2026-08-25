@@ -84,10 +84,10 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
         setInitialMessage('');
 
         confetti({
-          particleCount: 35,
+          particleCount: 40,
           spread: 60,
           origin: { y: 0.6 },
-          colors: ['#FFFFFF', '#A1A1AA', '#71717A'],
+          colors: ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'],
         });
       }
     } catch (err) {
@@ -132,7 +132,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
         {/* Header */}
         <div className="p-4 border-b border-surface-border flex items-center justify-between bg-surface-subtle">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-surface border border-surface-border flex items-center justify-center text-foreground font-black">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black shadow-sm">
               <Headphones className="w-4 h-4" />
             </div>
             <div>
@@ -144,7 +144,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsCreatingNew((prev) => !prev)}
-              className="bg-foreground hover:opacity-90 text-background font-bold text-xs px-3 py-1.5 rounded-lg transition-opacity cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-sm shadow-blue-500/20"
             >
               {isCreatingNew ? 'View Active Tickets' : '+ Open Ticket'}
             </button>
@@ -174,7 +174,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                  className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                 >
                   {DEPARTMENTS.map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -189,7 +189,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as any)}
-                  className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none font-mono"
+                  className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none font-mono"
                 >
                   <option value="urgent">Urgent (Match In Progress)</option>
                   <option value="high">High</option>
@@ -208,7 +208,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="e.g. WebSocket latency issue during match"
-                className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                 required
               />
             </div>
@@ -222,7 +222,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 onChange={(e) => setInitialMessage(e.target.value)}
                 rows={4}
                 placeholder="Please include details like match ID, browser version, or transaction reference..."
-                className="w-full bg-surface-subtle border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                 required
               />
             </div>
@@ -230,7 +230,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 bg-foreground hover:opacity-90 text-background font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-blue-500/20"
             >
               {isLoading ? 'Submitting Ticket...' : 'Submit Support Ticket'}
             </button>
@@ -257,15 +257,15 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                       onClick={() => setSelectedTicket(t)}
                       className={`w-full text-left p-2.5 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-surface border-foreground text-foreground shadow-subtle'
+                          ? 'bg-surface border-blue-500 text-foreground shadow-sm'
                           : 'bg-surface-subtle border-surface-border hover:bg-surface-hover text-muted-foreground'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="text-[10px] font-mono font-bold uppercase text-foreground truncate">
+                        <span className="text-[10px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400 truncate">
                           {t.category}
                         </span>
-                        <span className="text-[9px] font-mono text-muted-foreground bg-surface-subtle px-1.5 py-0.5 rounded border border-surface-border">
+                        <span className="text-[9px] font-mono text-muted-foreground bg-surface px-1.5 py-0.5 rounded border border-surface-border">
                           {t.status}
                         </span>
                       </div>
@@ -284,10 +284,10 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                     <div className="min-w-0 pr-2">
                       <h4 className="text-xs font-bold text-foreground truncate">{selectedTicket.subject}</h4>
                       <p className="text-[10px] text-muted-foreground font-mono">
-                        Ticket #{selectedTicket.id} • Priority: <strong className="text-foreground uppercase">{selectedTicket.priority}</strong>
+                        Ticket #{selectedTicket.id} • Priority: <strong className="text-blue-600 dark:text-blue-400 uppercase">{selectedTicket.priority}</strong>
                       </p>
                     </div>
-                    <span className="text-[10px] font-mono font-bold text-foreground bg-surface px-2 py-0.5 rounded border border-surface-border shrink-0">
+                    <span className="text-[10px] font-mono font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-0.5 rounded border border-blue-200 dark:border-blue-500/30 shrink-0">
                       {selectedTicket.status.toUpperCase()}
                     </span>
                   </div>
@@ -308,7 +308,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                           <div
                             className={`p-3 rounded-2xl max-w-sm text-xs leading-relaxed ${
                               isUser
-                                ? 'bg-foreground text-background rounded-br-none shadow-subtle'
+                                ? 'bg-blue-600 text-white rounded-br-none shadow-sm shadow-blue-500/20'
                                 : 'bg-surface-subtle border border-surface-border text-foreground rounded-bl-none shadow-subtle'
                             }`}
                           >
@@ -325,12 +325,12 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
                       placeholder="Type a reply..."
-                      className="flex-1 bg-surface border border-surface-border focus:border-foreground rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
+                      className="flex-1 bg-surface border border-surface-border focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none"
                     />
                     <button
                       type="submit"
                       disabled={!replyMessage.trim()}
-                      className="bg-foreground hover:opacity-90 text-background font-bold p-2 rounded-lg transition-opacity disabled:opacity-40 cursor-pointer"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold p-2 rounded-lg transition-opacity disabled:opacity-40 cursor-pointer shadow-sm shadow-blue-500/20"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -338,7 +338,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                  <MessageSquare className="w-8 h-8 mb-2" />
+                  <MessageSquare className="w-8 h-8 mb-2 text-muted-foreground" />
                   <p className="text-xs font-mono">Select a ticket or open a new inquiry</p>
                 </div>
               )}

@@ -166,7 +166,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
             onClick={() => setSportFilter('ALL')}
             className={`px-2.5 py-1 rounded-lg font-bold font-mono transition-colors cursor-pointer ${
               sportFilter === 'ALL'
-                ? 'bg-foreground text-background shadow-subtle'
+                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
                 : 'bg-surface-subtle text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -175,13 +175,14 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
           {(['soccer', 'basketball', 'tennis', 'nfl', 'cricket', 'baseball'] as SportType[]).map((s) => {
             const count = matches.filter((m) => m.sport === s).length;
             const Icon = SPORT_ICONS[s];
+            const isSelected = sportFilter === s;
             return (
               <button
                 key={s}
                 onClick={() => setSportFilter(s)}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold uppercase text-[11px] transition-colors cursor-pointer whitespace-nowrap ${
-                  sportFilter === s
-                    ? 'bg-foreground text-background shadow-subtle'
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
                     : 'bg-surface-subtle text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -219,19 +220,19 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                     isSelected
-                      ? 'bg-surface-hover border-foreground shadow-subtle'
-                      : 'bg-surface-subtle/60 border-surface-border hover:bg-surface-subtle'
+                      ? 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-400 dark:border-blue-600 shadow-sm'
+                      : 'bg-surface border-surface-border hover:bg-surface-subtle'
                   }`}
                 >
                   {/* Left: Sport Icon & Teams */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-8 h-8 rounded-lg bg-surface border border-surface-border flex items-center justify-center text-foreground shrink-0">
-                      <SportIcon className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-700 dark:text-indigo-300 shrink-0">
+                      <SportIcon className="w-4 h-4 text-muted-foreground" />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono mb-0.5">
-                        <span className="uppercase font-bold text-foreground">{m.sport}</span>
+                        <span className="uppercase font-bold text-blue-600 dark:text-blue-400">{m.sport}</span>
                         <span>•</span>
                         <span className="truncate">{m.league.name}</span>
                         {m.venue && (
@@ -254,11 +255,11 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                   <div className="flex items-center gap-3 shrink-0 text-right">
                     {isLive ? (
                       <div className="flex flex-col items-end font-mono">
-                        <span className="text-sm sm:text-base font-black text-foreground bg-surface px-2 py-0.5 rounded border border-surface-border">
+                        <span className="text-sm sm:text-base font-black text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/15 px-2.5 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30">
                           {m.home_score} : {m.away_score}
                         </span>
-                        <span className="text-[10px] font-bold text-foreground flex items-center gap-1 mt-0.5 uppercase">
-                          <span className="w-1.5 h-1.5 rounded-full bg-foreground animate-pulse" />
+                        <span className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-0.5 uppercase">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                           {m.period} {m.minute}&apos;
                         </span>
                       </div>
@@ -271,7 +272,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                       </div>
                     ) : (
                       <div className="flex flex-col items-end font-mono">
-                        <span className="text-xs font-bold text-foreground">
+                        <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
                           {new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <span className="text-[10px] text-muted-foreground">Upcoming</span>
@@ -293,7 +294,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
             <span><strong className="text-foreground">ENTER</strong> to select</span>
             <span><strong className="text-foreground">ESC</strong> to close</span>
           </div>
-          <span>{filteredMatches.length} results</span>
+          <span className="font-bold text-blue-600 dark:text-blue-400">{filteredMatches.length} results</span>
         </div>
       </div>
     </div>

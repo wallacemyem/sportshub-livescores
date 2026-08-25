@@ -14,6 +14,35 @@
     --muted-foreground: #64748B;
     --accent: #0F172A;
     --accent-foreground: #FFFFFF;
+
+    /* Colorful semantic tokens */
+    --live-red: #EF4444;
+    --live-red-bg: #FEE2E2;
+    --live-red-border: #FECACA;
+    --live-pulse: #DC2626;
+    --score-bg: #EEF2FF;
+    --score-border: #C7D2FE;
+    --score-text: #3730A3;
+    --badge-green: #10B981;
+    --badge-green-bg: #D1FAE5;
+    --badge-amber: #F59E0B;
+    --badge-amber-bg: #FEF3C7;
+    --badge-blue: #3B82F6;
+    --badge-blue-bg: #DBEAFE;
+    --badge-purple: #8B5CF6;
+    --badge-purple-bg: #EDE9FE;
+    --possession-home: #6366F1;
+    --possession-away: #F97316;
+    --pro-gradient-from: #7C3AED;
+    --pro-gradient-to: #2563EB;
+    --yellow-card: #EAB308;
+    --red-card: #EF4444;
+    --odds-text: #0369A1;
+    --odds-bg: #F0F9FF;
+    --odds-border: #BAE6FD;
+    --ticker-bg: #F0FDF4;
+    --ticker-border: #BBF7D0;
+    --ticker-live-dot: #22C55E;
   }
 
   .dark {
@@ -27,6 +56,35 @@
     --muted-foreground: #94A3B8;
     --accent: #F8FAFC;
     --accent-foreground: #090A0F;
+
+    /* Colorful semantic tokens (dark mode) */
+    --live-red: #F87171;
+    --live-red-bg: rgba(239, 68, 68, 0.15);
+    --live-red-border: rgba(248, 113, 113, 0.3);
+    --live-pulse: #EF4444;
+    --score-bg: rgba(99, 102, 241, 0.12);
+    --score-border: rgba(99, 102, 241, 0.3);
+    --score-text: #A5B4FC;
+    --badge-green: #34D399;
+    --badge-green-bg: rgba(52, 211, 153, 0.15);
+    --badge-amber: #FBBF24;
+    --badge-amber-bg: rgba(251, 191, 36, 0.15);
+    --badge-blue: #60A5FA;
+    --badge-blue-bg: rgba(96, 165, 250, 0.15);
+    --badge-purple: #A78BFA;
+    --badge-purple-bg: rgba(167, 139, 250, 0.15);
+    --possession-home: #818CF8;
+    --possession-away: #FB923C;
+    --pro-gradient-from: #A78BFA;
+    --pro-gradient-to: #60A5FA;
+    --yellow-card: #FBBF24;
+    --red-card: #F87171;
+    --odds-text: #7DD3FC;
+    --odds-bg: rgba(14, 165, 233, 0.1);
+    --odds-border: rgba(56, 189, 248, 0.25);
+    --ticker-bg: rgba(34, 197, 94, 0.08);
+    --ticker-border: rgba(74, 222, 128, 0.2);
+    --ticker-live-dot: #4ADE80;
   }
 
   body {
@@ -35,7 +93,7 @@
   }
 }
 
-/* Custom Minimal Monochrome Scrollbar */
+/* Custom Minimal Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
