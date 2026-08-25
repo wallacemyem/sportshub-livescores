@@ -2,6 +2,7 @@
 
 import { Match } from '@/types';
 import { Activity } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { TeamCrest } from './TeamCrest';
 
 interface TickerStripProps {
@@ -10,11 +11,17 @@ interface TickerStripProps {
 }
 
 export function TickerStrip({ matches, onSelectMatch }: TickerStripProps) {
+  const router = useRouter();
   const liveMatches = matches.filter((m) => m.status === 'LIVE');
 
   if (liveMatches.length === 0) {
     return null;
   }
+
+  const handleMatchClick = (m: Match) => {
+    onSelectMatch(m);
+    router.push(`/match/${m.id}`);
+  };
 
   return (
     <div className="w-full max-w-full overflow-hidden bg-emerald-50/50 dark:bg-emerald-500/5 border-y border-emerald-200/70 dark:border-emerald-500/15 py-1.5 select-none">
@@ -28,7 +35,7 @@ export function TickerStrip({ matches, onSelectMatch }: TickerStripProps) {
           {liveMatches.map((m) => (
             <button
               key={m.id}
-              onClick={() => onSelectMatch(m)}
+              onClick={() => handleMatchClick(m)}
               className="flex items-center gap-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 px-2.5 py-1 rounded-lg text-xs transition-all shrink-0 cursor-pointer"
             >
               <span className="font-mono text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-1.5 py-0.5 rounded font-bold">

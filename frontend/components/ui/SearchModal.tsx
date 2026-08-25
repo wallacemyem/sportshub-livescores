@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface SearchModalProps {
@@ -38,10 +39,17 @@ const SPORT_ICONS: Record<SportType, React.ComponentType<{ className?: string }>
 };
 
 export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchModalProps) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [sportFilter, setSportFilter] = useState<'ALL' | SportType>('ALL');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSelect = (m: Match) => {
+    onSelectMatch(m);
+    onClose();
+    router.push(`/match/${m.id}`);
+  };
 
   // Auto-focus input when opened
   useEffect(() => {
@@ -119,8 +127,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
         setSelectedIndex((prev) => (prev - 1 + filteredMatches.length) % (filteredMatches.length || 1));
       } else if (e.key === 'Enter' && filteredMatches[selectedIndex]) {
         e.preventDefault();
-        onSelectMatch(filteredMatches[selectedIndex]);
-        onClose();
+        handleSelect(filteredMatches[selectedIndex]);
       }
     };
 
@@ -234,10 +241,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
               return (
                 <div
                   key={m.id}
-                  onClick={() => {
-                    onSelectMatch(m);
-                    onClose();
-                  }}
+                  onClick={() => handleSelect(m)}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                     isSelected

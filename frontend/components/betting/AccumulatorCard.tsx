@@ -4,6 +4,7 @@ import { BetSlip } from '@/types';
 import { motion } from 'framer-motion';
 import { DollarSign, CheckCircle2, Clock, XCircle, TrendingUp } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import Link from 'next/link';
 
 interface AccumulatorCardProps {
   slip: BetSlip;
@@ -71,43 +72,48 @@ export function AccumulatorCard({ slip, onCashOut }: AccumulatorCardProps) {
 
       {/* Legs List */}
       <div className="space-y-2 mb-4">
-        {slip.legs.map((leg) => (
-          <div
-            key={leg.id}
-            className="bg-surface-subtle/50 border border-surface-border rounded-lg p-2.5 text-xs"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-foreground truncate max-w-[200px]">
-                {leg.match?.home_team?.name || 'Home'} vs {leg.match?.away_team?.name || 'Away'}
-              </span>
-              <span className="font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                {leg.odds.toFixed(2)}
-              </span>
-            </div>
+        {slip.legs.map((leg) => {
+          const matchId = leg.match_id || leg.match?.id;
+          return (
+            <Link
+              key={leg.id}
+              href={matchId ? `/match/${matchId}` : '#'}
+              className="block bg-surface-subtle/50 hover:bg-surface-subtle border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 rounded-lg p-2.5 text-xs transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-semibold text-foreground truncate max-w-[200px] group-hover:text-blue-600 transition-colors">
+                  <span className="inline sm:hidden">{leg.match?.home_team?.short_name || 'Home'} vs {leg.match?.away_team?.short_name || 'Away'}</span>
+                  <span className="hidden sm:inline">{leg.match?.home_team?.name || 'Home'} vs {leg.match?.away_team?.name || 'Away'}</span>
+                </span>
+                <span className="font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                  {leg.odds.toFixed(2)}
+                </span>
+              </div>
 
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>
-                Pick: <strong className="text-foreground">{leg.selection}</strong> ({leg.market})
-              </span>
-              <span className="font-mono flex items-center gap-1">
-                {leg.status === 'WON' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 inline" />}
-                {leg.status === 'RUNNING' && <Clock className="w-3.5 h-3.5 text-blue-500 inline" />}
-                {leg.status === 'LOST' && <XCircle className="w-3.5 h-3.5 text-red-500 inline" />}
-                <span className="text-foreground">{leg.current_score}</span>
-              </span>
-            </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>
+                  Pick: <strong className="text-foreground">{leg.selection}</strong> ({leg.market})
+                </span>
+                <span className="font-mono flex items-center gap-1">
+                  {leg.status === 'WON' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 inline" />}
+                  {leg.status === 'RUNNING' && <Clock className="w-3.5 h-3.5 text-blue-500 inline" />}
+                  {leg.status === 'LOST' && <XCircle className="w-3.5 h-3.5 text-red-500 inline" />}
+                  <span className="text-foreground font-bold">{leg.current_score}</span>
+                </span>
+              </div>
 
-            {/* Leg Fulfillment Mini Progress */}
-            <div className="w-full h-1 bg-surface-border rounded-full mt-2 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 rounded-full ${
-                  leg.status === 'WON' ? 'bg-emerald-500' : leg.status === 'LOST' ? 'bg-red-500' : 'bg-blue-500'
-                }`}
-                style={{ width: `${leg.fulfillment_pct}%` }}
-              />
-            </div>
-          </div>
-        ))}
+              {/* Leg Fulfillment Mini Progress */}
+              <div className="w-full h-1 bg-surface-border rounded-full mt-2 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    leg.status === 'WON' ? 'bg-emerald-500' : leg.status === 'LOST' ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${leg.fulfillment_pct || 50}%` }}
+                />
+              </div>
+            </Link>
+          );
+        })}
       </div>
 
       {/* Dynamic Cashout Offer Section */}

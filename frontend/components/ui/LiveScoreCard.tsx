@@ -2,19 +2,21 @@
 
 import { Match } from '@/types';
 import { motion } from 'framer-motion';
-import { Radio, ChevronRight, TrendingUp, Volume2 } from 'lucide-react';
+import { Radio, ChevronRight, TrendingUp, Volume2, ExternalLink } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
 
 interface LiveScoreCardProps {
   match: Match;
-  isSelected: boolean;
-  onSelect: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProps) {
+export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScoreCardProps) {
+  const router = useRouter();
   const prevScoreRef = useRef(`${match.home_score}-${match.away_score}`);
 
   // Trigger celebration confetti on score update
@@ -33,18 +35,26 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
 
   const isLive = match.status === 'LIVE';
 
+  const handleCardClick = () => {
+    if (onSelect) {
+      onSelect();
+    }
+    // Navigate directly to dedicated match details page
+    router.push(`/match/${match.id}`);
+  };
+
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      whileHover={{ y: -1 }}
-      onClick={onSelect}
-      className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer select-none p-4 ${
+      whileHover={{ y: -1.5 }}
+      onClick={handleCardClick}
+      className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer select-none p-4 group ${
         isSelected
           ? 'bg-surface border-blue-500 ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10'
-          : 'bg-surface border-surface-border hover:border-blue-300 dark:hover:border-blue-700 hover:bg-surface-subtle'
+          : 'bg-surface border-surface-border hover:border-blue-400 dark:hover:border-blue-600 hover:bg-surface-subtle shadow-xs'
       }`}
     >
       {/* Live left accent bar */}
@@ -67,20 +77,24 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
         </div>
 
         {/* Status / Minute Badge */}
-        {isLive ? (
-          <div className="flex items-center gap-1.5 bg-red-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider shadow-sm shadow-red-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <span>{match.period} {match.minute}&apos;</span>
-          </div>
-        ) : match.status === 'FINISHED' ? (
-          <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
-            FT
-          </span>
-        ) : (
-          <span className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-mono">
-            {new Date(match.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isLive ? (
+            <div className="flex items-center gap-1.5 bg-red-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider shadow-sm shadow-red-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              <span>{match.period} {match.minute}&apos;</span>
+            </div>
+          ) : match.status === 'FINISHED' ? (
+            <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-semibold">
+              FT
+            </span>
+          ) : (
+            <span className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-mono">
+              {new Date(match.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
+        </div>
       </div>
 
       {/* Main Score Board */}
@@ -199,18 +213,24 @@ export function LiveScoreCard({ match, isSelected, onSelect }: LiveScoreCardProp
         </div>
       )}
 
-      {/* Live Odds Quick Strip */}
+      {/* Consensus Odds Strip */}
       {match.odds?.consensus && (
-        <div className="mt-2.5 flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg border font-mono bg-sky-50 dark:bg-sky-500/8 border-sky-200 dark:border-sky-500/20">
-          <span className="text-[10px] text-muted-foreground flex items-center gap-1 uppercase">
-            <TrendingUp className="w-3 h-3" /> Odds:
+        <div className="mt-2 pt-2 border-t border-surface-border flex items-center justify-between text-[11px] font-mono">
+          <span className="text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-1">
+            <TrendingUp className="w-3 h-3 text-muted-foreground" /> Odds
           </span>
-          <div className="flex items-center gap-3 text-[11px]">
-            <span className="text-muted-foreground">1: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{match.odds.consensus.home_win}</strong></span>
+          <div className="flex items-center gap-1.5">
+            <span className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded font-bold">
+              1: {match.odds.consensus.home_win.toFixed(2)}
+            </span>
             {match.odds.consensus.draw && (
-              <span className="text-muted-foreground">X: <strong className="text-amber-600 dark:text-amber-400 font-bold">{match.odds.consensus.draw}</strong></span>
+              <span className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold">
+                X: {match.odds.consensus.draw.toFixed(2)}
+              </span>
             )}
-            <span className="text-muted-foreground">2: <strong className="text-blue-600 dark:text-blue-400 font-bold">{match.odds.consensus.away_win}</strong></span>
+            <span className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold">
+              2: {match.odds.consensus.away_win.toFixed(2)}
+            </span>
           </div>
         </div>
       )}

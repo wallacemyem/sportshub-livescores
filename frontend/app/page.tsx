@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Match, SportType, MatchStatus, BetSlip, LiveDelta } from '@/types';
 import { useLiveMatchSocket } from '@/hooks/useLiveMatchSocket';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
@@ -59,6 +60,7 @@ const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ classN
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [selectedSport, setSelectedSport] = useState<SportType>('soccer');
   // First page default is strictly LIVE
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
@@ -258,15 +260,7 @@ export default function HomePage() {
   const handleSelectFromSearch = (m: Match) => {
     setSelectedSport(m.sport);
     setSelectedMatchId(m.id);
-    if (m.status === 'LIVE' || m.status === 'HALF_TIME') {
-      setStatusFilter('LIVE');
-    } else if (m.status === 'SCHEDULED') {
-      setStatusFilter('SCHEDULED');
-    } else if (m.status === 'FINISHED') {
-      setStatusFilter('FINISHED');
-    } else {
-      setStatusFilter('ALL');
-    }
+    router.push(`/match/${m.id}`);
   };
 
   return (
