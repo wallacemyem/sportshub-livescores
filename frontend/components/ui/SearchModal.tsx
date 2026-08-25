@@ -59,6 +59,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
           onClose();
         }
       } else if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
         onClose();
       }
     };
@@ -128,9 +129,12 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 pt-16 sm:pt-24 animate-in fade-in duration-150">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center p-3 sm:p-6 pt-16 sm:pt-24 animate-in fade-in duration-150 cursor-pointer"
+    >
       <div
-        className="bg-surface border border-surface-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-elevated flex flex-col max-h-[80vh]"
+        className="bg-surface border border-surface-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-elevated flex flex-col max-h-[80vh] cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input Bar */}
@@ -147,17 +151,32 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
             placeholder="Search games, teams, leagues, stadiums, or players... (e.g. Arsenal, Lakers, Madrid, Saka)"
             className="flex-1 bg-transparent text-sm sm:text-base font-medium text-foreground placeholder:text-muted-foreground focus:outline-none"
           />
+
+          {/* Clear query button (if query present) */}
           {query && (
             <button
               onClick={() => setQuery('')}
               className="p-1 rounded-md text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="Clear search query"
             >
               <X className="w-4 h-4" />
             </button>
           )}
+
+          {/* ESC key badge */}
           <span className="hidden sm:inline font-mono text-[10px] text-muted-foreground bg-surface border border-surface-border px-1.5 py-0.5 rounded">
             ESC
           </span>
+
+          {/* Always Visible Close Button */}
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer ml-1"
+            title="Close modal (Esc)"
+            aria-label="Close search modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Quick Sport Filter Chips */}
@@ -294,7 +313,12 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
             <span><strong className="text-foreground">ENTER</strong> to select</span>
             <span><strong className="text-foreground">ESC</strong> to close</span>
           </div>
-          <span className="font-bold text-blue-600 dark:text-blue-400">{filteredMatches.length} results</span>
+          <button
+            onClick={onClose}
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer font-bold"
+          >
+            Close Dialog ✕
+          </button>
         </div>
       </div>
     </div>

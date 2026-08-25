@@ -197,8 +197,8 @@ export default function MatchDetailPage() {
         {activeTab === 'odds' && <OddsComparisonTable odds={match.odds} />}
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {/* Mobile Bottom Navigation & Desktop Side Nav */}
+      <MobileNav activeNav="scores" />
     </div>
   );
 }

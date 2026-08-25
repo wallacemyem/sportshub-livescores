@@ -434,8 +434,8 @@ export default function SupportPage() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {/* Mobile Bottom Navigation & Desktop Side Nav */}
+      <MobileNav activeNav="support" />
     </div>
   );
 }

@@ -703,8 +703,11 @@ export default function HomePage() {
         onSuccess={() => setIsProUser(true)}
       />
 
-      {/* Mobile Sticky Bottom Navigation Bar */}
+      {/* Mobile Sticky Bottom Navigation Bar & Desktop Side Nav Dock */}
       <MobileNav
+        activeNav={statusFilter === 'LIVE' ? 'live' : 'scores'}
+        onSelectScores={() => setStatusFilter('ALL')}
+        onSelectLive={() => setStatusFilter('LIVE')}
         onOpenProModal={() => setIsProModalOpen(true)}
         onOpenSupportModal={() => setIsSupportOpen(true)}
         onOpenSearchModal={() => setIsSearchModalOpen(true)}

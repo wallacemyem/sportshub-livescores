@@ -1,15 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Radio, Newspaper, Headphones, Shield, Activity, Search } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { useState } from 'react';
 
 interface MobileNavProps {
   onOpenProModal?: () => void;
   onOpenSupportModal?: () => void;
   onOpenSearchModal?: () => void;
+  onSelectScores?: () => void;
+  onSelectLive?: () => void;
+  activeNav?: 'scores' | 'live' | 'blog' | 'support';
   liveCount?: number;
 }
 
@@ -17,13 +19,45 @@ export function MobileNav({
   onOpenProModal,
   onOpenSupportModal,
   onOpenSearchModal,
+  onSelectScores,
+  onSelectLive,
+  activeNav,
   liveCount = 0,
 }: MobileNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
-  const isHome = pathname === '/';
-  const isBlog = pathname.startsWith('/blog');
-  const isSupport = pathname === '/support';
+  // Determine current active item
+  let currentActive: 'scores' | 'live' | 'blog' | 'support' = 'scores';
+  if (activeNav) {
+    currentActive = activeNav;
+  } else if (pathname.startsWith('/support')) {
+    currentActive = 'support';
+  } else if (pathname.startsWith('/blog')) {
+    currentActive = 'blog';
+  } else if (pathname.startsWith('/match')) {
+    currentActive = 'scores';
+  } else if (pathname === '/') {
+    currentActive = 'scores';
+  }
+
+  const handleScoresClick = (e: React.MouseEvent) => {
+    if (pathname === '/') {
+      e.preventDefault();
+      if (onSelectScores) {
+        onSelectScores();
+      }
+    }
+  };
+
+  const handleLiveClick = (e: React.MouseEvent) => {
+    if (pathname === '/') {
+      e.preventDefault();
+      if (onSelectLive) {
+        onSelectLive();
+      }
+    }
+  };
 
   return (
     <>
@@ -40,8 +74,9 @@ export function MobileNav({
             {/* Scores / Home */}
             <Link
               href="/"
+              onClick={handleScoresClick}
               className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 min-w-[52px] ${
-                isHome
+                currentActive === 'scores'
                   ? 'bg-white/90 dark:bg-white/15 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10'
               }`}
@@ -72,13 +107,18 @@ export function MobileNav({
             {/* Live Filter Shortcut */}
             <Link
               href="/?filter=LIVE"
-              className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10 transition-all duration-200 relative min-w-[52px]"
+              onClick={handleLiveClick}
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 relative min-w-[52px] ${
+                currentActive === 'live'
+                  ? 'bg-white/90 dark:bg-white/15 text-red-600 dark:text-red-400 font-bold shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10'
+              }`}
             >
               <div className="relative">
-                <Radio className="w-4 h-4 text-red-500" />
+                <Radio className={`w-4 h-4 ${currentActive === 'live' ? 'text-red-500' : 'text-muted-foreground'}`} />
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               </div>
-              <span className="text-[9px] font-medium text-foreground flex items-center gap-1">
+              <span className="text-[9px] font-medium flex items-center gap-1">
                 Live
                 {liveCount > 0 && (
                   <span className="bg-red-500 text-white text-[8px] font-mono font-bold px-1 rounded-full min-w-[14px] text-center">
@@ -92,7 +132,7 @@ export function MobileNav({
             <Link
               href="/blog"
               className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 min-w-[52px] ${
-                isBlog
+                currentActive === 'blog'
                   ? 'bg-white/90 dark:bg-white/15 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10'
               }`}
@@ -105,7 +145,7 @@ export function MobileNav({
             <Link
               href="/support"
               className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 min-w-[52px] ${
-                isSupport
+                currentActive === 'support'
                   ? 'bg-white/90 dark:bg-white/15 text-blue-600 dark:text-blue-400 font-bold shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-white/40 dark:hover:bg-white/10'
               }`}
@@ -144,13 +184,14 @@ export function MobileNav({
         className="hidden md:flex fixed left-3 lg:left-4 top-1/2 -translate-y-1/2 z-40 select-none flex-col items-center pointer-events-auto"
       >
         <div className="relative rounded-2xl p-2 flex flex-col items-center gap-2 backdrop-blur-2xl backdrop-saturate-200 bg-white/70 dark:bg-slate-900/75 border border-white/60 dark:border-white/15 shadow-[0_16px_48px_rgba(0,0,0,0.14)] dark:shadow-[0_20px_56px_rgba(0,0,0,0.5)] overflow-hidden before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-b before:from-white/30 before:to-transparent before:pointer-events-none">
-          {/* Logo / Home Indicator */}
+          {/* Scores Feed */}
           <Link
             href="/"
+            onClick={handleScoresClick}
             title="Scores Feed"
             className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
-              isHome
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+              currentActive === 'scores'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10'
             }`}
           >
@@ -188,11 +229,16 @@ export function MobileNav({
           {/* Live Filter */}
           <Link
             href="/?filter=LIVE"
+            onClick={handleLiveClick}
             title="Live Matches"
-            className="group relative p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10 flex items-center justify-center transition-all duration-200"
+            className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              currentActive === 'live'
+                ? 'bg-red-500 text-white shadow-md shadow-red-500/30 font-bold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10'
+            }`}
           >
             <div className="relative">
-              <Radio className="w-5 h-5 text-red-500" />
+              <Radio className={`w-5 h-5 ${currentActive === 'live' ? 'text-white' : 'text-red-500'}`} />
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             </div>
             <span className="absolute left-full ml-3 px-2 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50 flex items-center gap-1.5">
@@ -212,8 +258,8 @@ export function MobileNav({
             href="/blog"
             title="Editorial Blog"
             className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
-              isBlog
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+              currentActive === 'blog'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10'
             }`}
           >
@@ -228,8 +274,8 @@ export function MobileNav({
             href="/support"
             title="Customer Support"
             className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
-              isSupport
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+              currentActive === 'support'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold'
                 : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10'
             }`}
           >

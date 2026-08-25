@@ -240,8 +240,8 @@ export default function ArticleReaderPage() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {/* Mobile Bottom Navigation & Desktop Side Nav */}
+      <MobileNav activeNav="blog" />
     </div>
   );
 }
