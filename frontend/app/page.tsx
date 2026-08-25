@@ -429,28 +429,28 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* Tracked Bet Slips & Accumulators */}
+          {/* Tracked Bet Slips & Bets */}
           <div className="bg-surface rounded-xl border border-surface-border p-4 flex-1 shadow-subtle">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <Ticket className="w-3.5 h-3.5" /> Active Accumulators
+                <Ticket className="w-3.5 h-3.5" /> My Bet Slips
               </h3>
               <button
                 onClick={() => setIsImporterOpen(true)}
                 className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
               >
-                + Add Slip
+                + Track Bet
               </button>
             </div>
 
             {betSlips.length === 0 ? (
               <div className="text-center py-6 text-xs text-muted-foreground">
-                <p>No active bet slips imported.</p>
+                <p>No tracked bet slips yet.</p>
                 <button
                   onClick={() => setIsImporterOpen(true)}
                   className="mt-2 text-foreground font-bold hover:underline cursor-pointer block mx-auto"
                 >
-                  Import Booking Code
+                  Track a Bet Slip
                 </button>
               </div>
             ) : (
@@ -506,7 +506,7 @@ export default function HomePage() {
                   }`}
                 >
                   <Ticket className="w-3.5 h-3.5" />
-                  <span>My Tickets ({ticketLiveCount})</span>
+                  <span>My Bets ({ticketLiveCount})</span>
                 </button>
 
                 <button
@@ -528,8 +528,8 @@ export default function HomePage() {
                     <Ticket className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-foreground">Track Live Legs From Your Bookmaker Ticket</p>
-                    <p className="text-[10px] text-muted-foreground">Import code from SportyBet, Bet9ja, 1xBet, BetKing</p>
+                    <p className="text-xs font-bold text-foreground">Track Live Bets & Cashouts</p>
+                    <p className="text-[10px] text-muted-foreground">Enter your booking code from SportyBet, Bet9ja, 1xBet, BetKing</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -545,7 +545,7 @@ export default function HomePage() {
                     onClick={() => setIsImporterOpen(true)}
                     className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    Import Code
+                    Track Bet
                   </button>
                 </div>
               </div>

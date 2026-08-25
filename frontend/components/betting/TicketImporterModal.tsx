@@ -40,14 +40,14 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
     setIsLoading(true);
     setError(null);
-    setScanStep('Connecting to multi-bookmaker resolver...');
+    setScanStep('Connecting to sportsbook network...');
 
     const scanSteps = [
-      'Scanning SportyBet registry (6-8 char format)...',
-      'Scanning Bet9ja booking registry (6-7 char format)...',
-      'Scanning 1xBet bet slip registry (5-char format)...',
-      'Scanning BetKing accumulator database...',
-      'Scanning MSport and MozzartBet feeds...',
+      'Checking SportyBet...',
+      'Checking Bet9ja...',
+      'Checking 1xBet...',
+      'Checking BetKing...',
+      'Checking MSport & MozzartBet...',
     ];
 
     let stepIdx = 0;
@@ -64,19 +64,19 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          bookmaker: bookmaker === 'auto' ? '' : bookmaker,
+          bookmaker,
           booking_code: cleanCode,
-          stake: parseFloat(stake) || 20,
+          stake: parseFloat(stake) || 50,
         }),
       });
 
       clearInterval(stepInterval);
 
       if (!res.ok) {
-        const data = await res.json();
+        const errData = await res.json().catch(() => ({}));
         throw new Error(
-          data.error ||
-          `No matching bookmaker found for code "${cleanCode}". Scanned across SportyBet, Bet9ja, 1xBet, BetKing, MSport, and MozzartBet.`
+          errData.error ||
+          `Could not find a bet slip matching code "${cleanCode}". Please verify the code or select your sportsbook.`
         );
       }
 
@@ -93,7 +93,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
       onClose();
     } catch (err: any) {
       clearInterval(stepInterval);
-      setError(err.message || `No bookmaker found matching code "${cleanCode}".`);
+      setError(err.message || `No bet slip found matching code "${cleanCode}".`);
     } finally {
       setIsLoading(false);
       setScanStep('');
@@ -110,8 +110,8 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
               <Ticket className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground text-sm font-mono">Multi-Bookmaker Bet Slip Resolver</h3>
-              <p className="text-[11px] text-muted-foreground font-mono">Automatic looping across global bookmakers</p>
+              <h3 className="font-bold text-foreground text-sm font-sans">Import & Track Bet Slip</h3>
+              <p className="text-[11px] text-muted-foreground">Real-time live scores and cashout tracking</p>
             </div>
           </div>
           <button
@@ -129,7 +129,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
             <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 rounded-xl text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Ticket Resolution Failed</p>
+                <p className="font-bold">Bet Slip Not Found</p>
                 <p className="mt-0.5 text-xs leading-relaxed">{error}</p>
               </div>
             </div>
@@ -138,11 +138,11 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
           {/* Bookmaker Selector */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-foreground uppercase tracking-wider font-mono">
-                Bookmaker Resolution Mode
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider font-sans">
+                Sportsbook
               </label>
-              <span className="text-[10px] text-violet-600 dark:text-violet-400 font-mono flex items-center gap-1 font-bold">
-                <Zap className="w-3 h-3" /> Auto-Looping
+              <span className="text-[10px] text-violet-600 dark:text-violet-400 font-sans flex items-center gap-1 font-bold">
+                <Zap className="w-3 h-3" /> Auto-Detect
               </span>
             </div>
 
@@ -157,8 +157,8 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
                     : 'bg-surface-subtle border-surface-border text-foreground hover:bg-surface-hover'
                 }`}
               >
-                <span className="flex items-center gap-1.5 font-mono">
-                  <span>Auto-Detect (Loop All Bookmakers)</span>
+                <span className="flex items-center gap-1.5 font-sans">
+                  <span>Auto-Detect Any Sportsbook</span>
                 </span>
                 {bookmaker === 'auto' && <Check className="w-3.5 h-3.5" />}
               </button>
@@ -182,7 +182,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
                       : 'bg-surface-subtle border-surface-border text-muted-foreground hover:bg-surface-hover hover:text-foreground'
                   }`}
                 >
-                  <span className="text-[11px] font-mono">{b.name}</span>
+                  <span className="text-[11px] font-sans">{b.name}</span>
                   {bookmaker === b.id && <Check className="w-3 h-3 text-violet-600 dark:text-violet-400" />}
                 </button>
               ))}
@@ -191,8 +191,8 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
           {/* Booking Code Input */}
           <div>
-            <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
-              Booking Code
+            <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5 font-sans">
+              Booking Code / Bet ID
             </label>
             <input
               type="text"
@@ -206,7 +206,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
           {/* Stake Input */}
           <div>
-            <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5 font-sans">
               Stake Amount ($)
             </label>
             <input
@@ -222,21 +222,21 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
           {/* Preset Demo Codes */}
           <div>
-            <p className="text-[11px] text-muted-foreground font-semibold mb-1">
-              Quick Codes for Demo:
+            <p className="text-[11px] text-muted-foreground font-semibold mb-1 font-sans">
+              Quick Sample Codes:
             </p>
             <div className="grid grid-cols-2 gap-1.5">
               {SAMPLE_CODES.map((s) => (
                 <button
-                  key={s.code}
                   type="button"
+                  key={s.code}
                   onClick={() => {
-                    setBookmaker('auto');
+                    setBookmaker(s.bookmaker);
                     setBookingCode(s.code);
                   }}
-                  className="text-left bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-violet-300 dark:hover:border-violet-600 px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors truncate cursor-pointer font-mono"
+                  className="text-left bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-violet-300 dark:hover:border-violet-600 px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors truncate cursor-pointer font-sans"
                 >
-                  <strong className="text-violet-600 dark:text-violet-400">{s.code}</strong> - Auto Loop
+                  <strong className="text-violet-600 dark:text-violet-400 font-mono">{s.code}</strong> • <span className="capitalize">{s.bookmaker}</span>
                 </button>
               ))}
             </div>
@@ -244,7 +244,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
           {/* Active Scanning Status Message */}
           {isLoading && scanStep && (
-            <div className="p-2.5 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-lg text-center text-xs font-mono text-violet-700 dark:text-violet-300 flex items-center justify-center gap-2">
+            <div className="p-2.5 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-lg text-center text-xs font-sans text-violet-700 dark:text-violet-300 flex items-center justify-center gap-2">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-600" />
               <span>{scanStep}</span>
             </div>
@@ -259,10 +259,10 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
-                Looping Bookmakers & Resolving...
+                Finding Bet Slip...
               </>
             ) : (
-              'Auto-Resolve & Track Accumulator'
+              'Track Bet Slip'
             )}
           </button>
         </form>

@@ -11,7 +11,7 @@ export function OddsComparisonTable({ odds }: OddsComparisonTableProps) {
   if (!odds || !odds.bookmakers || odds.bookmakers.length === 0) {
     return (
       <div className="bg-surface rounded-xl border border-surface-border p-4 text-center text-muted-foreground text-xs">
-        No bookmaker odds currently open for this match.
+        No betting odds currently available for this match.
       </div>
     );
   }
@@ -20,10 +20,10 @@ export function OddsComparisonTable({ odds }: OddsComparisonTableProps) {
     <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 font-mono">
-          <Layers className="w-3.5 h-3.5 text-muted-foreground" /> Odds Comparison & Line Moves
+          <Layers className="w-3.5 h-3.5 text-muted-foreground" /> Sportsbook Odds & Live Lines
         </h4>
         <span className="text-[10px] text-muted-foreground font-mono">
-          The Odds API
+          Live Market
         </span>
       </div>
 
@@ -31,9 +31,9 @@ export function OddsComparisonTable({ odds }: OddsComparisonTableProps) {
       <div className="bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-500/10 dark:to-blue-500/10 border border-sky-200 dark:border-sky-500/30 rounded-xl p-3 mb-3 flex items-center justify-between">
         <div>
           <span className="text-xs font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> Market Consensus (Fair Odds)
+            <TrendingUp className="w-3.5 h-3.5" /> Best Market Average
           </span>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Aggregated tier-1 bookmaker average</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Aggregated odds across top sportsbooks</p>
         </div>
         <div className="flex items-center gap-4 font-mono text-sm font-bold">
           <div className="text-center">
@@ -58,7 +58,7 @@ export function OddsComparisonTable({ odds }: OddsComparisonTableProps) {
         <table className="w-full text-xs text-left">
           <thead>
             <tr className="border-b border-surface-border text-muted-foreground text-[10px] uppercase font-mono">
-              <th className="py-2 px-3">Bookmaker</th>
+              <th className="py-2 px-3">Sportsbook</th>
               <th className="py-2 px-3 text-center">1 (Home)</th>
               <th className="py-2 px-3 text-center">X (Draw)</th>
               <th className="py-2 px-3 text-center">2 (Away)</th>
