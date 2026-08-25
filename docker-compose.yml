@@ -1,0 +1,128 @@
+version: '3.8'
+
+services:
+  # 1. Core Relational Database with Supabase Realtime WAL (Non-Standard Port: 25432)
+  postgres:
+    image: postgres:16-alpine
+    container_name: sports_postgres
+    restart: unless-stopped
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=5", "-c", "max_wal_senders=5"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-sportsdb}
+    ports:
+      - "${POSTGRES_PORT:-25432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sportsdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sports_net
+
+  # 2. Redis In-Memory State & Pub/Sub Broker (Non-Standard Port: 26379)
+  redis:
+    image: redis:7-alpine
+    container_name: sports_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-26379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sports_net
+
+  # 3. High-Concurrency Go Backend Engine (Non-Standard Port: 18443)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sports_backend
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-sportsdb}?sslmode=disable"
+      REDIS_ADDR: "redis:6379"
+      SUPABASE_URL: "${SUPABASE_URL:-https://sports-livescores.supabase.co}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3J0cyIsImV4cCI6MTk4MzIzODQ0M30.sports_anon_token_18443}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3J0cyIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.sports_service_token_18443}"
+      SUPABASE_STORAGE_BUCKET: "${SUPABASE_STORAGE_BUCKET:-sports-assets}"
+      ESPN_API_BASE_URL: "https://site.api.espn.com/apis/site/v2/sports"
+      ODDS_API_BASE_URL: "https://api.the-odds-api.com/v4"
+      ODDS_API_KEY: "${ODDS_API_KEY:-demo_pro_key_sports_18443}"
+      FLW_SECRET_KEY: "${FLW_SECRET_KEY:-FLWSECK_TEST_3847291847293847}"
+      FLW_SECRET_HASH: "${FLW_SECRET_HASH:-flw_sports_secret_hash_token_18443}"
+      CRYPTOMUS_MERCHANT_ID: "${CRYPTOMUS_MERCHANT_ID:-merch_88291a_sports}"
+      CRYPTOMUS_PAYMENT_KEY: "${CRYPTOMUS_PAYMENT_KEY:-cryptomus_payment_api_key_secure_18443}"
+      FRONTEND_URL: "http://localhost:17080"
+      ADMIN_URL: "http://localhost:19080"
+      SIMULATION_ENABLED: "true"
+    ports:
+      - "${BACKEND_PORT:-18443}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sports_net
+
+  # 4. Next.js 14 Client Web Application (Non-Standard Port: 17080)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sports_frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      NEXT_PUBLIC_API_URL: "http://localhost:18443/api/v1"
+      NEXT_PUBLIC_WS_URL: "ws://localhost:18443/ws"
+      NEXT_PUBLIC_SUPABASE_URL: "${SUPABASE_URL:-https://sports-livescores.supabase.co}"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3J0cyIsImV4cCI6MTk4MzIzODQ0M30.sports_anon_token_18443}"
+    ports:
+      - "${FRONTEND_PORT:-17080}:3000"
+    depends_on:
+      - backend
+    networks:
+      - sports_net
+
+  # 5. Cloudflare Kumo Admin Dashboard (Non-Standard Port: 19080)
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: sports_admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      NEXT_PUBLIC_API_URL: "http://localhost:18443/api/v1"
+      NEXT_PUBLIC_SUPABASE_URL: "${SUPABASE_URL:-https://sports-livescores.supabase.co}"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3J0cyIsImV4cCI6MTk4MzIzODQ0M30.sports_anon_token_18443}"
+    ports:
+      - "${ADMIN_PORT:-19080}:3000"
+    depends_on:
+      - backend
+    networks:
+      - sports_net
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sports_net:
+    driver: bridge
