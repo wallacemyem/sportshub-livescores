@@ -603,7 +603,7 @@ export default function HomePage() {
 
                 {/* Main Match Header Score Banner */}
                 <div className="flex items-center justify-between gap-4 py-2">
-                  <div className="text-center flex-1 flex flex-col items-center">
+                  <div className="text-center flex-1 flex flex-col items-center min-w-0">
                     <TeamCrest
                       name={selectedMatch.home_team.name}
                       shortName={selectedMatch.home_team.short_name}
@@ -611,10 +611,13 @@ export default function HomePage() {
                       size="lg"
                       className="mb-1"
                     />
-                    <p className="text-xs font-bold text-foreground truncate w-full px-1">{selectedMatch.home_team.name}</p>
+                    <p className="text-xs font-bold text-foreground truncate w-full px-1">
+                      <span className="inline sm:hidden">{selectedMatch.home_team.short_name || selectedMatch.home_team.name.slice(0, 3)}</span>
+                      <span className="hidden sm:inline">{selectedMatch.home_team.name}</span>
+                    </p>
                   </div>
 
-                  <div className="text-center font-mono">
+                  <div className="text-center font-mono shrink-0 px-2">
                     <div className={`text-2xl font-black tracking-wider px-4 py-1.5 rounded-xl border inline-block ${
                       selectedMatch.status === 'LIVE'
                         ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30'
@@ -629,7 +632,7 @@ export default function HomePage() {
                     </p>
                   </div>
 
-                  <div className="text-center flex-1 flex flex-col items-center">
+                  <div className="text-center flex-1 flex flex-col items-center min-w-0">
                     <TeamCrest
                       name={selectedMatch.away_team.name}
                       shortName={selectedMatch.away_team.short_name}
@@ -637,7 +640,10 @@ export default function HomePage() {
                       size="lg"
                       className="mb-1"
                     />
-                    <p className="text-xs font-bold text-foreground truncate w-full px-1">{selectedMatch.away_team.name}</p>
+                    <p className="text-xs font-bold text-foreground truncate w-full px-1">
+                      <span className="inline sm:hidden">{selectedMatch.away_team.short_name || selectedMatch.away_team.name.slice(0, 3)}</span>
+                      <span className="hidden sm:inline">{selectedMatch.away_team.name}</span>
+                    </p>
                   </div>
                 </div>
 

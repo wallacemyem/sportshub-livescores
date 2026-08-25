@@ -173,9 +173,9 @@ export default function MatchDetailPage() {
           </div>
 
           {/* Main Teams Matchup Scoreboard */}
-          <div className="grid grid-cols-12 items-center gap-3 sm:gap-6 my-2">
+          <div className="flex items-center justify-between gap-2 sm:gap-6 my-3 px-1 sm:px-4">
             {/* Home Team */}
-            <div className="col-span-5 text-center flex flex-col items-center">
+            <div className="flex-1 text-center flex flex-col items-center min-w-0">
               <TeamCrest
                 name={match.home_team.name}
                 shortName={match.home_team.short_name}
@@ -196,8 +196,8 @@ export default function MatchDetailPage() {
             </div>
 
             {/* Score Center */}
-            <div className="col-span-2 text-center font-mono">
-              <div className={`text-2xl sm:text-4xl md:text-5xl font-black px-3 sm:px-5 py-1.5 sm:py-2 rounded-2xl border inline-block shadow-sm ${
+            <div className="shrink-0 text-center font-mono px-2 sm:px-4">
+              <div className={`text-2xl sm:text-4xl md:text-5xl font-black px-4 sm:px-6 py-2 rounded-2xl border inline-block shadow-sm ${
                 isLive
                   ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30'
                   : 'text-foreground bg-surface-subtle border-surface-border'
@@ -212,7 +212,7 @@ export default function MatchDetailPage() {
             </div>
 
             {/* Away Team */}
-            <div className="col-span-5 text-center flex flex-col items-center">
+            <div className="flex-1 text-center flex flex-col items-center min-w-0">
               <TeamCrest
                 name={match.away_team.name}
                 shortName={match.away_team.short_name}
