@@ -93,10 +93,20 @@ func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
 
 		// Admin Management & Orchestrator
 		api.Route("/admin", func(adm chi.Router) {
+			// Console
+			adm.Get("/overview", h.Admin.GetOverview)
+			adm.Get("/users", h.Admin.GetUsers)
+			adm.Patch("/users/{id}", h.Admin.UpdateUser)
+			adm.Get("/slips", h.Admin.GetSlips)
+			adm.Get("/transactions", h.Admin.GetTransactions)
+
+			// Live operations
 			adm.Get("/telemetry", h.Admin.GetTelemetry)
 			adm.Get("/clients", h.Admin.GetClients)
 			adm.Post("/matches/{id}/override", h.Admin.OverrideMatch)
 			adm.Post("/matches/{id}/simulate-goal", h.Admin.SimulateGoal)
+
+			// Finance & parser
 			adm.Get("/financials", h.Admin.GetFinancials)
 			adm.Get("/webhooks", h.Admin.GetWebhooks)
 			adm.Get("/parser/metrics", h.Admin.GetParserMetrics)

@@ -203,3 +203,98 @@ export interface SupportTicket {
   created_at: string;
   updated_at: string;
 }
+
+/* ---------------------------------------------------------------------------
+ * Admin console
+ *
+ * These mirror the pre-joined rows returned by /api/v1/admin/*. The joins
+ * (slip → user, payment → payer) happen server-side so a paginated table can
+ * show a total that agrees with its rows.
+ * ------------------------------------------------------------------------- */
+
+export type UserPlan = 'free' | 'pro';
+export type UserStatus = 'active' | 'suspended';
+export type PaymentGateway = 'flutterwave' | 'cryptomus';
+export type TransactionStatus = 'successful' | 'paid' | 'pending' | 'failed' | 'refunded';
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  name: string;
+  plan: UserPlan;
+  plan_expiry?: string;
+  status: UserStatus;
+  country: string;
+  signup_source: string;
+  slips_scanned: number;
+  active_slips: number;
+  lifetime_value_usd: number;
+  last_seen_at: string;
+  created_at: string;
+}
+
+export interface AdminSlipRow {
+  id: string;
+  booking_code: string;
+  bookmaker: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  user_plan: UserPlan;
+  legs: number;
+  legs_won: number;
+  legs_lost: number;
+  stake: number;
+  total_odds: number;
+  potential_win: number;
+  current_cashout: number;
+  status: BetSlipStatus;
+  parse_ms: number;
+  scanned_at: string;
+}
+
+export interface AdminTransactionRow {
+  id: string;
+  reference: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  gateway: PaymentGateway;
+  method: string;
+  amount: number;
+  currency: string;
+  status: TransactionStatus;
+  plan: UserPlan;
+  billing_cycle: string;
+  created_at: string;
+}
+
+export interface AdminTimePoint {
+  label: string;
+  revenue_usd: number;
+  signups: number;
+  slips: number;
+}
+
+export interface AdminOverview {
+  total_users: number;
+  new_users_7d: number;
+  pro_users: number;
+  suspended_users: number;
+  mrr_usd: number;
+  revenue_usd: number;
+  revenue_7d_usd: number;
+  arpu_usd: number;
+  slips_scanned_total: number;
+  slips_scanned_24h: number;
+  active_slips: number;
+  parse_success_pct: number;
+  failed_payments_7d: number;
+  open_tickets: number;
+  connected_clients: number;
+  live_matches: number;
+  ingestion_latency_ms: number;
+  trend: AdminTimePoint[];
+  slips_by_bookmaker: Record<string, number>;
+  plan_split: Record<string, number>;
+}

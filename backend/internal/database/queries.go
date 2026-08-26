@@ -20,6 +20,12 @@ type Store struct {
 	webhookLogs    []*models.WebhookLog
 	posts          map[string]*models.BlogPost
 	supportTickets map[string]*models.SupportTicket
+
+	// Side tables for detail the core models do not carry. Keyed by the
+	// transaction / slip ID they annotate.
+	txMethods   map[string]string
+	txCycles    map[string]string
+	slipParseMs map[string]int
 }
 
 func NewStore(db *DB) *Store {
@@ -34,6 +40,9 @@ func NewStore(db *DB) *Store {
 		webhookLogs:    make([]*models.WebhookLog, 0),
 		posts:          make(map[string]*models.BlogPost),
 		supportTickets: make(map[string]*models.SupportTicket),
+		txMethods:      make(map[string]string),
+		txCycles:       make(map[string]string),
+		slipParseMs:    make(map[string]int),
 	}
 
 	// Seed blog posts
@@ -48,9 +57,9 @@ func NewStore(db *DB) *Store {
 		ID:        "tkt_sup_01",
 		UserID:    "usr_pro_01",
 		UserName:  "Alex Mercer",
-		UserEmail: "pro_trader@livescores.io",
-		Subject:   "VIP Stream Ingestion & Low-Latency WebSocket setup",
-		Category:  "Live Stream & Scores",
+		UserEmail: "alex.mercer@example.com",
+		Subject:   "Booking code not resolving on MSport",
+		Category:  "Slip tracking",
 		Priority:  "high",
 		Status:    "in_progress",
 		Messages: []models.SupportTicketMessage{
@@ -58,14 +67,14 @@ func NewStore(db *DB) *Store {
 				ID:         "msg_01",
 				Sender:     "user",
 				SenderName: "Alex Mercer",
-				Message:    "Hello, I am using the Pro API and WebSocket gateway on port 18443. How do I subscribe to delta pitch coordinate feeds for Arsenal vs Man City?",
+				Message:    "My MSport code MS-90441 only shows 3 of the 4 legs on my slip.",
 				CreatedAt:  time.Now().Add(-2 * time.Hour),
 			},
 			{
 				ID:         "msg_02",
 				Sender:     "agent",
-				SenderName: "Sarah (Support Lead)",
-				Message:    "Hi Alex! You can send {\"action\": \"subscribe\", \"match_id\": \"match-epl-01\"} over the WebSocket connection to receive real-time pitch coordinates and goal events.",
+				SenderName: "Support",
+				Message:    "Thanks Alex - checking the parser logs for that code now.",
 				CreatedAt:  time.Now().Add(-1 * time.Hour),
 			},
 		},
@@ -75,26 +84,26 @@ func NewStore(db *DB) *Store {
 
 	store.supportTickets["tkt_sup_02"] = &models.SupportTicket{
 		ID:        "tkt_sup_02",
-		UserID:    "usr_fan_02",
-		UserName:  "Marcus Sterling",
-		UserEmail: "marcus@tactics.io",
-		Subject:   "Cryptomus USDT transaction confirmation query",
-		Category:  "VIP & Pro Billing",
+		UserID:    "usr_free_05",
+		UserName:  "Brian Otieno",
+		UserEmail: "brian.otieno@example.com",
+		Subject:   "Refund for a duplicate charge",
+		Category:  "Billing",
 		Priority:  "medium",
-		Status:    "resolved",
+		Status:    "open",
 		Messages: []models.SupportTicketMessage{
 			{
 				ID:         "msg_03",
 				Sender:     "user",
-				SenderName: "Marcus Sterling",
-				Message:    "I paid for the annual Pro subscription using Cryptomus USDT on Tron network. Payment was confirmed on-chain in 2 minutes!",
+				SenderName: "Brian Otieno",
+				Message:    "I was charged twice for the monthly plan this week.",
 				CreatedAt:  time.Now().Add(-24 * time.Hour),
 			},
 			{
 				ID:         "msg_04",
 				Sender:     "agent",
-				SenderName: "David (Billing Specialist)",
-				Message:    "Thank you Marcus! Your account has been upgraded to Pro with full live odds and pitch telemetry access.",
+				SenderName: "Support",
+				Message:    "Thanks for flagging - raising the refund with the gateway now.",
 				CreatedAt:  time.Now().Add(-23 * time.Hour),
 			},
 		},
@@ -114,89 +123,13 @@ func NewStore(db *DB) *Store {
 		}
 	}
 
-	// Seed sample Pro & Free users
-	proExpiry := time.Now().Add(30 * 24 * time.Hour)
-	store.users["usr_pro_01"] = &models.User{
-		ID:        "usr_pro_01",
-		Email:     "pro_trader@livescores.io",
-		Name:      "Alex Mercer",
-		Plan:      models.PlanPro,
-		PlanExpiry: &proExpiry,
-		CreatedAt: time.Now().Add(-15 * 24 * time.Hour),
-	}
-	store.users["usr_free_01"] = &models.User{
-		ID:        "usr_free_01",
-		Email:     "fan@livescores.io",
-		Name:      "Jordan Smith",
-		Plan:      models.PlanFree,
-		CreatedAt: time.Now().Add(-5 * 24 * time.Hour),
-	}
-
-	// Seed sample bet slips
-	store.seedSampleBetSlips()
+	// Seed the accounts, payments and scanned slips the admin console reads.
+	// This supersedes the two-user / one-slip fixture that used to live here.
+	store.seedAdminPopulation()
 
 	return store
 }
 
-func (s *Store) seedSampleBetSlips() {
-	m1 := s.matches["match-epl-01"]
-	m2 := s.matches["match-ucl-02"]
-	m3 := s.matches["match-nba-01"]
-
-	if m1 != nil && m2 != nil && m3 != nil {
-		slip := &models.BetSlip{
-			ID:                 "slip-sporty-01",
-			UserID:             "usr_pro_01",
-			Bookmaker:          "sportybet",
-			BookingCode:        "BC99214",
-			Stake:              50.00,
-			TotalOdds:          7.42,
-			PotentialWin:       371.00,
-			CurrentCashout:     218.40,
-			CashoutProbability: 0.76,
-			Status:             models.SlipRunning,
-			Legs: []models.BetSlipLeg{
-				{
-					ID:             "leg-1",
-					MatchID:        m1.ID,
-					Match:          *m1,
-					Market:         "1X2",
-					Selection:      "Arsenal",
-					Odds:           1.45,
-					Status:         models.LegRunning,
-					CurrentScore:   "2-1 (68')",
-					FulfillmentPct: 82.0,
-				},
-				{
-					ID:             "leg-2",
-					MatchID:        m2.ID,
-					Match:          *m2,
-					Market:         "Over/Under 2.5",
-					Selection:      "Over 2.5 Goals",
-					Odds:           1.55,
-					Status:         models.LegRunning,
-					CurrentScore:   "1-1 (39')",
-					FulfillmentPct: 75.0,
-				},
-				{
-					ID:             "leg-3",
-					MatchID:        m3.ID,
-					Match:          *m3,
-					Market:         "Moneyline",
-					Selection:      "Boston Celtics",
-					Odds:           1.42,
-					Status:         models.LegRunning,
-					CurrentScore:   "89-94 (Q4)",
-					FulfillmentPct: 70.0,
-				},
-			},
-			CreatedAt: time.Now().Add(-2 * time.Hour),
-			UpdatedAt: time.Now(),
-		}
-		s.betSlips[slip.ID] = slip
-		s.betSlips[slip.BookingCode] = slip
-	}
-}
 
 // Matches
 func (s *Store) GetAllMatches(sport models.SportType, status models.MatchStatus) []models.Match {
@@ -395,13 +328,17 @@ func (s *Store) GetFinancialMetrics() models.FinancialMetrics {
 		}
 	}
 
+	// No padded baselines here. These used to add a few thousand dollars and
+	// a few thousand users to make the dashboard look busy, which meant the
+	// finance tab and the overview KPIs reported different totals for the
+	// same data. Everything is now derived from the transactions above.
 	return models.FinancialMetrics{
-		TotalRevenueUSD:     total + 4820.00, // Seed realistic baseline
-		MonthlyRecurringUSD: float64(proUsers)*29.00 + 3480.00,
-		FlutterwaveVolume:   flwVol + 2650.00,
-		CryptomusVolume:     cryptoVol + 2170.00,
-		ActiveProUsers:      proUsers + 120,
-		TotalUsers:          len(s.users) + 4200,
+		TotalRevenueUSD:     total,
+		MonthlyRecurringUSD: float64(proUsers) * 9.00,
+		FlutterwaveVolume:   flwVol,
+		CryptomusVolume:     cryptoVol,
+		ActiveProUsers:      proUsers,
+		TotalUsers:          len(s.users),
 		RecentTransactions:  recent,
 	}
 }

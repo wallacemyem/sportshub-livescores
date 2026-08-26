@@ -173,3 +173,135 @@ func (h *AdminHandler) GetParserMetrics(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(metrics)
 }
+
+// ---------------------------------------------------------------------------
+// Console data: accounts, payments and scanned slips.
+//
+// Each returns a pre-joined list plus its own total, so a paginated table can
+// show an accurate count without a second request.
+// ---------------------------------------------------------------------------
+
+func writeJSON(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+// GetOverview backs the console landing tab.
+func (h *AdminHandler) GetOverview(w http.ResponseWriter, r *http.Request) {
+	connCount := h.wsHub.GetConnectedCount()
+	telemetry := h.worker.GetTelemetry(r.Context(), connCount)
+
+	overview := h.store.GetAdminOverview(connCount, telemetry.AvgIngestionLatencyMs)
+	writeJSON(w, http.StatusOK, overview)
+}
+
+// GetUsers lists accounts with their slip and spend aggregates.
+func (h *AdminHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
+	rows := h.store.GetAdminUsers()
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"users": rows,
+		"count": len(rows),
+	})
+}
+
+// GetSlips lists scanned booking codes attributed to the account that scanned
+// them. Optional ?user_id= narrows to one account.
+func (h *AdminHandler) GetSlips(w http.ResponseWriter, r *http.Request) {
+	rows := h.store.GetAdminSlips()
+
+	if userID := r.URL.Query().Get("user_id"); userID != "" {
+		filtered := make([]models.AdminSlipRow, 0, len(rows))
+		for _, row := range rows {
+			if row.UserID == userID {
+				filtered = append(filtered, row)
+			}
+		}
+		rows = filtered
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"slips": rows,
+		"count": len(rows),
+	})
+}
+
+// GetTransactions lists payments with the payer resolved. Optional ?user_id=
+// narrows to one account.
+func (h *AdminHandler) GetTransactions(w http.ResponseWriter, r *http.Request) {
+	rows := h.store.GetAdminTransactions()
+
+	if userID := r.URL.Query().Get("user_id"); userID != "" {
+		filtered := make([]models.AdminTransactionRow, 0, len(rows))
+		for _, row := range rows {
+			if row.UserID == userID {
+				filtered = append(filtered, row)
+			}
+		}
+		rows = filtered
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"transactions": rows,
+		"count":        len(rows),
+	})
+}
+
+type UpdateUserRequest struct {
+	Plan         models.UserPlan   `json:"plan,omitempty"`
+	Status       models.UserStatus `json:"status,omitempty"`
+	DurationDays int               `json:"duration_days,omitempty"`
+}
+
+// UpdateUser changes an account's plan, its status, or both. Both fields are
+// optional; whichever is present is applied.
+func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	var req UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	if req.Plan == "" && req.Status == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "nothing to update: pass plan, status, or both"})
+		return
+	}
+
+	var updated *models.User
+	var ok bool
+
+	if req.Plan != "" {
+		if req.Plan != models.PlanFree && req.Plan != models.PlanPro {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "plan must be free or pro"})
+			return
+		}
+		days := req.DurationDays
+		if days <= 0 {
+			days = 30
+		}
+		updated, ok = h.store.SetUserPlan(id, req.Plan, days)
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+			return
+		}
+	}
+
+	if req.Status != "" {
+		if req.Status != models.UserActive && req.Status != models.UserSuspended {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "status must be active or suspended"})
+			return
+		}
+		updated, ok = h.store.SetUserStatus(id, req.Status)
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "user not found"})
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user":    updated,
+		"updated": true,
+	})
+}

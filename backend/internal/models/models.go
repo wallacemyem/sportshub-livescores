@@ -198,12 +198,19 @@ const (
 )
 
 type User struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	Name      string    `json:"name"`
-	Plan      UserPlan  `json:"plan"`
+	ID         string     `json:"id"`
+	Email      string     `json:"email"`
+	Name       string     `json:"name"`
+	Plan       UserPlan   `json:"plan"`
 	PlanExpiry *time.Time `json:"plan_expiry,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt  time.Time  `json:"created_at"`
+
+	// Operational attributes, surfaced in the admin console. Status gates
+	// sign-in; the rest are for segmenting and for support context.
+	Status       UserStatus `json:"status"`
+	Country      string     `json:"country"`
+	SignupSource string     `json:"signup_source"`
+	LastSeenAt   time.Time  `json:"last_seen_at"`
 }
 
 type PaymentGateway string
@@ -344,4 +351,109 @@ type ParserMetrics struct {
 	SuccessRatePct       float64            `json:"success_rate_pct"`
 	ByBookmaker          map[string]int     `json:"by_bookmaker"`
 	RecentParsedSlips    []BetSlip          `json:"recent_parsed_slips"`
+}
+
+// ---------------------------------------------------------------------------
+// Admin console read models
+//
+// The admin dashboard needs rows that join across users, slips and payments.
+// Rather than have the client stitch three lists together (and get the counts
+// wrong whenever one of them paginates), the API returns pre-joined rows.
+// ---------------------------------------------------------------------------
+
+type UserStatus string
+
+const (
+	UserActive    UserStatus = "active"
+	UserSuspended UserStatus = "suspended"
+)
+
+// AdminUserRow is one line in the admin Users table: the account plus the
+// aggregates an operator actually decides on (spend, activity, slip volume).
+type AdminUserRow struct {
+	ID            string     `json:"id"`
+	Email         string     `json:"email"`
+	Name          string     `json:"name"`
+	Plan          UserPlan   `json:"plan"`
+	PlanExpiry    *time.Time `json:"plan_expiry,omitempty"`
+	Status        UserStatus `json:"status"`
+	Country       string     `json:"country"`
+	SignupSource  string     `json:"signup_source"`
+	SlipsScanned  int        `json:"slips_scanned"`
+	ActiveSlips   int        `json:"active_slips"`
+	LifetimeValue float64    `json:"lifetime_value_usd"`
+	LastSeenAt    time.Time  `json:"last_seen_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+// AdminSlipRow is one scanned booking code, attributed to the account that
+// scanned it. This is the join the old dashboard was missing entirely.
+type AdminSlipRow struct {
+	ID           string        `json:"id"`
+	BookingCode  string        `json:"booking_code"`
+	Bookmaker    string        `json:"bookmaker"`
+	UserID       string        `json:"user_id"`
+	UserName     string        `json:"user_name"`
+	UserEmail    string        `json:"user_email"`
+	UserPlan     UserPlan      `json:"user_plan"`
+	Legs         int           `json:"legs"`
+	LegsWon      int           `json:"legs_won"`
+	LegsLost     int           `json:"legs_lost"`
+	Stake        float64       `json:"stake"`
+	TotalOdds    float64       `json:"total_odds"`
+	PotentialWin float64       `json:"potential_win"`
+	Cashout      float64       `json:"current_cashout"`
+	Status       BetSlipStatus `json:"status"`
+	ParseMs      int           `json:"parse_ms"`
+	ScannedAt    time.Time     `json:"scanned_at"`
+}
+
+// AdminTransactionRow is a payment with the payer resolved.
+type AdminTransactionRow struct {
+	ID        string         `json:"id"`
+	Reference string         `json:"reference"`
+	UserID    string         `json:"user_id"`
+	UserName  string         `json:"user_name"`
+	UserEmail string         `json:"user_email"`
+	Gateway   PaymentGateway `json:"gateway"`
+	Method    string         `json:"method"`
+	Amount    float64        `json:"amount"`
+	Currency  string         `json:"currency"`
+	Status    string         `json:"status"`
+	Plan      UserPlan       `json:"plan"`
+	Cycle     string         `json:"billing_cycle"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+// AdminTimePoint is one bucket on the overview trend chart.
+type AdminTimePoint struct {
+	Label    string  `json:"label"`
+	Revenue  float64 `json:"revenue_usd"`
+	Signups  int     `json:"signups"`
+	Slips    int     `json:"slips"`
+}
+
+// AdminOverview is everything the landing tab of the console shows, in one
+// request, so the KPI row cannot disagree with the charts beneath it.
+type AdminOverview struct {
+	TotalUsers        int              `json:"total_users"`
+	NewUsers7d        int              `json:"new_users_7d"`
+	ProUsers          int              `json:"pro_users"`
+	SuspendedUsers    int              `json:"suspended_users"`
+	MRRUSD            float64          `json:"mrr_usd"`
+	RevenueUSD        float64          `json:"revenue_usd"`
+	Revenue7dUSD      float64          `json:"revenue_7d_usd"`
+	ARPUUSD           float64          `json:"arpu_usd"`
+	SlipsScannedTotal int              `json:"slips_scanned_total"`
+	SlipsScanned24h   int              `json:"slips_scanned_24h"`
+	ActiveSlips       int              `json:"active_slips"`
+	ParseSuccessPct   float64          `json:"parse_success_pct"`
+	FailedPayments7d  int              `json:"failed_payments_7d"`
+	OpenTickets       int              `json:"open_tickets"`
+	ConnectedClients  int              `json:"connected_clients"`
+	LiveMatches       int              `json:"live_matches"`
+	IngestionLatency  float64          `json:"ingestion_latency_ms"`
+	Trend             []AdminTimePoint `json:"trend"`
+	SlipsByBookmaker  map[string]int   `json:"slips_by_bookmaker"`
+	PlanSplit         map[string]int   `json:"plan_split"`
 }

@@ -1,229 +1,211 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Pagination } from '@/components/ui/Pagination';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  LayoutDashboard,
+  Users,
+  Ticket,
+  CreditCard,
+  Radio,
+  Headphones,
+  TrendingUp,
+  DollarSign,
+  UserPlus,
+  ScanLine,
+  AlertTriangle,
   Activity,
   Server,
-  Zap,
-  DollarSign,
-  TrendingUp,
-  Radio,
-  Sliders,
-  ShieldCheck,
-  Ticket,
-  Play,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Terminal,
-  Cpu,
-  Database,
-  ExternalLink,
-  Layers,
-  Sparkles,
-  Headphones,
   Send,
-  MessageSquare,
-  Search,
-  ArrowLeft,
-  RefreshCw,
-  Coins,
-  CreditCard,
-  Plus,
   Minus,
-  Check,
-  ChevronRight,
+  Plus,
+  Loader2,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { MobileNav } from '@/components/ui/MobileNav';
+import { AdminShell, type AdminSection } from '@/components/admin/AdminShell';
+import { DataTable, type Column } from '@/components/admin/DataTable';
+import {
+  BreakdownBars,
+  Chip,
+  KpiCard,
+  Panel,
+  TrendBars,
+  UserCell,
+  money,
+  num,
+  relTime,
+  shortDate,
+  slipTone,
+  txTone,
+  type Tone,
+} from '@/components/admin/primitives';
+import { UserDrawer } from '@/components/admin/UserDrawer';
 import { getApiBaseUrl } from '@/lib/api';
+import type {
+  AdminOverview,
+  AdminSlipRow,
+  AdminTransactionRow,
+  AdminUserRow,
+  SupportTicket,
+} from '@/types';
 
-interface TelemetryData {
-  active_pollers: number;
-  espn_polling_rate_sec: number;
-  odds_api_polling_rate_sec: number;
-  espn_quota_used: number;
-  espn_quota_limit: number;
-  odds_api_quota_used: number;
-  odds_api_quota_limit: number;
-  avg_ingestion_latency_ms: number;
-  redis_keys_count: number;
-  redis_memory_used_mb: number;
-  connected_clients: number;
-  broadcasts_per_minute: number;
-  last_updated: string;
-}
+type SectionId = 'overview' | 'users' | 'slips' | 'transactions' | 'live' | 'support';
 
-interface FinancialData {
-  total_revenue_usd: number;
-  mrr_usd: number;
-  flutterwave_volume_usd: number;
-  cryptomus_volume_usd: number;
-  active_pro_users: number;
-  total_users: number;
-  recent_transactions: any[];
-}
+const REFRESH_MS = 15000;
 
-interface ParserMetricsData {
-  total_parsed: number;
-  success_count: number;
-  failure_count: number;
-  success_rate_pct: number;
-  by_bookmaker: Record<string, number>;
-  recent_parsed_slips: any[];
-}
+export default function AdminConsolePage() {
+  const [section, setSection] = useState<SectionId>('overview');
 
-export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<'ingestion' | 'orchestrator' | 'financials' | 'parser' | 'support'>('ingestion');
-  const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
-  const [financials, setFinancials] = useState<FinancialData | null>(null);
-  const [parserMetrics, setParserMetrics] = useState<ParserMetricsData | null>(null);
+  // Console data
+  const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [slips, setSlips] = useState<AdminSlipRow[]>([]);
+  const [transactions, setTransactions] = useState<AdminTransactionRow[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+
+  // Live ops
+  const [telemetry, setTelemetry] = useState<any | null>(null);
   const [matches, setMatches] = useState<any[]>([]);
-  const [matchSearchQuery, setMatchSearchQuery] = useState('');
-  const [clients, setClients] = useState<any[]>([]);
-  const [webhooks, setWebhooks] = useState<any[]>([]);
-  const [supportTickets, setSupportTickets] = useState<any[]>([]);
-  const [ticketSearchQuery, setTicketSearchQuery] = useState('');
-  const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
-  const [agentReplyText, setAgentReplyText] = useState('');
-  const [testBookingCode, setTestBookingCode] = useState('BC99214');
-  const [testResult, setTestResult] = useState<any | null>(null);
-  const [isTestingParser, setIsTestingParser] = useState(false);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // UI state
+  const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [offline, setOffline] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // Pagination states across tables
-  const [clientsPage, setClientsPage] = useState(1);
-  const [clientsPageSize, setClientsPageSize] = useState(5);
+  const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
-  const [matchesPage, setMatchesPage] = useState(1);
-  const [matchesPageSize, setMatchesPageSize] = useState(6);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
 
-  const [webhooksPage, setWebhooksPage] = useState(1);
-  const [webhooksPageSize, setWebhooksPageSize] = useState(5);
+  const notify = useCallback((message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
-  const [ticketsPage, setTicketsPage] = useState(1);
-  const [ticketsPageSize, setTicketsPageSize] = useState(5);
+  /* ----------------------------- data loading ---------------------------- */
 
-  // Filtered & Paginated Slices
-  const paginatedClients = useMemo(() => {
-    const start = (clientsPage - 1) * clientsPageSize;
-    return clients.slice(start, start + clientsPageSize);
-  }, [clients, clientsPage, clientsPageSize]);
+  const fetchAll = useCallback(async () => {
+    setIsRefreshing(true);
+    const apiBase = getApiBaseUrl();
 
-  const filteredMatches = useMemo(() => {
-    if (!matchSearchQuery.trim()) return matches;
-    const q = matchSearchQuery.toLowerCase();
-    return matches.filter((m) =>
-      m.home_team?.name?.toLowerCase().includes(q) ||
-      m.away_team?.name?.toLowerCase().includes(q) ||
-      m.league?.name?.toLowerCase().includes(q) ||
-      m.sport?.toLowerCase().includes(q)
-    );
-  }, [matches, matchSearchQuery]);
+    const getJSON = async (path: string) => {
+      const res = await fetch(`${apiBase}${path}`);
+      if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+      return res.json();
+    };
 
-  const paginatedMatches = useMemo(() => {
-    const start = (matchesPage - 1) * matchesPageSize;
-    return filteredMatches.slice(start, start + matchesPageSize);
-  }, [filteredMatches, matchesPage, matchesPageSize]);
-
-  const paginatedWebhooks = useMemo(() => {
-    const start = (webhooksPage - 1) * webhooksPageSize;
-    return webhooks.slice(start, start + webhooksPageSize);
-  }, [webhooks, webhooksPage, webhooksPageSize]);
-
-  const filteredTickets = useMemo(() => {
-    if (!ticketSearchQuery.trim()) return supportTickets;
-    const q = ticketSearchQuery.toLowerCase();
-    return supportTickets.filter((t) =>
-      t.subject?.toLowerCase().includes(q) ||
-      t.user_name?.toLowerCase().includes(q) ||
-      t.category?.toLowerCase().includes(q) ||
-      t.id?.toLowerCase().includes(q)
-    );
-  }, [supportTickets, ticketSearchQuery]);
-
-  const paginatedTickets = useMemo(() => {
-    const start = (ticketsPage - 1) * ticketsPageSize;
-    return filteredTickets.slice(start, start + ticketsPageSize);
-  }, [filteredTickets, ticketsPage, ticketsPageSize]);
-
-  // Fetch all admin data
-  const fetchAll = async () => {
     try {
-      setIsRefreshing(true);
-      const apiBase = getApiBaseUrl();
-      const [telRes, finRes, parRes, matRes, cliRes, whRes, supRes] = await Promise.all([
-        fetch(`${apiBase}/admin/telemetry`),
-        fetch(`${apiBase}/admin/financials`),
-        fetch(`${apiBase}/admin/parser/metrics`),
-        fetch(`${apiBase}/matches`),
-        fetch(`${apiBase}/admin/clients`),
-        fetch(`${apiBase}/admin/webhooks`),
-        fetch(`${apiBase}/support/tickets`),
+      const [ov, us, sl, tx, tk, tel, mt] = await Promise.all([
+        getJSON('/admin/overview'),
+        getJSON('/admin/users'),
+        getJSON('/admin/slips'),
+        getJSON('/admin/transactions'),
+        getJSON('/support/tickets'),
+        getJSON('/admin/telemetry'),
+        getJSON('/matches'),
       ]);
 
-      if (telRes.ok) setTelemetry(await telRes.json());
-      if (finRes.ok) setFinancials(await finRes.json());
-      if (parRes.ok) setParserMetrics(await parRes.json());
-      if (matRes.ok) {
-        const d = await matRes.json();
-        setMatches(d.matches || []);
-      }
-      if (cliRes.ok) {
-        const d = await cliRes.json();
-        setClients(d.clients || []);
-      }
-      if (whRes.ok) {
-        const d = await whRes.json();
-        setWebhooks(d.logs || []);
-      }
-      if (supRes.ok) {
-        const d = await supRes.json();
-        setSupportTickets(d.tickets || []);
-        if (d.tickets?.length > 0 && !selectedTicket) {
-          setSelectedTicket(d.tickets[0]);
-        }
-      }
-    } catch (e) {
-      console.warn('Admin sync error:', e);
+      setOverview(ov);
+      setUsers(us.users ?? []);
+      setSlips(sl.slips ?? []);
+      setTransactions(tx.transactions ?? []);
+      setTickets(tk.tickets ?? []);
+      setTelemetry(tel);
+      setMatches(mt.matches ?? []);
+
+      setOffline(false);
+      setLastUpdated(new Date());
+    } catch (err) {
+      // The console shows an explicit offline banner and empty tables rather
+      // than substituting placeholder figures. An operator must never be shown
+      // a number that did not come from the API.
+      console.warn('Admin data unavailable:', err);
+      setOffline(true);
     } finally {
+      setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(fetchAll, 5000);
+    const interval = setInterval(fetchAll, REFRESH_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAll]);
 
-  // Trigger Goal Simulation
-  async function triggerGoal(matchId: string, teamSide: 'HOME' | 'AWAY') {
+  // Keep an open drawer in step with refreshed data.
+  useEffect(() => {
+    setSelectedUser((current) => {
+      if (!current) return current;
+      return users.find((u) => u.id === current.id) ?? current;
+    });
+  }, [users]);
+
+  /* -------------------------------- actions ------------------------------ */
+
+  const patchUser = async (
+    user: AdminUserRow,
+    body: Record<string, unknown>,
+    action: string,
+    successMessage: string
+  ) => {
+    setPendingAction(action);
     try {
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/admin/matches/${matchId}/simulate-goal`, {
+      const res = await fetch(`${getApiBaseUrl()}/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      notify(successMessage);
+      await fetchAll();
+    } catch {
+      notify(`Could not update ${user.name}. The API did not accept the change.`);
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleSetPlan = (user: AdminUserRow, plan: 'free' | 'pro') =>
+    patchUser(
+      user,
+      { plan, duration_days: 30 },
+      'plan',
+      plan === 'pro' ? `${user.name} moved to Pro` : `${user.name} moved to Free`
+    );
+
+  const handleSetStatus = (user: AdminUserRow, status: 'active' | 'suspended') =>
+    patchUser(
+      user,
+      { status },
+      'status',
+      status === 'suspended' ? `${user.name} suspended` : `${user.name} reinstated`
+    );
+
+  const triggerGoal = async (matchId: string, side: 'HOME' | 'AWAY') => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/admin/matches/${matchId}/simulate-goal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_side: teamSide }),
+        body: JSON.stringify({ team_side: side }),
       });
       if (res.ok) {
-        setActionSuccess(`Simulated goal dispatched for match (${teamSide})! Broadcasted to live sockets.`);
-        setTimeout(() => setActionSuccess(null), 4000);
+        notify(`Test goal broadcast to all live clients (${side})`);
         fetchAll();
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
+      notify('Could not reach the match orchestrator.');
     }
-  }
+  };
 
-  // Override Match Score
-  async function handleOverride(match: any, homeDelta: number, awayDelta: number) {
+  const adjustScore = async (match: any, homeDelta: number, awayDelta: number) => {
     try {
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/admin/matches/${match.id}/override`, {
+      const res = await fetch(`${getApiBaseUrl()}/admin/matches/${match.id}/override`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -235,839 +217,1179 @@ export default function AdminDashboardPage() {
         }),
       });
       if (res.ok) {
-        setActionSuccess(`Score adjusted for ${match.home_team.name} vs ${match.away_team.name}`);
-        setTimeout(() => setActionSuccess(null), 3000);
+        notify(`Score corrected: ${match.home_team?.name} v ${match.away_team?.name}`);
         fetchAll();
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
+      notify('Could not reach the match orchestrator.');
     }
-  }
+  };
 
-  // Test Parser
-  async function handleTestParser() {
-    try {
-      setIsTestingParser(true);
-      setTestResult(null);
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/betslip/import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          booking_code: testBookingCode,
-          stake: 50.0,
-        }),
-      });
-      if (res.ok) {
-        setTestResult(await res.json());
-      } else {
-        const err = await res.json();
-        setTestResult({ error: err.error || 'No matching bookmaker found' });
-      }
-    } catch (e: any) {
-      setTestResult({ error: e.message || 'Error communicating with parser service' });
-    } finally {
-      setIsTestingParser(false);
-    }
-  }
-
-  // Send Support Reply
-  async function handleSendSupportReply(e: React.FormEvent) {
+  const sendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTicket || !agentReplyText.trim()) return;
+    if (!selectedTicket || !replyText.trim()) return;
 
-    const text = agentReplyText.trim();
-    setAgentReplyText('');
-
+    const text = replyText.trim();
+    setIsSendingReply(true);
     try {
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/support/tickets/${selectedTicket.id}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sender: 'agent',
-          sender_name: 'Lead Support Engineer',
-          message: text,
-        }),
-      });
+      const res = await fetch(
+        `${getApiBaseUrl()}/support/tickets/${selectedTicket.id}/messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sender: 'agent',
+            sender_name: 'Support',
+            message: text,
+          }),
+        }
+      );
+      if (!res.ok) throw new Error(String(res.status));
 
-      if (res.ok) {
-        const updated = await res.json();
-        setSelectedTicket(updated);
-        setSupportTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-        setActionSuccess(`Reply sent to ticket #${selectedTicket.id.slice(-6)}`);
-        setTimeout(() => setActionSuccess(null), 3000);
-      }
-    } catch (err) {
-      console.error(err);
+      const updated = await res.json();
+      setSelectedTicket(updated);
+      setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      setReplyText('');
+      notify('Reply sent');
+    } catch {
+      notify('Reply could not be sent.');
+    } finally {
+      setIsSendingReply(false);
     }
-  }
+  };
+
+  /* ------------------------------- derived ------------------------------- */
+
+  const openTickets = useMemo(
+    () => tickets.filter((t) => t.status === 'open' || t.status === 'in_progress').length,
+    [tickets]
+  );
+
+  const failedPayments = useMemo(
+    () => transactions.filter((t) => t.status === 'failed').length,
+    [transactions]
+  );
+
+  const drawerSlips = useMemo(
+    () => (selectedUser ? slips.filter((s) => s.user_id === selectedUser.id) : []),
+    [slips, selectedUser]
+  );
+
+  const drawerTransactions = useMemo(
+    () => (selectedUser ? transactions.filter((t) => t.user_id === selectedUser.id) : []),
+    [transactions, selectedUser]
+  );
+
+  const liveMatchCount = useMemo(
+    () => matches.filter((m) => m.status === 'LIVE').length,
+    [matches]
+  );
+
+  const sections: AdminSection[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'users', label: 'Users', icon: Users, badge: users.length },
+    { id: 'slips', label: 'Slips scanned', icon: Ticket, badge: slips.length },
+    {
+      id: 'transactions',
+      label: 'Transactions',
+      icon: CreditCard,
+      badge: failedPayments,
+      badgeTone: 'danger',
+    },
+    { id: 'live', label: 'Live ops', icon: Radio, badge: liveMatchCount },
+    {
+      id: 'support',
+      label: 'Support',
+      icon: Headphones,
+      badge: openTickets,
+      badgeTone: 'danger',
+    },
+  ];
+
+  const meta: Record<SectionId, { title: string; description: string }> = {
+    overview: {
+      title: 'Overview',
+      description: 'How the platform is doing right now, and anything that needs a look.',
+    },
+    users: {
+      title: 'Users',
+      description: 'Every account, what plan it is on, and how much the product gets used.',
+    },
+    slips: {
+      title: 'Slips scanned',
+      description: 'Every booking code the parser resolved, and the account it belongs to.',
+    },
+    transactions: {
+      title: 'Transactions',
+      description: 'Payments across both gateways, with the payer attached.',
+    },
+    live: {
+      title: 'Live operations',
+      description: 'Feed health, and manual control over in-play fixtures.',
+    },
+    support: {
+      title: 'Support',
+      description: 'The inbound queue, and the conversation on each ticket.',
+    },
+  };
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-12">
-      {/* Header */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 md:pl-20 xl:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Scores Feed</span>
-          </Link>
-
-          <div className="h-4 w-px bg-surface-border" />
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold">
-              <Server className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-bold text-foreground tracking-tight flex items-center gap-1.5 font-mono">
-                ADMIN ORCHESTRATOR
-              </h1>
-              <p className="text-[10px] text-muted-foreground hidden sm:block">
-                Live Data Ingestion, Goal Simulation & Financial Console
-              </p>
-            </div>
-          </div>
+    <AdminShell
+      sections={sections}
+      activeId={section}
+      onSelect={(id) => setSection(id as SectionId)}
+      title={meta[section].title}
+      description={meta[section].description}
+      offline={offline}
+      isRefreshing={isRefreshing}
+      onRefresh={fetchAll}
+      lastUpdated={lastUpdated}
+    >
+      {toast && (
+        <div className="animate-in fade-in mb-4 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">{toast}</p>
         </div>
+      )}
 
-        <div className="flex items-center gap-2.5">
-          <button
-            onClick={fetchAll}
-            disabled={isRefreshing}
-            className="p-2 rounded-xl bg-surface-subtle hover:bg-surface-hover border border-surface-border text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-            title="Refresh Live Metrics"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-500' : ''}`} />
-          </button>
-          <ThemeToggle />
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Engine Online</span>
-          </div>
-        </div>
-      </header>
+      {section === 'overview' && (
+        <OverviewSection overview={overview} isLoading={isLoading} onJump={setSection} />
+      )}
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 md:pl-24 xl:px-6 py-6 space-y-6">
-        {/* Action Success Notification */}
-        {actionSuccess && (
-          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs rounded-2xl flex items-center gap-2 animate-in fade-in shadow-sm">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-            <span className="font-semibold">{actionSuccess}</span>
-          </div>
-        )}
+      {section === 'users' && (
+        <UsersSection
+          users={users}
+          isLoading={isLoading}
+          selectedUser={selectedUser}
+          onSelect={setSelectedUser}
+        />
+      )}
 
-        {/* Executive KPI Overview Grid (Responsive 2 cols on mobile, 4 on desktop) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Active Pollers */}
-          <div className="bg-surface border border-surface-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider font-mono">Pollers</span>
-              <Activity className="w-4 h-4 text-blue-500" />
-            </div>
-            <p className="text-xl sm:text-2xl font-black text-foreground font-mono">
-              {telemetry ? telemetry.active_pollers : '—'}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              Latency: <strong className="text-emerald-500">{telemetry?.avg_ingestion_latency_ms || 2.4}ms</strong>
-            </p>
-          </div>
+      {section === 'slips' && (
+        <SlipsSection
+          slips={slips}
+          isLoading={isLoading}
+          onOpenUser={(userId) => {
+            const user = users.find((u) => u.id === userId);
+            if (user) {
+              setSection('users');
+              setSelectedUser(user);
+            }
+          }}
+        />
+      )}
 
-          {/* Connected WebSocket Clients */}
-          <div className="bg-surface border border-surface-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider font-mono">WS Clients</span>
-              <Radio className="w-4 h-4 text-emerald-500" />
-            </div>
-            <p className="text-xl sm:text-2xl font-black text-foreground font-mono">
-              {telemetry ? telemetry.connected_clients : '—'}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              Broadcasts: <strong className="text-foreground">{telemetry?.broadcasts_per_minute || 0}/min</strong>
-            </p>
-          </div>
+      {section === 'transactions' && (
+        <TransactionsSection transactions={transactions} isLoading={isLoading} />
+      )}
 
-          {/* PRO Revenue */}
-          <div className="bg-surface border border-surface-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider font-mono">PRO Revenue</span>
-              <DollarSign className="w-4 h-4 text-violet-500" />
-            </div>
-            <p className="text-xl sm:text-2xl font-black text-foreground font-mono">
-              ${financials ? financials.total_revenue_usd.toLocaleString() : '0'}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              Active Subs: <strong className="text-violet-500">{financials?.active_pro_users || 0}</strong>
-            </p>
-          </div>
+      {section === 'live' && (
+        <LiveSection
+          telemetry={telemetry}
+          matches={matches}
+          isLoading={isLoading}
+          onSimulateGoal={triggerGoal}
+          onAdjustScore={adjustScore}
+        />
+      )}
 
-          {/* Parser Success Rate */}
-          <div className="bg-surface border border-surface-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-1">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-bold uppercase tracking-wider font-mono">Parser Rate</span>
-              <Ticket className="w-4 h-4 text-amber-500" />
-            </div>
-            <p className="text-xl sm:text-2xl font-black text-foreground font-mono">
-              {parserMetrics ? `${parserMetrics.success_rate_pct.toFixed(1)}%` : '98.5%'}
-            </p>
-            <p className="text-[10px] text-muted-foreground">
-              Resolved: <strong className="text-foreground">{parserMetrics?.total_parsed || 0} slips</strong>
-            </p>
-          </div>
-        </div>
+      {section === 'support' && (
+        <SupportSection
+          tickets={tickets}
+          isLoading={isLoading}
+          selectedTicket={selectedTicket}
+          onSelect={setSelectedTicket}
+          replyText={replyText}
+          onReplyChange={setReplyText}
+          onSendReply={sendReply}
+          isSending={isSendingReply}
+        />
+      )}
 
-        {/* Segmented Navigation Tab Bar (Mobile-friendly horizontal swipe) */}
-        <div className="border-b border-surface-border pb-2 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1.5 p-1 bg-surface-subtle border border-surface-border rounded-2xl w-max">
-            <button
-              onClick={() => setActiveTab('ingestion')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'ingestion'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Activity className="w-3.5 h-3.5 text-blue-500" />
-              <span>Telemetry & Ingestion</span>
-            </button>
+      <UserDrawer
+        user={selectedUser}
+        slips={drawerSlips}
+        transactions={drawerTransactions}
+        onClose={() => setSelectedUser(null)}
+        onSetPlan={handleSetPlan}
+        onSetStatus={handleSetStatus}
+        pendingAction={pendingAction}
+      />
+    </AdminShell>
+  );
+}
 
-            <button
-              onClick={() => setActiveTab('orchestrator')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'orchestrator'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Play className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Match Controller ({matches.length})</span>
-            </button>
+/* =========================================================================== */
+/* Overview                                                                    */
+/* =========================================================================== */
 
-            <button
-              onClick={() => setActiveTab('financials')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'financials'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <DollarSign className="w-3.5 h-3.5 text-violet-500" />
-              <span>Financials & Webhooks</span>
-            </button>
+function OverviewSection({
+  overview,
+  isLoading,
+  onJump,
+}: {
+  overview: AdminOverview | null;
+  isLoading: boolean;
+  onJump: (id: SectionId) => void;
+}) {
+  if (isLoading && !overview) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-28 animate-pulse rounded-2xl border border-surface-border bg-surface"
+          />
+        ))}
+      </div>
+    );
+  }
 
-            <button
-              onClick={() => setActiveTab('parser')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'parser'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Ticket className="w-3.5 h-3.5 text-amber-500" />
-              <span>Bet Slip Parser</span>
-            </button>
+  const o = overview;
+  const bookmakers = Object.entries(o?.slips_by_bookmaker ?? {}).sort((a, b) => b[1] - a[1]);
+  const plans = Object.entries(o?.plan_split ?? {}).sort((a, b) => b[1] - a[1]);
 
-            <button
-              onClick={() => setActiveTab('support')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === 'support'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Headphones className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Support Queue ({supportTickets.length})</span>
-            </button>
-          </div>
-        </div>
+  const attention = [
+    {
+      show: (o?.failed_payments_7d ?? 0) > 0,
+      label: `${o?.failed_payments_7d} failed payment${o?.failed_payments_7d === 1 ? '' : 's'} in the last 7 days`,
+      action: 'transactions' as SectionId,
+      cta: 'Review',
+    },
+    {
+      show: (o?.open_tickets ?? 0) > 0,
+      label: `${o?.open_tickets} support ticket${o?.open_tickets === 1 ? '' : 's'} awaiting a reply`,
+      action: 'support' as SectionId,
+      cta: 'Open queue',
+    },
+    {
+      show: (o?.suspended_users ?? 0) > 0,
+      label: `${o?.suspended_users} suspended account${o?.suspended_users === 1 ? '' : 's'}`,
+      action: 'users' as SectionId,
+      cta: 'View',
+    },
+  ].filter((item) => item.show);
 
-        {/* ========================================================================= */}
-        {/* TAB 1: TELEMETRY & INGESTION                                              */}
-        {/* ========================================================================= */}
-        {activeTab === 'ingestion' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Quota & Memory Meters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* ESPN Ingestion */}
-              <div className="bg-surface border border-surface-border rounded-2xl p-5 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-blue-500" />
-                    <h3 className="text-xs font-bold text-foreground">ESPN API Quota & Poller</h3>
-                  </div>
-                  <span className="text-[10px] font-mono text-muted-foreground">Rate: 1s interval</span>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-muted-foreground">Quota Used</span>
-                    <span className="font-bold text-foreground">
-                      {telemetry?.espn_quota_used || 1240} / {telemetry?.espn_quota_limit || 10000}
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-subtle overflow-hidden border border-surface-border">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, ((telemetry?.espn_quota_used || 1240) / (telemetry?.espn_quota_limit || 10000)) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+  return (
+    <div className="space-y-5">
+      {/* The four numbers you would check first */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Total users"
+          value={num(o?.total_users ?? 0)}
+          sub={`${num(o?.new_users_7d ?? 0)} joined this week`}
+          icon={UserPlus}
+          tone="info"
+        />
+        <KpiCard
+          label="Monthly recurring"
+          value={money(o?.mrr_usd ?? 0)}
+          sub={`${num(o?.pro_users ?? 0)} on a paid plan`}
+          icon={DollarSign}
+          tone="positive"
+        />
+        <KpiCard
+          label="Slips scanned (24h)"
+          value={num(o?.slips_scanned_24h ?? 0)}
+          sub={`${num(o?.slips_scanned_total ?? 0)} all time`}
+          icon={ScanLine}
+          tone="brand"
+        />
+        <KpiCard
+          label="Active slips"
+          value={num(o?.active_slips ?? 0)}
+          sub={`${(o?.parse_success_pct ?? 0).toFixed(1)}% parse success`}
+          icon={Ticket}
+          tone="warning"
+        />
+      </div>
 
-              {/* The Odds API */}
-              <div className="bg-surface border border-surface-border rounded-2xl p-5 space-y-3 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-amber-500" />
-                    <h3 className="text-xs font-bold text-foreground">The Odds API Quota</h3>
-                  </div>
-                  <span className="text-[10px] font-mono text-muted-foreground">Rate: 5s interval</span>
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-muted-foreground">Quota Used</span>
-                    <span className="font-bold text-foreground">
-                      {telemetry?.odds_api_quota_used || 820} / {telemetry?.odds_api_quota_limit || 5000}
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-subtle overflow-hidden border border-surface-border">
-                    <div
-                      className="h-full bg-amber-500 rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(100, ((telemetry?.odds_api_quota_used || 820) / (telemetry?.odds_api_quota_limit || 5000)) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Redis & System Telemetry */}
-            <div className="bg-surface border border-surface-border rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-surface-border pb-3">
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-500" />
-                  <h3 className="text-xs font-bold text-foreground">Redis Memory & Socket Broker</h3>
-                </div>
-                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                  HEALTHY
+      {attention.length > 0 && (
+        <Panel
+          title="Needs attention"
+          description="Surfaced here so nothing sits waiting in a tab you did not open."
+        >
+          <ul className="space-y-2">
+            {attention.map((item) => (
+              <li
+                key={item.label}
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 dark:border-amber-500/30 dark:bg-amber-500/10"
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span className="truncate text-xs font-semibold text-amber-900 dark:text-amber-200">
+                    {item.label}
+                  </span>
                 </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                <div className="bg-surface-subtle p-3 rounded-xl border border-surface-border">
-                  <span className="text-[10px] text-muted-foreground uppercase">Keys Cached</span>
-                  <p className="text-lg font-bold text-foreground mt-0.5">{telemetry?.redis_keys_count || 142}</p>
-                </div>
-                <div className="bg-surface-subtle p-3 rounded-xl border border-surface-border">
-                  <span className="text-[10px] text-muted-foreground uppercase">RAM Used</span>
-                  <p className="text-lg font-bold text-foreground mt-0.5">{telemetry?.redis_memory_used_mb || 4.2} MB</p>
-                </div>
-                <div className="bg-surface-subtle p-3 rounded-xl border border-surface-border">
-                  <span className="text-[10px] text-muted-foreground uppercase">Avg Latency</span>
-                  <p className="text-lg font-bold text-emerald-500 mt-0.5">{telemetry?.avg_ingestion_latency_ms || 2.4} ms</p>
-                </div>
-                <div className="bg-surface-subtle p-3 rounded-xl border border-surface-border">
-                  <span className="text-[10px] text-muted-foreground uppercase">Broadcasts</span>
-                  <p className="text-lg font-bold text-foreground mt-0.5">{telemetry?.broadcasts_per_minute || 60}/min</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Connected WebSocket Clients (Responsive Table / Mobile Cards) */}
-            <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm space-y-0">
-              <div className="p-4 border-b border-surface-border bg-surface-subtle flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Radio className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-xs font-bold text-foreground">Connected Clients ({clients.length})</h3>
-                </div>
-                <span className="text-[10px] font-mono text-muted-foreground">Port 18443</span>
-              </div>
-
-              {clients.length === 0 ? (
-                <div className="p-8 text-center text-xs text-muted-foreground font-mono">
-                  No active WebSocket client connections
-                </div>
-              ) : (
-                <>
-                  {/* Desktop Table View */}
-                  <div className="hidden sm:block overflow-x-auto">
-                    <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-surface-subtle/60 border-b border-surface-border text-muted-foreground text-[10px] uppercase">
-                        <tr>
-                          <th className="p-3">Client IP</th>
-                          <th className="p-3">User Agent</th>
-                          <th className="p-3">Subscribed Matches</th>
-                          <th className="p-3">Connected Since</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-surface-border">
-                        {paginatedClients.map((c, i) => (
-                          <tr key={i} className="hover:bg-surface-hover/50 transition-colors">
-                            <td className="p-3 text-foreground font-bold">{c.ip || '127.0.0.1'}</td>
-                            <td className="p-3 text-muted-foreground truncate max-w-xs">{c.user_agent || 'Mozilla/5.0'}</td>
-                            <td className="p-3">
-                              <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 text-[10px]">
-                                {c.subscriptions?.length || 1} match feeds
-                              </span>
-                            </td>
-                            <td className="p-3 text-muted-foreground">{new Date(c.connected_at || Date.now()).toLocaleTimeString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Mobile Card View */}
-                  <div className="sm:hidden divide-y divide-surface-border">
-                    {paginatedClients.map((c, i) => (
-                      <div key={i} className="p-3 space-y-1.5 text-xs font-mono">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-foreground">{c.ip || '127.0.0.1'}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(c.connected_at || Date.now()).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground truncate">{c.user_agent || 'Browser Client'}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Pagination
-                    currentPage={clientsPage}
-                    totalItems={clients.length}
-                    pageSize={clientsPageSize}
-                    onPageChange={setClientsPage}
-                    onPageSizeChange={setClientsPageSize}
-                    itemLabel="clients"
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 2: MATCH CONTROLLER & SIMULATION                                      */}
-        {/* ========================================================================= */}
-        {activeTab === 'orchestrator' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Search Bar */}
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={matchSearchQuery}
-                onChange={(e) => setMatchSearchQuery(e.target.value)}
-                placeholder="Search fixtures, teams, leagues..."
-                className="w-full pl-10 pr-4 py-2 bg-surface border border-surface-border focus:border-blue-500 rounded-xl text-xs text-foreground focus:outline-none"
-              />
-            </div>
-
-            {/* Matches Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {paginatedMatches.map((m) => (
-                <div
-                  key={m.id}
-                  className="bg-surface border border-surface-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-4"
-                >
-                  <div className="flex items-center justify-between border-b border-surface-border pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono uppercase font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                        {m.sport}
-                      </span>
-                      <span className="text-xs text-muted-foreground truncate max-w-[160px] sm:max-w-xs">
-                        {m.league?.name}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                      {m.period} {m.minute ? `${m.minute}'` : ''}
-                    </span>
-                  </div>
-
-                  {/* Teams & Score Steppers */}
-                  <div className="space-y-3">
-                    {/* Home Team */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-bold text-foreground truncate">{m.home_team.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOverride(m, -1, 0)}
-                          className="p-1 rounded-lg bg-surface-subtle hover:bg-surface-hover border border-surface-border text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-base font-black font-mono text-foreground min-w-[20px] text-center">
-                          {m.home_score}
-                        </span>
-                        <button
-                          onClick={() => handleOverride(m, 1, 0)}
-                          className="p-1 rounded-lg bg-surface-subtle hover:bg-surface-hover border border-surface-border text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => triggerGoal(m.id, 'HOME')}
-                          className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg cursor-pointer"
-                        >
-                          + Goal
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Away Team */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-bold text-foreground truncate">{m.away_team.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOverride(m, 0, -1)}
-                          className="p-1 rounded-lg bg-surface-subtle hover:bg-surface-hover border border-surface-border text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-base font-black font-mono text-foreground min-w-[20px] text-center">
-                          {m.away_score}
-                        </span>
-                        <button
-                          onClick={() => handleOverride(m, 0, 1)}
-                          className="p-1 rounded-lg bg-surface-subtle hover:bg-surface-hover border border-surface-border text-muted-foreground hover:text-foreground cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => triggerGoal(m.id, 'AWAY')}
-                          className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg cursor-pointer"
-                        >
-                          + Goal
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Pagination
-              currentPage={matchesPage}
-              totalItems={filteredMatches.length}
-              pageSize={matchesPageSize}
-              onPageChange={setMatchesPage}
-              onPageSizeChange={setMatchesPageSize}
-              itemLabel="matches"
-            />
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 3: FINANCIALS & WEBHOOKS                                              */}
-        {/* ========================================================================= */}
-        {activeTab === 'financials' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Gateway Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-surface border border-surface-border rounded-2xl p-5 space-y-2 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-violet-500" />
-                    <h3 className="text-xs font-bold text-foreground">Cryptomus On-Chain Volume</h3>
-                  </div>
-                  <span className="text-[10px] font-mono text-violet-600 dark:text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
-                    USDT / BTC / ETH
-                  </span>
-                </div>
-                <p className="text-2xl font-black text-foreground font-mono">
-                  ${financials ? financials.cryptomus_volume_usd.toLocaleString() : '0'}
-                </p>
-                <p className="text-[11px] text-muted-foreground">Automated Webhook Verification with 1 block confirmation</p>
-              </div>
-
-              <div className="bg-surface border border-surface-border rounded-2xl p-5 space-y-2 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-blue-500" />
-                    <h3 className="text-xs font-bold text-foreground">Flutterwave Card & Bank Volume</h3>
-                  </div>
-                  <span className="text-[10px] font-mono text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                    Cards / Bank
-                  </span>
-                </div>
-                <p className="text-2xl font-black text-foreground font-mono">
-                  ${financials ? financials.flutterwave_volume_usd.toLocaleString() : '0'}
-                </p>
-                <p className="text-[11px] text-muted-foreground">Direct webhook HMAC signed token processing</p>
-              </div>
-            </div>
-
-            {/* Webhook Activity Logs */}
-            <div className="bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-surface-border bg-surface-subtle flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="text-xs font-bold text-foreground">Recent Webhook Inbound Logs ({webhooks.length})</h3>
-                </div>
-              </div>
-
-              {webhooks.length === 0 ? (
-                <div className="p-8 text-center text-xs text-muted-foreground font-mono">
-                  No webhook transactions recorded yet.
-                </div>
-              ) : (
-                <>
-                  <div className="divide-y divide-surface-border">
-                    {paginatedWebhooks.map((w, idx) => (
-                      <div key={idx} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground uppercase">{w.provider || 'Cryptomus'}</span>
-                            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded border border-emerald-500/20">
-                              {w.status || 'VERIFIED'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground truncate">{w.event || 'charge.completed'}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-bold text-foreground text-sm">${w.amount || 29}.00</span>
-                          <p className="text-[10px] text-muted-foreground">{new Date(w.timestamp || Date.now()).toLocaleTimeString()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Pagination
-                    currentPage={webhooksPage}
-                    totalItems={webhooks.length}
-                    pageSize={webhooksPageSize}
-                    onPageChange={setWebhooksPage}
-                    onPageSizeChange={setWebhooksPageSize}
-                    itemLabel="webhooks"
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* TAB 4: BET SLIP PARSER ENGINE                                             */}
-        {/* ========================================================================= */}
-        {activeTab === 'parser' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Parser Tester Card */}
-            <div className="bg-surface border border-surface-border rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Multi-Bookmaker Ticket Resolver Simulator</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Test auto-resolution across SportyBet, Bet9ja, 1xBet, and BetKing backend algorithms.
-                </p>
-              </div>
-
-              {/* Quick Presets */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-[11px] text-muted-foreground font-mono">Sample Codes:</span>
-                {['BC99214', 'B9JA-44912', '1X-88231', 'BK-10294'].map((code) => (
-                  <button
-                    key={code}
-                    onClick={() => setTestBookingCode(code)}
-                    className="px-2.5 py-1 rounded-lg bg-surface-subtle hover:bg-surface-hover border border-surface-border text-xs font-mono font-semibold text-foreground cursor-pointer"
-                  >
-                    {code}
-                  </button>
-                ))}
-              </div>
-
-              {/* Input Form */}
-              <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                <input
-                  type="text"
-                  value={testBookingCode}
-                  onChange={(e) => setTestBookingCode(e.target.value.toUpperCase())}
-                  placeholder="Enter Booking Code..."
-                  className="w-full sm:max-w-xs px-3.5 py-2 bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-xl text-xs font-mono text-foreground focus:outline-none"
-                />
                 <button
-                  onClick={handleTestParser}
-                  disabled={isTestingParser || !testBookingCode.trim()}
-                  className="w-full sm:w-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-all flex items-center justify-center gap-2"
+                  type="button"
+                  onClick={() => onJump(item.action)}
+                  className="shrink-0 cursor-pointer rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-800 transition-colors hover:bg-amber-100 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300"
                 >
-                  <Play className="w-3.5 h-3.5" />
-                  <span>{isTestingParser ? 'Resolving...' : 'Test Resolve'}</span>
+                  {item.cta}
                 </button>
-              </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
 
-              {/* Result View */}
-              {testResult && (
-                <div className="p-4 bg-surface-subtle border border-surface-border rounded-xl space-y-3 font-mono text-xs animate-in fade-in">
-                  {testResult.error ? (
-                    <div className="text-red-500 flex items-center gap-2">
-                      <XCircle className="w-4 h-4" />
-                      <span>{testResult.error}</span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-between border-b border-surface-border pb-2">
-                        <span className="font-bold text-emerald-500">Bookmaker: {testResult.bookmaker}</span>
-                        <span className="text-muted-foreground">Total Odds: {testResult.total_odds?.toFixed(2)}x</span>
-                      </div>
-                      <div className="space-y-1.5">
-                        <p className="text-[11px] text-muted-foreground">
-                          Cash-out Probability: <strong className="text-foreground">{((testResult.cashout_probability || 0.85) * 100).toFixed(0)}%</strong>
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Potential Win: <strong className="text-emerald-500">${testResult.potential_win?.toFixed(2)}</strong>
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Panel title="Last 7 days" description="Revenue booked per day." className="lg:col-span-2">
+          <TrendBars
+            points={o?.trend ?? []}
+            valueOf={(p) => p.revenue_usd}
+            format={(v) => money(v)}
+            label={`${money(o?.revenue_7d_usd ?? 0)} booked this week · ${money(o?.revenue_usd ?? 0)} all time`}
+          />
+        </Panel>
 
-        {/* ========================================================================= */}
-        {/* TAB 5: SUPPORT HELP DESK                                                  */}
-        {/* ========================================================================= */}
-        {activeTab === 'support' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Search Input */}
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={ticketSearchQuery}
-                onChange={(e) => setTicketSearchQuery(e.target.value)}
-                placeholder="Search ticket subject, user email, category..."
-                className="w-full pl-10 pr-4 py-2 bg-surface border border-surface-border focus:border-blue-500 rounded-xl text-xs text-foreground focus:outline-none"
-              />
-            </div>
+        <Panel title="Plan split" description="Where accounts sit today.">
+          <BreakdownBars data={plans} total={o?.total_users ?? 0} />
 
-            {/* Split View on Desktop / Stack on Mobile */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              {/* Left Ticket List */}
-              <div className="md:col-span-5 bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm flex flex-col">
-                <div className="p-3 border-b border-surface-border bg-surface-subtle">
-                  <h3 className="text-xs font-bold text-foreground">Support Inquiries ({supportTickets.length})</h3>
-                </div>
+          <dl className="mt-5 space-y-2 border-t border-surface-border pt-4 text-xs">
+            <Stat label="Revenue per user" value={money(o?.arpu_usd ?? 0)} />
+            <Stat label="New this week" value={num(o?.new_users_7d ?? 0)} />
+          </dl>
+        </Panel>
+      </div>
 
-                <div className="divide-y divide-surface-border overflow-y-auto max-h-[450px]">
-                  {paginatedTickets.map((t) => {
-                    const isSelected = selectedTicket?.id === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => setSelectedTicket(t)}
-                        className={`w-full text-left p-3 transition-all cursor-pointer space-y-1 ${
-                          isSelected
-                            ? 'bg-blue-500/10 border-l-4 border-l-blue-500 text-foreground'
-                            : 'hover:bg-surface-subtle text-muted-foreground'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono font-bold uppercase text-blue-600 dark:text-blue-400">
-                            {t.category}
-                          </span>
-                          <span className="text-[9px] font-mono bg-surface-subtle px-1.5 py-0.5 rounded border border-surface-border">
-                            {t.status.toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-foreground truncate">{t.subject}</p>
-                        <div className="text-[10px] text-muted-foreground flex items-center justify-between font-mono">
-                          <span>{t.user_name || 'User'}</span>
-                          <span>{new Date(t.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Panel
+          title="Scans by sportsbook"
+          description="Which books the parser is asked for most."
+          className="lg:col-span-2"
+        >
+          <BreakdownBars
+            data={bookmakers}
+            total={o?.slips_scanned_total ?? 0}
+            emptyLabel="No slips scanned yet"
+          />
+        </Panel>
 
-                <Pagination
-                  currentPage={ticketsPage}
-                  totalItems={filteredTickets.length}
-                  pageSize={ticketsPageSize}
-                  onPageChange={setTicketsPage}
-                  onPageSizeChange={setTicketsPageSize}
-                  itemLabel="tickets"
-                />
-              </div>
+        <Panel title="Live feed" description="Right now.">
+          <dl className="space-y-3 text-xs">
+            <Stat label="Matches in play" value={num(o?.live_matches ?? 0)} />
+            <Stat label="Connected clients" value={num(o?.connected_clients ?? 0)} />
+            <Stat
+              label="Ingestion latency"
+              value={`${(o?.ingestion_latency_ms ?? 0).toFixed(1)} ms`}
+            />
+            <Stat label="Parse success" value={`${(o?.parse_success_pct ?? 0).toFixed(1)}%`} />
+          </dl>
+        </Panel>
+      </div>
+    </div>
+  );
+}
 
-              {/* Right Message Thread & Reply Composer */}
-              <div className="md:col-span-7 bg-surface border border-surface-border rounded-2xl overflow-hidden shadow-sm flex flex-col min-h-[450px]">
-                {selectedTicket ? (
-                  <>
-                    <div className="p-4 border-b border-surface-border bg-surface-subtle flex items-center justify-between">
-                      <div>
-                        <h4 className="text-xs font-bold text-foreground">{selectedTicket.subject}</h4>
-                        <p className="text-[10px] text-muted-foreground font-mono">
-                          From: {selectedTicket.user_name} ({selectedTicket.user_email}) &bull; Priority: {selectedTicket.priority}
-                        </p>
-                      </div>
-                      <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                        {selectedTicket.status.toUpperCase()}
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-surface-border pb-2.5 last:border-0 last:pb-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-mono font-bold tabular-nums text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+/* =========================================================================== */
+/* Users                                                                       */
+/* =========================================================================== */
+
+function UsersSection({
+  users,
+  isLoading,
+  selectedUser,
+  onSelect,
+}: {
+  users: AdminUserRow[];
+  isLoading: boolean;
+  selectedUser: AdminUserRow | null;
+  onSelect: (user: AdminUserRow) => void;
+}) {
+  const columns: Column<AdminUserRow>[] = [
+    {
+      key: 'name',
+      header: 'Account',
+      cell: (u) => <UserCell name={u.name} email={u.email} plan={u.plan} />,
+      sortValue: (u) => u.name.toLowerCase(),
+    },
+    {
+      key: 'plan',
+      header: 'Plan',
+      cell: (u) => (
+        <span className="flex flex-wrap items-center gap-1">
+          <Chip tone={u.plan === 'pro' ? 'brand' : 'neutral'}>{u.plan}</Chip>
+          {u.status === 'suspended' && <Chip tone="danger">Suspended</Chip>}
+        </span>
+      ),
+      sortValue: (u) => u.plan,
+    },
+    {
+      key: 'slips',
+      header: 'Slips',
+      align: 'right',
+      // The active count sits in its own chip: rendered inline it ran straight
+      // into the total, so "1" and "1 live" read as "11 live".
+      cell: (u) => (
+        <span className="flex items-center justify-end gap-1.5">
+          <span className="font-mono tabular-nums text-foreground">{u.slips_scanned}</span>
+          {u.active_slips > 0 && (
+            <Chip tone="brand">{u.active_slips} live</Chip>
+          )}
+        </span>
+      ),
+      sortValue: (u) => u.slips_scanned,
+    },
+    {
+      key: 'ltv',
+      header: 'Lifetime value',
+      align: 'right',
+      hideBelow: 'md',
+      cell: (u) => (
+        <span className="font-mono font-semibold tabular-nums text-foreground">
+          {money(u.lifetime_value_usd)}
+        </span>
+      ),
+      sortValue: (u) => u.lifetime_value_usd,
+    },
+    {
+      key: 'country',
+      header: 'Country',
+      hideBelow: 'xl',
+      cell: (u) => <span className="text-muted-foreground">{u.country || '—'}</span>,
+      sortValue: (u) => u.country,
+    },
+    {
+      key: 'last_seen',
+      header: 'Last seen',
+      hideBelow: 'lg',
+      cell: (u) => <span className="text-muted-foreground">{relTime(u.last_seen_at)}</span>,
+      sortValue: (u) => new Date(u.last_seen_at).getTime(),
+    },
+    {
+      key: 'joined',
+      header: 'Joined',
+      align: 'right',
+      hideBelow: 'lg',
+      cell: (u) => <span className="text-muted-foreground">{shortDate(u.created_at)}</span>,
+      sortValue: (u) => new Date(u.created_at).getTime(),
+    },
+  ];
+
+  return (
+    <DataTable
+      rows={users}
+      columns={columns}
+      rowKey={(u) => u.id}
+      searchFields={(u) => `${u.name} ${u.email} ${u.id} ${u.country}`}
+      searchPlaceholder="Search name, email or ID..."
+      filters={[
+        {
+          key: 'plan',
+          label: 'Plan',
+          options: [
+            { value: 'pro', label: 'Pro' },
+            { value: 'free', label: 'Free' },
+          ],
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          options: [
+            { value: 'active', label: 'Active' },
+            { value: 'suspended', label: 'Suspended' },
+          ],
+        },
+      ]}
+      filterValue={(u, key) => (key === 'plan' ? u.plan : u.status)}
+      onRowClick={onSelect}
+      isSelected={(u) => u.id === selectedUser?.id}
+      defaultSort={{ key: 'joined', dir: 'desc' }}
+      itemLabel="accounts"
+      isLoading={isLoading}
+      emptyTitle="No accounts"
+      emptyBody="No accounts match this view. Clear the filters, or check the API is reachable."
+      minWidth="min-w-[900px]"
+    />
+  );
+}
+
+/* =========================================================================== */
+/* Slips                                                                       */
+/* =========================================================================== */
+
+function SlipsSection({
+  slips,
+  isLoading,
+  onOpenUser,
+}: {
+  slips: AdminSlipRow[];
+  isLoading: boolean;
+  onOpenUser: (userId: string) => void;
+}) {
+  const bookmakers = useMemo(
+    () => Array.from(new Set(slips.map((s) => s.bookmaker))).sort(),
+    [slips]
+  );
+
+  const columns: Column<AdminSlipRow>[] = [
+    {
+      key: 'code',
+      header: 'Booking code',
+      cell: (s) => (
+        <span>
+          <span className="block font-mono text-xs font-bold text-foreground">
+            {s.booking_code}
+          </span>
+          <span className="block text-[11px] capitalize text-muted-foreground">{s.bookmaker}</span>
+        </span>
+      ),
+      sortValue: (s) => s.booking_code,
+    },
+    {
+      key: 'user',
+      header: 'Scanned by',
+      cell: (s) => (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenUser(s.user_id);
+          }}
+          className="group min-w-0 cursor-pointer text-left"
+        >
+          <span className="block truncate text-xs font-semibold text-foreground group-hover:text-[color:var(--brand)]">
+            {s.user_name}
+          </span>
+          <span className="block truncate text-[11px] text-muted-foreground">{s.user_email}</span>
+        </button>
+      ),
+      sortValue: (s) => s.user_name.toLowerCase(),
+    },
+    {
+      key: 'legs',
+      header: 'Legs',
+      align: 'right',
+      cell: (s) => (
+        <span className="flex items-center justify-end gap-1.5 font-mono tabular-nums">
+          <span className="text-foreground">{s.legs}</span>
+          {(s.legs_won > 0 || s.legs_lost > 0) && (
+            <span className="whitespace-nowrap text-[10px]">
+              <span className="text-emerald-600 dark:text-emerald-400">{s.legs_won}W</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-red-600 dark:text-red-400">{s.legs_lost}L</span>
+            </span>
+          )}
+        </span>
+      ),
+      sortValue: (s) => s.legs,
+    },
+    {
+      key: 'stake',
+      header: 'Stake',
+      align: 'right',
+      hideBelow: 'md',
+      cell: (s) => <span className="font-mono tabular-nums text-foreground">{money(s.stake)}</span>,
+      sortValue: (s) => s.stake,
+    },
+    {
+      key: 'odds',
+      header: 'Odds',
+      align: 'right',
+      hideBelow: 'lg',
+      cell: (s) => (
+        <span className="font-mono tabular-nums text-amber-600 dark:text-amber-400">
+          {s.total_odds.toFixed(2)}x
+        </span>
+      ),
+      sortValue: (s) => s.total_odds,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (s) => <Chip tone={slipTone(s.status)}>{s.status.replace('_', ' ')}</Chip>,
+      sortValue: (s) => s.status,
+    },
+    {
+      key: 'parse',
+      header: 'Parse',
+      align: 'right',
+      hideBelow: 'xl',
+      cell: (s) => (
+        <span
+          className={`font-mono tabular-nums ${
+            s.parse_ms > 400 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'
+          }`}
+        >
+          {s.parse_ms ? `${s.parse_ms}ms` : '—'}
+        </span>
+      ),
+      sortValue: (s) => s.parse_ms,
+    },
+    {
+      key: 'scanned',
+      header: 'Scanned',
+      align: 'right',
+      cell: (s) => <span className="text-muted-foreground">{relTime(s.scanned_at)}</span>,
+      sortValue: (s) => new Date(s.scanned_at).getTime(),
+    },
+  ];
+
+  return (
+    <DataTable
+      rows={slips}
+      columns={columns}
+      rowKey={(s) => s.id}
+      searchFields={(s) => `${s.booking_code} ${s.bookmaker} ${s.user_name} ${s.user_email}`}
+      searchPlaceholder="Search code, sportsbook or user..."
+      filters={[
+        {
+          key: 'bookmaker',
+          label: 'Book',
+          options: bookmakers.map((b) => ({ value: b, label: b })),
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          options: [
+            { value: 'RUNNING', label: 'Running' },
+            { value: 'PENDING', label: 'Pending' },
+            { value: 'WON', label: 'Won' },
+            { value: 'LOST', label: 'Lost' },
+            { value: 'CASHED_OUT', label: 'Cashed out' },
+          ],
+        },
+      ]}
+      filterValue={(s, key) => (key === 'bookmaker' ? s.bookmaker : s.status)}
+      defaultSort={{ key: 'scanned', dir: 'desc' }}
+      itemLabel="slips"
+      isLoading={isLoading}
+      emptyTitle="No slips scanned"
+      emptyBody="Booking codes appear here the moment the parser resolves one."
+      minWidth="min-w-[980px]"
+    />
+  );
+}
+
+/* =========================================================================== */
+/* Transactions                                                                */
+/* =========================================================================== */
+
+function TransactionsSection({
+  transactions,
+  isLoading,
+}: {
+  transactions: AdminTransactionRow[];
+  isLoading: boolean;
+}) {
+  const settled = transactions
+    .filter((t) => t.status === 'successful' || t.status === 'paid')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const failedCount = transactions.filter((t) => t.status === 'failed').length;
+
+  const columns: Column<AdminTransactionRow>[] = [
+    {
+      key: 'reference',
+      header: 'Reference',
+      cell: (t) => (
+        <span>
+          <span className="block font-mono text-xs font-bold text-foreground">{t.reference}</span>
+          <span className="block text-[11px] capitalize text-muted-foreground">
+            {t.gateway} · {t.billing_cycle || '—'}
+          </span>
+        </span>
+      ),
+      sortValue: (t) => t.reference,
+    },
+    {
+      key: 'user',
+      header: 'Payer',
+      cell: (t) => <UserCell name={t.user_name} email={t.user_email} plan={t.plan} />,
+      sortValue: (t) => t.user_name.toLowerCase(),
+    },
+    {
+      key: 'method',
+      header: 'Method',
+      hideBelow: 'lg',
+      cell: (t) => <span className="text-muted-foreground">{t.method || '—'}</span>,
+      sortValue: (t) => t.method,
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      align: 'right',
+      cell: (t) => (
+        <span className="font-mono font-bold tabular-nums text-foreground">
+          {money(t.amount, t.currency)}
+        </span>
+      ),
+      sortValue: (t) => t.amount,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (t) => <Chip tone={txTone(t.status)}>{t.status}</Chip>,
+      sortValue: (t) => t.status,
+    },
+    {
+      key: 'created',
+      header: 'When',
+      align: 'right',
+      cell: (t) => <span className="text-muted-foreground">{relTime(t.created_at)}</span>,
+      sortValue: (t) => new Date(t.created_at).getTime(),
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <KpiCard
+          label="Settled volume"
+          value={money(settled)}
+          sub={`${transactions.length} transactions`}
+          icon={DollarSign}
+          tone="positive"
+        />
+        <KpiCard
+          label="Failed"
+          value={num(failedCount)}
+          sub="Needs follow-up"
+          icon={AlertTriangle}
+          tone={failedCount > 0 ? 'danger' : 'neutral'}
+        />
+        <KpiCard
+          label="Average payment"
+          value={money(transactions.length ? settled / transactions.length : 0)}
+          sub="Across all gateways"
+          icon={TrendingUp}
+          tone="info"
+        />
+      </div>
+
+      <DataTable
+        rows={transactions}
+        columns={columns}
+        rowKey={(t) => t.id}
+        searchFields={(t) => `${t.reference} ${t.user_name} ${t.user_email} ${t.method}`}
+        searchPlaceholder="Search reference, payer or method..."
+        filters={[
+          {
+            key: 'gateway',
+            label: 'Gateway',
+            options: [
+              { value: 'flutterwave', label: 'Flutterwave' },
+              { value: 'cryptomus', label: 'Cryptomus' },
+            ],
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            options: [
+              { value: 'successful', label: 'Successful' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'failed', label: 'Failed' },
+              { value: 'refunded', label: 'Refunded' },
+            ],
+          },
+        ]}
+        filterValue={(t, key) => (key === 'gateway' ? t.gateway : t.status)}
+        defaultSort={{ key: 'created', dir: 'desc' }}
+        itemLabel="transactions"
+        isLoading={isLoading}
+        emptyTitle="No transactions"
+        emptyBody="Payments appear here as soon as a gateway webhook is processed."
+        minWidth="min-w-[880px]"
+      />
+    </div>
+  );
+}
+
+/* =========================================================================== */
+/* Live operations                                                             */
+/* =========================================================================== */
+
+function LiveSection({
+  telemetry,
+  matches,
+  isLoading,
+  onSimulateGoal,
+  onAdjustScore,
+}: {
+  telemetry: any | null;
+  matches: any[];
+  isLoading: boolean;
+  onSimulateGoal: (id: string, side: 'HOME' | 'AWAY') => void;
+  onAdjustScore: (match: any, home: number, away: number) => void;
+}) {
+  const quotaTone = (used: number, limit: number): Tone =>
+    used / Math.max(1, limit) > 0.8 ? 'danger' : 'neutral';
+
+  const columns: Column<any>[] = [
+    {
+      key: 'fixture',
+      header: 'Fixture',
+      cell: (m) => (
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-semibold text-foreground">
+            {m.home_team?.name} v {m.away_team?.name}
+          </span>
+          <span className="block truncate text-[11px] text-muted-foreground">
+            {m.league?.name} · {m.sport}
+          </span>
+        </span>
+      ),
+      sortValue: (m) => m.home_team?.name ?? '',
+    },
+    {
+      key: 'score',
+      header: 'Score',
+      align: 'right',
+      cell: (m) => (
+        <span className="font-mono text-sm font-black tabular-nums text-foreground">
+          {m.home_score}–{m.away_score}
+        </span>
+      ),
+      sortValue: (m) => m.home_score + m.away_score,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (m) => (
+        <Chip
+          tone={m.status === 'LIVE' ? 'danger' : m.status === 'FINISHED' ? 'neutral' : 'warning'}
+        >
+          {m.status === 'LIVE' ? `${m.period} ${m.minute}'` : m.status}
+        </Chip>
+      ),
+      sortValue: (m) => m.status,
+    },
+    {
+      key: 'correct',
+      header: 'Correct score',
+      hideBelow: 'md',
+      cell: (m) => (
+        <span className="flex items-center gap-1">
+          <ScoreStep label="Home -1" onClick={() => onAdjustScore(m, -1, 0)} icon={Minus} />
+          <ScoreStep label="Home +1" onClick={() => onAdjustScore(m, 1, 0)} icon={Plus} />
+          <span className="mx-1 text-[10px] font-bold text-muted-foreground">/</span>
+          <ScoreStep label="Away -1" onClick={() => onAdjustScore(m, 0, -1)} icon={Minus} />
+          <ScoreStep label="Away +1" onClick={() => onAdjustScore(m, 0, 1)} icon={Plus} />
+        </span>
+      ),
+    },
+    {
+      key: 'simulate',
+      header: 'Test event',
+      align: 'right',
+      hideBelow: 'lg',
+      cell: (m) => (
+        <span className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={() => onSimulateGoal(m.id, 'HOME')}
+            className="cursor-pointer rounded-md border border-surface-border bg-surface-subtle px-2 py-1 text-[10px] font-bold text-foreground transition-colors hover:bg-surface-hover"
+          >
+            Goal H
+          </button>
+          <button
+            type="button"
+            onClick={() => onSimulateGoal(m.id, 'AWAY')}
+            className="cursor-pointer rounded-md border border-surface-border bg-surface-subtle px-2 py-1 text-[10px] font-bold text-foreground transition-colors hover:bg-surface-hover"
+          >
+            Goal A
+          </button>
+        </span>
+      ),
+    },
+    {
+      key: 'open',
+      header: '',
+      align: 'right',
+      cell: (m) => (
+        <Link
+          href={`/match/${m.id}`}
+          aria-label="Open match page"
+          className="inline-flex rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Connected clients"
+          value={num(telemetry?.connected_clients ?? 0)}
+          sub={`${num(telemetry?.broadcasts_per_minute ?? 0)} broadcasts/min`}
+          icon={Radio}
+          tone="positive"
+        />
+        <KpiCard
+          label="Ingestion latency"
+          value={`${(telemetry?.avg_ingestion_latency_ms ?? 0).toFixed(1)} ms`}
+          sub={`${num(telemetry?.active_pollers ?? 0)} active pollers`}
+          icon={Activity}
+          tone="info"
+        />
+        <KpiCard
+          label="ESPN quota"
+          value={num(telemetry?.espn_quota_used ?? 0)}
+          sub={`of ${num(telemetry?.espn_quota_limit ?? 0)} calls`}
+          icon={Server}
+          tone={quotaTone(telemetry?.espn_quota_used ?? 0, telemetry?.espn_quota_limit ?? 1)}
+        />
+        <KpiCard
+          label="Odds API quota"
+          value={num(telemetry?.odds_api_quota_used ?? 0)}
+          sub={`of ${num(telemetry?.odds_api_quota_limit ?? 0)} calls`}
+          icon={TrendingUp}
+          tone={quotaTone(telemetry?.odds_api_quota_used ?? 0, telemetry?.odds_api_quota_limit ?? 1)}
+        />
+      </div>
+
+      <Panel
+        title="Match orchestrator"
+        description="Correct a wrong scoreline, or push a test event to every connected client. Both broadcast live immediately."
+      >
+        <DataTable
+          rows={matches}
+          columns={columns}
+          rowKey={(m) => m.id}
+          searchFields={(m) =>
+            `${m.home_team?.name} ${m.away_team?.name} ${m.league?.name} ${m.sport}`
+          }
+          searchPlaceholder="Search fixture, league or sport..."
+          filters={[
+            {
+              key: 'status',
+              label: 'Status',
+              options: [
+                { value: 'LIVE', label: 'Live' },
+                { value: 'SCHEDULED', label: 'Scheduled' },
+                { value: 'FINISHED', label: 'Finished' },
+              ],
+            },
+          ]}
+          filterValue={(m) => m.status}
+          defaultSort={{ key: 'status', dir: 'asc' }}
+          pageSize={8}
+          itemLabel="fixtures"
+          isLoading={isLoading}
+          emptyTitle="No fixtures"
+          emptyBody="Fixtures appear once the ingestion worker has polled a feed."
+          minWidth="min-w-[900px]"
+        />
+      </Panel>
+    </div>
+  );
+}
+
+function ScoreStep({
+  label,
+  onClick,
+  icon: Icon,
+}: {
+  label: string;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="cursor-pointer rounded-md border border-surface-border bg-surface-subtle p-1 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+    >
+      <Icon className="h-3 w-3" />
+    </button>
+  );
+}
+
+/* =========================================================================== */
+/* Support                                                                     */
+/* =========================================================================== */
+
+function SupportSection({
+  tickets,
+  isLoading,
+  selectedTicket,
+  onSelect,
+  replyText,
+  onReplyChange,
+  onSendReply,
+  isSending,
+}: {
+  tickets: SupportTicket[];
+  isLoading: boolean;
+  selectedTicket: SupportTicket | null;
+  onSelect: (t: SupportTicket) => void;
+  replyText: string;
+  onReplyChange: (v: string) => void;
+  onSendReply: (e: React.FormEvent) => void;
+  isSending: boolean;
+}) {
+  const priorityTone = (p: string): Tone =>
+    p === 'urgent' ? 'danger' : p === 'high' ? 'warning' : p === 'medium' ? 'info' : 'neutral';
+
+  const statusTone = (s: string): Tone =>
+    s === 'open' ? 'danger' : s === 'in_progress' ? 'warning' : 'positive';
+
+  const columns: Column<SupportTicket>[] = [
+    {
+      key: 'subject',
+      header: 'Ticket',
+      cell: (t) => (
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-semibold text-foreground">{t.subject}</span>
+          <span className="block truncate text-[11px] text-muted-foreground">
+            {t.category} · #{t.id.slice(-6)}
+          </span>
+        </span>
+      ),
+      sortValue: (t) => t.subject.toLowerCase(),
+    },
+    {
+      key: 'user',
+      header: 'From',
+      hideBelow: 'md',
+      cell: (t) => <UserCell name={t.user_name} email={t.user_email} />,
+      sortValue: (t) => t.user_name.toLowerCase(),
+    },
+    {
+      key: 'priority',
+      header: 'Priority',
+      cell: (t) => <Chip tone={priorityTone(t.priority)}>{t.priority}</Chip>,
+      sortValue: (t) => ['low', 'medium', 'high', 'urgent'].indexOf(t.priority),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (t) => <Chip tone={statusTone(t.status)}>{t.status.replace('_', ' ')}</Chip>,
+      sortValue: (t) => t.status,
+    },
+    {
+      key: 'updated',
+      header: 'Updated',
+      align: 'right',
+      cell: (t) => <span className="text-muted-foreground">{relTime(t.updated_at)}</span>,
+      sortValue: (t) => new Date(t.updated_at).getTime(),
+    },
+  ];
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-5">
+      <div className="min-w-0 xl:col-span-3">
+        <DataTable
+          rows={tickets}
+          columns={columns}
+          rowKey={(t) => t.id}
+          searchFields={(t) => `${t.subject} ${t.user_name} ${t.user_email} ${t.category} ${t.id}`}
+          searchPlaceholder="Search subject, sender or category..."
+          filters={[
+            {
+              key: 'status',
+              label: 'Status',
+              options: [
+                { value: 'open', label: 'Open' },
+                { value: 'in_progress', label: 'In progress' },
+                { value: 'resolved', label: 'Resolved' },
+                { value: 'closed', label: 'Closed' },
+              ],
+            },
+          ]}
+          filterValue={(t) => t.status}
+          onRowClick={onSelect}
+          isSelected={(t) => t.id === selectedTicket?.id}
+          defaultSort={{ key: 'updated', dir: 'desc' }}
+          pageSize={8}
+          itemLabel="tickets"
+          isLoading={isLoading}
+          emptyTitle="Queue is clear"
+          emptyBody="No tickets match this view."
+          minWidth="min-w-[680px]"
+        />
+      </div>
+
+      <div className="min-w-0 xl:col-span-2">
+        {selectedTicket ? (
+          <Panel
+            title={selectedTicket.subject}
+            description={`${selectedTicket.user_name} · ${selectedTicket.category}`}
+            actions={
+              <Chip tone={statusTone(selectedTicket.status)}>
+                {selectedTicket.status.replace('_', ' ')}
+              </Chip>
+            }
+          >
+            <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
+              {selectedTicket.messages?.map((msg) => {
+                const fromAgent = msg.sender === 'agent';
+                return (
+                  <div
+                    key={msg.id}
+                    className={`rounded-xl border p-3 ${
+                      fromAgent
+                        ? 'border-[var(--brand-ring)] bg-[var(--brand-soft)]'
+                        : 'border-surface-border bg-surface-subtle'
+                    }`}
+                  >
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-[11px] font-bold text-foreground">
+                        {msg.sender_name}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        {relTime(msg.created_at)}
                       </span>
                     </div>
-
-                    <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[340px]">
-                      {selectedTicket.messages?.map((msg: any, i: number) => {
-                        const isAgent = msg.sender === 'agent';
-                        return (
-                          <div key={i} className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}>
-                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1 font-mono">
-                              <span>{msg.sender_name || (isAgent ? 'Support Engineer' : 'User')}</span>
-                              <span>&bull;</span>
-                              <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <div
-                              className={`p-3 rounded-2xl max-w-md text-xs leading-relaxed ${
-                                isAgent
-                                  ? 'bg-blue-600 text-white rounded-br-none shadow-sm'
-                                  : 'bg-surface-subtle border border-surface-border text-foreground rounded-bl-none'
-                              }`}
-                            >
-                              {msg.message}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <form onSubmit={handleSendSupportReply} className="p-3 border-t border-surface-border bg-surface-subtle flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={agentReplyText}
-                        onChange={(e) => setAgentReplyText(e.target.value)}
-                        placeholder="Type official support engineer response..."
-                        className="flex-1 bg-surface border border-surface-border focus:border-blue-500 rounded-xl px-3.5 py-2 text-xs text-foreground focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!agentReplyText.trim()}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-bold p-2.5 rounded-xl transition-all cursor-pointer shadow-sm"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                      </button>
-                    </form>
-                  </>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
-                    <MessageSquare className="w-8 h-8 opacity-30 mb-2" />
-                    <p className="text-xs font-mono">Select a support ticket from the queue</p>
+                    <p className="text-xs leading-relaxed text-foreground">{msg.message}</p>
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
+
+            <form onSubmit={onSendReply} className="mt-4 border-t border-surface-border pt-4">
+              <label htmlFor="admin-reply" className="sr-only">
+                Reply to ticket
+              </label>
+              <textarea
+                id="admin-reply"
+                value={replyText}
+                onChange={(e) => onReplyChange(e.target.value)}
+                rows={3}
+                placeholder="Write a reply..."
+                className="w-full resize-none rounded-xl border border-surface-border bg-surface-subtle p-3 text-xs text-foreground transition-colors placeholder:text-muted-foreground focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={isSending || !replyText.trim()}
+                className="mt-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-brand-gradient px-4 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                <span>Send reply</span>
+              </button>
+            </form>
+          </Panel>
+        ) : (
+          <div className="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-2xl border border-dashed border-surface-border bg-surface p-8 text-center">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-surface-border bg-surface-subtle text-muted-foreground">
+              <Headphones className="h-5 w-5" />
+            </span>
+            <p className="mt-3.5 text-sm font-bold text-foreground">No ticket open</p>
+            <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+              Pick a ticket from the queue to read the thread and reply.
+            </p>
           </div>
         )}
-      </main>
-
-      <MobileNav activeNav="admin" />
+      </div>
     </div>
   );
 }
