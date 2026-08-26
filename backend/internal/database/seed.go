@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/sports/livescores/internal/models"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var InitialSports = []models.SportType{
@@ -345,16 +344,14 @@ func (db *DB) SeedInitialData(ctx context.Context) error {
 			l.ID, l.Name, string(l.Sport), l.Country, l.Logo)
 	}
 
-	// Seed system administrator
-	adminHash, _ := bcrypt.GenerateFromPassword([]byte("AdminSecure2026!SlipRadar"), bcrypt.DefaultCost)
-	_, _ = db.Pool.Exec(ctx, `
-		INSERT INTO users (id, email, name, password_hash, role, is_admin, plan, status, country, signup_source, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-		ON CONFLICT (id) DO UPDATE SET
-			role = 'admin',
-			is_admin = TRUE,
-			password_hash = EXCLUDED.password_hash;
-	`, "usr_admin_01", "admin@slipradar.com", "System Administrator", string(adminHash), "admin", true, "elite", "active", "US", "system_init")
+	// Seed initial blog posts
+	for _, p := range GetInitialBlogPosts() {
+		_, _ = db.Pool.Exec(ctx, `
+			INSERT INTO blog_posts (id, title, slug, excerpt, content_html, cover_image, category, author_name, author_role, author_avatar, match_id, read_time_min, views, likes, status, is_deleted, published_at, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, FALSE, $16, $17, $18)
+			ON CONFLICT (id) DO NOTHING;
+		`, p.ID, p.Title, p.Slug, p.Excerpt, p.ContentHTML, p.CoverImage, p.Category, p.AuthorName, p.AuthorRole, p.AuthorAvatar, p.MatchID, p.ReadTimeMin, p.Views, p.Likes, p.Status, p.PublishedAt, p.CreatedAt, p.UpdatedAt)
+	}
 
 	return nil
 }

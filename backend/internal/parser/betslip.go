@@ -78,6 +78,11 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string) (*models.BetSli
 
 	// 1. Check if already stored/cached in store
 	if existing, ok := p.store.GetBetSlip(cleanCode); ok {
+		p.store.SaveBetSlip(existing)
+		for _, leg := range existing.Legs {
+			legMatch := leg.Match
+			p.store.SaveMatch(&legMatch)
+		}
 		return existing, nil
 	}
 
