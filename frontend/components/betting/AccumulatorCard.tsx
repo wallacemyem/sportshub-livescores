@@ -1,17 +1,16 @@
-'use client';
-
 import { BetSlip } from '@/types';
 import { motion } from 'framer-motion';
-import { DollarSign, CheckCircle2, Clock, XCircle, TrendingUp } from 'lucide-react';
+import { DollarSign, CheckCircle2, Clock, XCircle, TrendingUp, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
 
 interface AccumulatorCardProps {
   slip: BetSlip;
   onCashOut?: (slipId: string) => void;
+  onDelete?: (slipId: string) => void;
 }
 
-export function AccumulatorCard({ slip, onCashOut }: AccumulatorCardProps) {
+export function AccumulatorCard({ slip, onCashOut, onDelete }: AccumulatorCardProps) {
   const probPct = Math.round(slip.cashout_probability * 100);
 
   const handleCashoutClick = () => {
@@ -49,9 +48,21 @@ export function AccumulatorCard({ slip, onCashOut }: AccumulatorCardProps) {
           </span>
         </div>
 
-        <span className={`shrink-0 text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${statusColor}`}>
-          {slip.status}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded border ${statusColor}`}>
+            {slip.status}
+          </span>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(slip.id)}
+              title="Delete bet slip"
+              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stake and Potential Win Strip */}

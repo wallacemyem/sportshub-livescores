@@ -86,7 +86,9 @@ func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
 		// Bet Slip & Accumulator Tracker
 		api.Post("/betslip/import", h.Bet.ImportBetSlip)
 		api.Get("/betslip/{id}", h.Bet.GetBetSlip)
+		api.Delete("/betslip/{id}", h.Bet.DeleteBetSlip)
 		api.Get("/betslip", h.Bet.GetAllBetSlips)
+		api.Delete("/betslip", h.Bet.ClearAllBetSlips)
 
 		// Editorial Sports Blog & Articles
 		api.Get("/blog", h.Blog.GetPosts)

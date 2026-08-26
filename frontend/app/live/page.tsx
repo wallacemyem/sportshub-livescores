@@ -108,6 +108,21 @@ export default function HomePage() {
     }
   };
 
+  // Delete a specific bet slip (soft delete)
+  const handleDeleteSlip = async (slipId: string) => {
+    setBetSlips((prev) => {
+      const next = prev.filter((s) => s.id !== slipId);
+      setCachedData('slips', next);
+      return next;
+    });
+    try {
+      const apiBase = getApiBaseUrl();
+      await fetch(`${apiBase}/betslip/${slipId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Failed to delete bet slip', err);
+    }
+  };
+
   // WebSocket Live Connection
   const { isConnected, subscribe } = useLiveMatchSocket(selectedMatchId || undefined);
 
@@ -445,28 +460,32 @@ export default function HomePage() {
               <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5 font-mono">
                 <Ticket className="w-3.5 h-3.5" /> My slips
               </h3>
-              <button
-                onClick={() => setIsImporterOpen(true)}
+              <Link
+                href="/search"
                 className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
               >
                 + Add slip
-              </button>
+              </Link>
             </div>
 
             {betSlips.length === 0 ? (
               <div className="text-center py-6 text-xs text-muted-foreground">
                 <p>No slips tracked yet.</p>
-                <button
-                  onClick={() => setIsImporterOpen(true)}
+                <Link
+                  href="/search"
                   className="mt-2 text-foreground font-bold hover:underline cursor-pointer block mx-auto"
                 >
                   Track your first slip
-                </button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">
                 {betSlips.map((slip) => (
-                  <AccumulatorCard key={slip.id} slip={slip} />
+                  <AccumulatorCard
+                    key={slip.id}
+                    slip={slip}
+                    onDelete={handleDeleteSlip}
+                  />
                 ))}
               </div>
             )}

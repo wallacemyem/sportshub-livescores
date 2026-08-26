@@ -77,6 +77,9 @@ func (s *Store) GetAllMatches(sport models.SportType, status models.MatchStatus)
 
 	result := make([]models.Match, 0)
 	for _, m := range s.matches {
+		if m.IsDeleted || m.DeletedAt != nil {
+			continue
+		}
 		if sport != "" && m.Sport != sport {
 			continue
 		}
@@ -101,7 +104,7 @@ func (s *Store) GetMatchByID(id string) (*models.Match, bool) {
 	defer s.mu.RUnlock()
 
 	m, ok := s.matches[id]
-	if !ok {
+	if !ok || m.IsDeleted || m.DeletedAt != nil {
 		return nil, false
 	}
 	matchCopy := *m
@@ -126,10 +129,10 @@ func (s *Store) DeleteMatch(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.matches[id]; exists {
-		delete(s.matches, id)
-		delete(s.events, id)
-		delete(s.odds, id)
+	if m, exists := s.matches[id]; exists {
+		now := time.Now()
+		m.IsDeleted = true
+		m.DeletedAt = &now
 		return true
 	}
 	return false
@@ -139,10 +142,15 @@ func (s *Store) ClearAllMatches() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	count := len(s.matches)
-	s.matches = make(map[string]*models.Match)
-	s.events = make(map[string][]models.MatchEvent)
-	s.odds = make(map[string]*models.MatchOdds)
+	now := time.Now()
+	count := 0
+	for _, m := range s.matches {
+		if !m.IsDeleted {
+			m.IsDeleted = true
+			m.DeletedAt = &now
+			count++
+		}
+	}
 	return count
 }
 
@@ -181,7 +189,7 @@ func (s *Store) GetBetSlip(idOrCode string) (*models.BetSlip, bool) {
 	defer s.mu.RUnlock()
 
 	slip, ok := s.betSlips[idOrCode]
-	if !ok {
+	if !ok || slip.IsDeleted || slip.DeletedAt != nil {
 		return nil, false
 	}
 	return slip, true
@@ -194,12 +202,47 @@ func (s *Store) GetAllBetSlips() []*models.BetSlip {
 	seen := make(map[string]bool)
 	result := make([]*models.BetSlip, 0)
 	for _, slip := range s.betSlips {
+		if slip.IsDeleted || slip.DeletedAt != nil {
+			continue
+		}
 		if !seen[slip.ID] {
 			seen[slip.ID] = true
 			result = append(result, slip)
 		}
 	}
 	return result
+}
+
+func (s *Store) DeleteBetSlip(idOrCode string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	slip, ok := s.betSlips[idOrCode]
+	if !ok || slip.IsDeleted {
+		return false
+	}
+	now := time.Now()
+	slip.IsDeleted = true
+	slip.DeletedAt = &now
+	return true
+}
+
+func (s *Store) ClearAllBetSlips() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	now := time.Now()
+	seen := make(map[string]bool)
+	count := 0
+	for _, slip := range s.betSlips {
+		if !seen[slip.ID] && !slip.IsDeleted {
+			seen[slip.ID] = true
+			slip.IsDeleted = true
+			slip.DeletedAt = &now
+			count++
+		}
+	}
+	return count
 }
 
 // Users & Subscriptions
@@ -410,6 +453,9 @@ func (s *Store) GetAllBlogPosts(category, tag string) []models.BlogPost {
 	result := make([]models.BlogPost, 0)
 
 	for _, p := range s.posts {
+		if p.IsDeleted || p.DeletedAt != nil {
+			continue
+		}
 		if seen[p.ID] {
 			continue
 		}
@@ -436,7 +482,7 @@ func (s *Store) GetBlogPostBySlug(slugOrID string) (*models.BlogPost, bool) {
 	defer s.mu.Unlock()
 
 	p, ok := s.posts[slugOrID]
-	if !ok {
+	if !ok || p.IsDeleted || p.DeletedAt != nil {
 		return nil, false
 	}
 
@@ -465,7 +511,7 @@ func (s *Store) LikeBlogPost(slugOrID string) (int, bool) {
 	defer s.mu.Unlock()
 
 	p, ok := s.posts[slugOrID]
-	if !ok {
+	if !ok || p.IsDeleted {
 		return 0, false
 	}
 	p.Likes++
@@ -477,11 +523,12 @@ func (s *Store) DeleteBlogPost(id string) bool {
 	defer s.mu.Unlock()
 
 	p, ok := s.posts[id]
-	if !ok {
+	if !ok || p.IsDeleted {
 		return false
 	}
-	delete(s.posts, p.ID)
-	delete(s.posts, p.Slug)
+	now := time.Now()
+	p.IsDeleted = true
+	p.DeletedAt = &now
 	return true
 }
 
@@ -492,6 +539,9 @@ func (s *Store) GetSupportTickets(status string) []*models.SupportTicket {
 
 	result := make([]*models.SupportTicket, 0)
 	for _, t := range s.supportTickets {
+		if t.IsDeleted || t.DeletedAt != nil {
+			continue
+		}
 		if status == "" || t.Status == status {
 			tCopy := *t
 			result = append(result, &tCopy)
@@ -505,11 +555,25 @@ func (s *Store) GetSupportTicketByID(id string) (*models.SupportTicket, bool) {
 	defer s.mu.RUnlock()
 
 	t, ok := s.supportTickets[id]
-	if !ok {
+	if !ok || t.IsDeleted || t.DeletedAt != nil {
 		return nil, false
 	}
 	tCopy := *t
 	return &tCopy, true
+}
+
+func (s *Store) DeleteSupportTicket(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	t, ok := s.supportTickets[id]
+	if !ok || t.IsDeleted {
+		return false
+	}
+	now := time.Now()
+	t.IsDeleted = true
+	t.DeletedAt = &now
+	return true
 }
 
 func (s *Store) CreateSupportTicket(ticket *models.SupportTicket) {

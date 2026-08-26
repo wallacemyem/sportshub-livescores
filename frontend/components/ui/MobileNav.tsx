@@ -19,7 +19,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { getPlanConfig } from '@/components/brand/PlanBadge';
 
-type NavKey = 'scores' | 'live' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
+type NavKey = 'scores' | 'live' | 'search' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
 
 interface MobileNavProps {
   onOpenProModal?: () => void;
@@ -34,6 +34,7 @@ interface MobileNavProps {
 /** Resolve the highlighted item from the route when the page does not pin one. */
 function resolveActive(pathname: string, activeNav?: NavKey): NavKey {
   if (activeNav) return activeNav;
+  if (pathname.startsWith('/search')) return 'search';
   if (pathname.startsWith('/account/plan')) return 'plan';
   if (pathname.startsWith('/pro') || pathname.startsWith('/pricing')) return 'pro';
   if (pathname.startsWith('/support')) return 'support';
@@ -122,24 +123,18 @@ export function MobileNav({
             </Link>
 
             {/* Search */}
-            {onOpenSearchModal ? (
-              <button
-                type="button"
-                onClick={onOpenSearchModal}
-                className="flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 text-muted-foreground transition-colors duration-200 active:bg-white/50 dark:active:bg-white/10 cursor-pointer"
-              >
-                <Search className="w-[18px] h-[18px] shrink-0" />
-                <span className="text-[10px] font-semibold leading-none">Search</span>
-              </button>
-            ) : (
-              <Link
-                href="/live"
-                className="flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 text-muted-foreground transition-colors duration-200 active:bg-white/50 dark:active:bg-white/10"
-              >
-                <Search className="w-[18px] h-[18px] shrink-0" />
-                <span className="text-[10px] font-semibold leading-none">Search</span>
-              </Link>
-            )}
+            <Link
+              href="/search"
+              aria-current={currentActive === 'search' ? 'page' : undefined}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 transition-colors duration-200 ${
+                currentActive === 'search'
+                  ? 'bg-white/90 dark:bg-white/15 text-violet-600 dark:text-violet-400 shadow-sm'
+                  : 'text-muted-foreground active:bg-white/50 dark:active:bg-white/10'
+              }`}
+            >
+              <Search className="w-[18px] h-[18px] shrink-0" />
+              <span className="text-[10px] font-semibold leading-none">Search</span>
+            </Link>
 
             {/* Plan with Dynamic Icon */}
             <Link
@@ -193,11 +188,13 @@ export function MobileNav({
             onClick={handleScoresClick}
           />
 
-          {onOpenSearchModal ? (
-            <DockButton label="Search games" icon={Search} onClick={onOpenSearchModal} />
-          ) : (
-            <DockLink href="/live" label="Search" icon={Search} isActive={false} />
-          )}
+          <DockLink
+            href="/search"
+            label="Search & Tickets"
+            icon={Search}
+            isActive={currentActive === 'search'}
+            activeClass="bg-blue-600 text-white shadow-md shadow-blue-500/30"
+          />
 
           <DockLink
             href="/live?filter=LIVE"

@@ -141,6 +141,8 @@ type Match struct {
 	Venue       string      `json:"venue,omitempty"`
 	Referee     string      `json:"referee,omitempty"`
 	HasLiveAudio bool       `json:"has_live_audio,omitempty"`
+	IsDeleted   bool        `json:"is_deleted,omitempty"`
+	DeletedAt   *time.Time  `json:"deleted_at,omitempty"`
 }
 
 type BetLegStatus string
@@ -188,6 +190,8 @@ type BetSlip struct {
 	Legs              []BetSlipLeg  `json:"legs"`
 	CreatedAt         time.Time     `json:"created_at"`
 	UpdatedAt         time.Time     `json:"updated_at"`
+	IsDeleted         bool          `json:"is_deleted,omitempty"`
+	DeletedAt         *time.Time    `json:"deleted_at,omitempty"`
 }
 
 type UserPlan string
@@ -215,6 +219,8 @@ type User struct {
 	Country      string     `json:"country"`
 	SignupSource string     `json:"signup_source"`
 	LastSeenAt   time.Time  `json:"last_seen_at"`
+	IsDeleted    bool       `json:"is_deleted,omitempty"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
 }
 
 type RegisterRequest struct {
@@ -251,6 +257,8 @@ type PaymentTransaction struct {
 	Plan        UserPlan       `json:"plan"`
 	RawPayload  string         `json:"raw_payload,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
+	IsDeleted   bool           `json:"is_deleted,omitempty"`
+	DeletedAt   *time.Time     `json:"deleted_at,omitempty"`
 }
 
 type WebhookLog struct {
@@ -264,26 +272,28 @@ type WebhookLog struct {
 }
 
 type BlogPost struct {
-	ID           string    `json:"id"`
-	Title        string    `json:"title"`
-	Slug         string    `json:"slug"`
-	Excerpt      string    `json:"excerpt"`
-	ContentHTML  string    `json:"content_html"`
-	CoverImage   string    `json:"cover_image"`
-	Category     string    `json:"category"`
-	Tags         []string  `json:"tags"`
-	AuthorName   string    `json:"author_name"`
-	AuthorRole   string    `json:"author_role,omitempty"`
-	AuthorAvatar string    `json:"author_avatar"`
-	MatchID      string    `json:"match_id,omitempty"`
-	Match        *Match    `json:"match,omitempty"`
-	ReadTimeMin  int       `json:"read_time_min"`
-	Views        int       `json:"views"`
-	Likes        int       `json:"likes"`
-	Status       string    `json:"status"`
-	PublishedAt  time.Time `json:"published_at"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string     `json:"id"`
+	Title        string     `json:"title"`
+	Slug         string     `json:"slug"`
+	Excerpt      string     `json:"excerpt"`
+	ContentHTML  string     `json:"content_html"`
+	CoverImage   string     `json:"cover_image"`
+	Category     string     `json:"category"`
+	Tags         []string   `json:"tags"`
+	AuthorName   string     `json:"author_name"`
+	AuthorRole   string     `json:"author_role,omitempty"`
+	AuthorAvatar string     `json:"author_avatar"`
+	MatchID      string     `json:"match_id,omitempty"`
+	Match        *Match     `json:"match,omitempty"`
+	ReadTimeMin  int        `json:"read_time_min"`
+	Views        int        `json:"views"`
+	Likes        int        `json:"likes"`
+	Status       string     `json:"status"`
+	PublishedAt  time.Time  `json:"published_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	IsDeleted    bool       `json:"is_deleted,omitempty"`
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
 }
 
 // Customer Support & Helpdesk Models
@@ -307,6 +317,8 @@ type SupportTicket struct {
 	Messages  []SupportTicketMessage `json:"messages"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
+	IsDeleted bool                   `json:"is_deleted,omitempty"`
+	DeletedAt *time.Time             `json:"deleted_at,omitempty"`
 }
 
 // WebSocket Delta Message Types

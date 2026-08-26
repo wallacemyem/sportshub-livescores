@@ -211,3 +211,21 @@ export function BookmakerBadge({
     </div>
   );
 }
+
+export function BookmakerLogo({
+  bookmaker,
+  size = 'md',
+  className = '',
+}: {
+  bookmaker: string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) {
+  const iconSizes = {
+    sm: 'w-6 h-6',
+    md: 'w-8 h-8',
+    lg: 'w-10 h-10',
+  };
+
+  return <BookmakerIcon id={bookmaker} className={`${iconSizes[size]} ${className}`} />;
+}

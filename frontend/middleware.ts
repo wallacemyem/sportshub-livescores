@@ -82,10 +82,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 4. Protect App Routes (/live, /match/*, /account, /pro, /support)
+  // 4. Protect App Routes (/live, /search, /match/*, /account, /pro, /support)
   const isProtectedAppRoute =
     pathname === '/live' ||
     pathname.startsWith('/live/') ||
+    pathname === '/search' ||
+    pathname.startsWith('/search/') ||
     pathname === '/account' ||
     pathname.startsWith('/account/') ||
     pathname === '/pro' ||

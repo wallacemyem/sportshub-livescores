@@ -74,3 +74,29 @@ func (h *BetSlipHandler) GetAllBetSlips(w http.ResponseWriter, r *http.Request) 
 		"count": len(slips),
 	})
 }
+
+func (h *BetSlipHandler) DeleteBetSlip(w http.ResponseWriter, r *http.Request) {
+	idOrCode := chi.URLParam(r, "id")
+	deleted := h.store.DeleteBetSlip(idOrCode)
+	w.Header().Set("Content-Type", "application/json")
+	if !deleted {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Bet slip not found"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "success",
+		"message": "Bet slip removed successfully",
+		"id":      idOrCode,
+	})
+}
+
+func (h *BetSlipHandler) ClearAllBetSlips(w http.ResponseWriter, r *http.Request) {
+	count := h.store.ClearAllBetSlips()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":        "success",
+		"message":       "All bet slips cleared successfully",
+		"cleared_count": count,
+	})
+}

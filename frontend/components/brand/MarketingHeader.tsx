@@ -11,6 +11,7 @@ import { PlanBadge } from '@/components/brand/PlanBadge';
 
 const NAV_LINKS = [
   { href: '/live', label: 'Live Scores' },
+  { href: '/search', label: 'Search & Tickets' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/blog', label: 'Blog' },
   { href: '/support', label: 'Support' },
