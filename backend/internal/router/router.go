@@ -77,6 +77,8 @@ func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
 		// Matches & Sports
 		api.Get("/matches", h.Match.GetMatches)
 		api.Get("/matches/{id}", h.Match.GetMatchByID)
+		api.Delete("/matches/{id}", h.Match.DeleteMatch)
+		api.Delete("/matches", h.Match.ClearAllMatches)
 		api.Get("/matches/{id}/odds", h.Odds.GetMatchOdds)
 		api.Get("/leagues", h.Match.GetLeagues)
 		api.Get("/sports", h.Match.GetSports)

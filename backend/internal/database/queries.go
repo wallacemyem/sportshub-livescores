@@ -122,6 +122,30 @@ func (s *Store) SaveMatch(m *models.Match) {
 	s.matches[m.ID] = &matchCopy
 }
 
+func (s *Store) DeleteMatch(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.matches[id]; exists {
+		delete(s.matches, id)
+		delete(s.events, id)
+		delete(s.odds, id)
+		return true
+	}
+	return false
+}
+
+func (s *Store) ClearAllMatches() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	count := len(s.matches)
+	s.matches = make(map[string]*models.Match)
+	s.events = make(map[string][]models.MatchEvent)
+	s.odds = make(map[string]*models.MatchOdds)
+	return count
+}
+
 func (s *Store) AddMatchEvent(event models.MatchEvent) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

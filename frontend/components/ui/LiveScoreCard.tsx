@@ -1,8 +1,6 @@
-'use client';
-
 import { Match } from '@/types';
 import { motion } from 'framer-motion';
-import { Radio, ChevronRight, TrendingUp, Volume2, Activity } from 'lucide-react';
+import { Radio, ChevronRight, TrendingUp, Volume2, Activity, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,9 +11,10 @@ interface LiveScoreCardProps {
   match: Match;
   isSelected?: boolean;
   onSelect?: () => void;
+  onRemove?: (id: string) => void;
 }
 
-export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScoreCardProps) {
+export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }: LiveScoreCardProps) {
   const router = useRouter();
   const prevScoreRef = useRef(`${match.home_score}-${match.away_score}`);
 
@@ -89,6 +88,21 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
             <span className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
               {new Date(match.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
+          )}
+
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(match.id);
+              }}
+              title="Remove game from tracker"
+              aria-label="Remove game"
+              className="p-1 rounded-md text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           )}
 
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />

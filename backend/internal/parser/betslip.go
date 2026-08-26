@@ -169,7 +169,7 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string, stake float64) 
 
 	allMatches := p.store.GetAllMatches("", "")
 	if len(allMatches) == 0 {
-		for _, m := range database.GetInitialMatches() {
+		for _, m := range database.GetSampleFixturePool() {
 			mCopy := m
 			p.store.SaveMatch(&mCopy)
 		}

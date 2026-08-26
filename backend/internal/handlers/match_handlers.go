@@ -55,3 +55,29 @@ func (h *MatchHandler) GetSports(w http.ResponseWriter, r *http.Request) {
 		"sports": database.InitialSports,
 	})
 }
+
+func (h *MatchHandler) DeleteMatch(w http.ResponseWriter, r *http.Request) {
+	matchID := chi.URLParam(r, "id")
+	deleted := h.store.DeleteMatch(matchID)
+	w.Header().Set("Content-Type", "application/json")
+	if !deleted {
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Match not found"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "success",
+		"message": "Match removed successfully",
+		"id":      matchID,
+	})
+}
+
+func (h *MatchHandler) ClearAllMatches(w http.ResponseWriter, r *http.Request) {
+	count := h.store.ClearAllMatches()
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":        "success",
+		"message":       "All matches cleared successfully",
+		"cleared_count": count,
+	})
+}

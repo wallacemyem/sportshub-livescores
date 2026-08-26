@@ -43,6 +43,7 @@ import {
   Target,
   Circle,
   Flag,
+  Trash2,
 } from 'lucide-react';
 
 const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -72,7 +73,40 @@ export default function HomePage() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
   const [detailTab, setDetailTab] = useState<'stats' | 'timeline' | 'lineups' | 'odds'>('stats');
-  const [isImportingSample, setIsImportingSample] = useState(false);
+
+  // Remove an individual match from the tracker and database
+  const handleRemoveMatch = async (matchId: string) => {
+    setMatches((prev) => {
+      const next = prev.filter((m) => m.id !== matchId);
+      setCachedData('matches', next);
+      return next;
+    });
+    if (selectedMatchId === matchId) {
+      setSelectedMatchId(null);
+    }
+    try {
+      const apiBase = getApiBaseUrl();
+      await fetch(`${apiBase}/matches/${matchId}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Failed to remove match', err);
+    }
+  };
+
+  // Clear all matches from the tracker and database
+  const handleClearAllMatches = async () => {
+    if (!window.confirm('Are you sure you want to remove all games from the board?')) {
+      return;
+    }
+    setMatches([]);
+    setSelectedMatchId(null);
+    setCachedData('matches', []);
+    try {
+      const apiBase = getApiBaseUrl();
+      await fetch(`${apiBase}/matches`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Failed to clear matches', err);
+    }
+  };
 
   // WebSocket Live Connection
   const { isConnected, subscribe } = useLiveMatchSocket(selectedMatchId || undefined);
@@ -168,37 +202,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [selectedMatchId]);
 
-  // 1-Click Load Sample Multi-Sport Ticket
-  const handleLoadSampleTicket = async () => {
-    setIsImportingSample(true);
-    try {
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/betslip/import`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bookmaker: 'sportybet',
-          booking_code: 'BC99214',
-          stake: 25.0,
-        }),
-      });
 
-      if (res.ok) {
-        const newSlip: BetSlip = await res.json();
-        setBetSlips((prev) => {
-          const next = [newSlip, ...prev];
-          setCachedData('slips', next);
-          return next;
-        });
-        setTicketFilterMode('MY_TICKETS');
-        setStatusFilter('LIVE');
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsImportingSample(false);
-    }
-  };
 
   // Handle Real-Time WebSocket Deltas
   useEffect(() => {
@@ -494,9 +498,23 @@ export default function HomePage() {
               ))}
             </div>
 
-            <span className="text-[11px] font-mono text-muted-foreground hidden sm:block">
-              {filteredMatches.length} matches
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono text-muted-foreground hidden sm:block">
+                {filteredMatches.length} matches
+              </span>
+
+              {matches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllMatches}
+                  title="Remove all games from tracker"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors border border-surface-border hover:border-red-500/30 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Clear all</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Ticket vs Global Switcher on Live Page */}
@@ -562,9 +580,15 @@ export default function HomePage() {
                 <>
                   <p className="mt-4 text-sm font-bold text-foreground">Waiting for the feed</p>
                   <p className="mx-auto mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground">
-                    No matches have arrived yet. Scores appear here automatically as soon as the
-                    live feed connects.
+                    No matches on the board right now. Import a ticket with your booking code to track your custom slips.
                   </p>
+                  <button
+                    onClick={() => setIsImporterOpen(true)}
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-brand-gradient text-white text-xs font-bold rounded-xl shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                  >
+                    <Ticket className="w-3.5 h-3.5" />
+                    <span>Import Booking Slip</span>
+                  </button>
                 </>
               ) : (
                 <>
@@ -595,6 +619,7 @@ export default function HomePage() {
                   match={m}
                   isSelected={selectedMatch?.id === m.id}
                   onSelect={() => setSelectedMatchId(m.id)}
+                  onRemove={handleRemoveMatch}
                 />
               ))}
             </div>

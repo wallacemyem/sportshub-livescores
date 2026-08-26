@@ -31,6 +31,10 @@ var InitialLeagues = []models.League{
 }
 
 func GetInitialMatches() []models.Match {
+	return []models.Match{}
+}
+
+func GetSampleFixturePool() []models.Match {
 	now := time.Now()
 
 	return []models.Match{
