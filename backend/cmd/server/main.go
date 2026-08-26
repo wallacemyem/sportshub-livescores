@@ -17,6 +17,7 @@ import (
 	"github.com/sports/livescores/internal/parser"
 	"github.com/sports/livescores/internal/payments"
 	"github.com/sports/livescores/internal/router"
+	"github.com/sports/livescores/internal/supabase"
 	"github.com/sports/livescores/internal/websocket"
 )
 
@@ -37,6 +38,13 @@ func main() {
 	defer db.Close()
 
 	store := database.NewStore(db)
+
+	// 1b. Supabase PostgREST Realtime Client & Auto-Sync
+	supaClient := supabase.NewClient(cfg.SupabaseURL, cfg.SupabaseServiceKey)
+	if supaClient.IsConfigured() {
+		log.Printf("[SUPABASE] Connected to Supabase at %s. Activating live dual-sync.", cfg.SupabaseURL)
+		store.SetSupabaseSyncer(supaClient)
+	}
 
 	// 2. Redis Connection
 	redisSvc := cache.NewRedisService(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)

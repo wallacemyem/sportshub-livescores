@@ -24,12 +24,54 @@ type Store struct {
 	webhookLogs    []*models.WebhookLog
 	posts          map[string]*models.BlogPost
 	supportTickets map[string]*models.SupportTicket
+	supabaseSyncer SupabaseSyncer
 
 	// Side tables for detail the core models do not carry. Keyed by the
 	// transaction / slip ID they annotate.
 	txMethods   map[string]string
 	txCycles    map[string]string
 	slipParseMs map[string]int
+}
+
+type SupabaseSyncer interface {
+	SyncBetSlip(slip *models.BetSlip)
+	SyncMatch(match *models.Match)
+	SyncUser(user *models.User)
+	SyncBlogPost(post *models.BlogPost)
+	SyncSupportTicket(ticket *models.SupportTicket)
+}
+
+func (s *Store) SetSupabaseSyncer(syncer SupabaseSyncer) {
+	s.mu.Lock()
+	s.supabaseSyncer = syncer
+	s.mu.Unlock()
+
+	if syncer != nil {
+		go func() {
+			s.mu.RLock()
+			defer s.mu.RUnlock()
+			for _, m := range s.matches {
+				if !m.IsDeleted {
+					syncer.SyncMatch(m)
+				}
+			}
+			for _, sl := range s.betSlips {
+				if !sl.IsDeleted {
+					syncer.SyncBetSlip(sl)
+				}
+			}
+			for _, p := range s.posts {
+				if !p.IsDeleted {
+					syncer.SyncBlogPost(p)
+				}
+			}
+			for _, u := range s.users {
+				if !u.IsDeleted {
+					syncer.SyncUser(u)
+				}
+			}
+		}()
+	}
 }
 
 func NewStore(db *DB) *Store {
@@ -287,6 +329,10 @@ func (s *Store) SaveMatch(m *models.Match) {
 			log.Printf("[DB ERROR] Failed to save match %s to PostgreSQL: %v", matchCopy.ID, err)
 		}
 	}
+
+	if s.supabaseSyncer != nil {
+		s.supabaseSyncer.SyncMatch(m)
+	}
 }
 
 func (s *Store) DeleteMatch(id string) bool {
@@ -391,6 +437,10 @@ func (s *Store) SaveBetSlip(slip *models.BetSlip) {
 		if err != nil {
 			log.Printf("[DB ERROR] Failed to save betslip %s to PostgreSQL: %v", slip.BookingCode, err)
 		}
+	}
+
+	if s.supabaseSyncer != nil {
+		s.supabaseSyncer.SyncBetSlip(slip)
 	}
 }
 
@@ -563,6 +613,10 @@ func (s *Store) SaveUser(user *models.User) {
 				log.Printf("[DB ERROR] Failed to save user %s to PostgreSQL: %v", u.Email, err)
 			}
 		}(*user)
+	}
+
+	if s.supabaseSyncer != nil {
+		s.supabaseSyncer.SyncUser(user)
 	}
 }
 
@@ -787,6 +841,10 @@ func (s *Store) SaveBlogPost(post *models.BlogPost) {
 			`, bp.ID, bp.Title, bp.Slug, bp.Excerpt, bp.ContentHTML, bp.CoverImage, bp.Category, bp.AuthorName, bp.AuthorRole, bp.AuthorAvatar, bp.MatchID, bp.ReadTimeMin, bp.Views, bp.Likes, bp.Status, bp.IsDeleted, bp.PublishedAt, bp.CreatedAt, bp.UpdatedAt)
 		}(*post)
 	}
+
+	if s.supabaseSyncer != nil {
+		s.supabaseSyncer.SyncBlogPost(post)
+	}
 }
 
 func (s *Store) LikeBlogPost(slugOrID string) (int, bool) {
@@ -901,6 +959,10 @@ func (s *Store) CreateSupportTicket(ticket *models.SupportTicket) {
 			`, st.ID, st.UserID, st.UserName, st.UserEmail, st.Subject, st.Category, st.Priority, st.Status, msgBytes, st.IsDeleted, st.CreatedAt, st.UpdatedAt)
 		}(*ticket)
 	}
+
+	if s.supabaseSyncer != nil {
+		s.supabaseSyncer.SyncSupportTicket(ticket)
+	}
 }
 
 func (s *Store) AddSupportMessage(ticketID string, msg *models.SupportTicketMessage) (*models.SupportTicket, bool) {
@@ -928,6 +990,10 @@ func (s *Store) AddSupportMessage(ticketID string, msg *models.SupportTicketMess
 				UPDATE support_tickets SET messages = $1, status = $2, updated_at = NOW() WHERE id = $3
 			`, msgBytes, st.Status, st.ID)
 		}(tCopy)
+	}
+
+	if s.supabaseSyncer != nil {
+		s.supabaseSyncer.SyncSupportTicket(&tCopy)
 	}
 
 	return &tCopy, true
