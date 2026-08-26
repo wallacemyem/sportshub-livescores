@@ -239,7 +239,25 @@ export default function MatchDetailPage() {
           <div className="grid grid-cols-5 gap-1 sm:gap-2 mt-6 pt-4 border-t border-surface-border text-center text-xs font-semibold">
             {[
               { id: 'stats', label: 'Full Stats' },
-              { id: 'pitch', label: match.sport === 'soccer' ? '2D Pitch' : 'Court / Field' },
+              {
+                id: 'pitch',
+                label:
+                  match.sport === 'soccer'
+                    ? '2D Pitch'
+                    : match.sport === 'basketball'
+                    ? '2D Court'
+                    : match.sport === 'tennis'
+                    ? '2D Court'
+                    : match.sport === 'nfl'
+                    ? '2D Gridiron'
+                    : match.sport === 'baseball'
+                    ? '2D Diamond'
+                    : match.sport === 'cricket'
+                    ? '2D Oval'
+                    : match.sport === 'golf'
+                    ? '2D Course'
+                    : '2D Tracker',
+              },
               { id: 'timeline', label: 'Timeline' },
               { id: 'lineups', label: 'Lineups' },
               { id: 'odds', label: 'Odds Hub' },

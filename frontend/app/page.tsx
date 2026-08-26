@@ -12,7 +12,6 @@ import { TickerStrip } from '@/components/ui/TickerStrip';
 import { LiveScoreCard } from '@/components/ui/LiveScoreCard';
 import { FloatingPiP } from '@/components/ui/FloatingPiP';
 import { ProUpgradeModal } from '@/components/ui/ProUpgradeModal';
-import { PitchView } from '@/components/live/PitchView';
 import { EventTimeline } from '@/components/live/EventTimeline';
 import { LineupsView } from '@/components/live/LineupsView';
 import { HeadToHead } from '@/components/live/HeadToHead';
@@ -76,7 +75,7 @@ export default function HomePage() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
-  const [detailTab, setDetailTab] = useState<'pitch' | 'timeline' | 'stats' | 'lineups' | 'odds'>('pitch');
+  const [detailTab, setDetailTab] = useState<'stats' | 'timeline' | 'lineups' | 'odds'>('stats');
   const [isImportingSample, setIsImportingSample] = useState(false);
 
   // WebSocket Live Connection
@@ -652,11 +651,10 @@ export default function HomePage() {
                 </div>
 
                 {/* Detail Tabs Bar */}
-                <div className="grid grid-cols-5 gap-1 pt-3 border-t border-surface-border text-center text-xs">
+                <div className="grid grid-cols-4 gap-1 pt-3 border-t border-surface-border text-center text-xs">
                   {[
-                    { id: 'pitch', label: '2D Pitch' },
-                    { id: 'timeline', label: 'Timeline' },
                     { id: 'stats', label: 'Stats' },
+                    { id: 'timeline', label: 'Timeline' },
                     { id: 'lineups', label: 'Lineups' },
                     { id: 'odds', label: 'Odds' },
                   ].map((tab) => (
@@ -676,7 +674,7 @@ export default function HomePage() {
               </div>
 
               {/* Active Tab Content */}
-              {detailTab === 'pitch' && <PitchView match={selectedMatch} />}
+              {detailTab === 'stats' && <HeadToHead match={selectedMatch} />}
               {detailTab === 'timeline' && (
                 <EventTimeline
                   events={selectedMatch.events}
@@ -684,13 +682,12 @@ export default function HomePage() {
                   awayTeamName={selectedMatch.away_team.name}
                 />
               )}
-              {detailTab === 'stats' && <HeadToHead match={selectedMatch} />}
               {detailTab === 'lineups' && <LineupsView match={selectedMatch} />}
               {detailTab === 'odds' && <OddsComparisonTable odds={selectedMatch.odds} />}
             </div>
           ) : (
             <div className="bg-surface rounded-xl border border-surface-border p-8 text-center text-muted-foreground text-xs">
-              Select a match from the feed to view live 2D pitch tracking, lineups, and odds.
+              Select a match from the feed to view live stats, lineups, and odds.
             </div>
           )}
         </div>
