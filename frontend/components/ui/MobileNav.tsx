@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Radio, Newspaper, Headphones, Shield, Activity, Search } from 'lucide-react';
+import { Radio, Newspaper, Headphones, Shield, Activity, Search, User, Server } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 interface MobileNavProps {
@@ -11,7 +11,7 @@ interface MobileNavProps {
   onOpenSearchModal?: () => void;
   onSelectScores?: () => void;
   onSelectLive?: () => void;
-  activeNav?: 'scores' | 'live' | 'blog' | 'support' | 'pro';
+  activeNav?: 'scores' | 'live' | 'blog' | 'support' | 'pro' | 'account' | 'admin';
   liveCount?: number;
 }
 
@@ -28,13 +28,17 @@ export function MobileNav({
   const router = useRouter();
 
   // Determine current active item
-  let currentActive: 'scores' | 'live' | 'blog' | 'support' | 'pro' = 'scores';
+  let currentActive: 'scores' | 'live' | 'blog' | 'support' | 'pro' | 'account' | 'admin' = 'scores';
   if (activeNav) {
     currentActive = activeNav;
   } else if (pathname.startsWith('/pro')) {
     currentActive = 'pro';
   } else if (pathname.startsWith('/support')) {
     currentActive = 'support';
+  } else if (pathname.startsWith('/account') || pathname.startsWith('/auth')) {
+    currentActive = 'account';
+  } else if (pathname.startsWith('/admin')) {
+    currentActive = 'admin';
   } else if (pathname.startsWith('/blog')) {
     currentActive = 'blog';
   } else if (pathname.startsWith('/match')) {
@@ -294,6 +298,38 @@ export function MobileNav({
             <Shield className="w-5 h-5" />
             <span className="absolute left-full ml-3 px-2 py-1 bg-violet-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50">
               PRO Pass
+            </span>
+          </Link>
+
+          {/* Admin Dashboard */}
+          <Link
+            href="/admin"
+            title="Admin Console (Port 19080)"
+            className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              currentActive === 'admin'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30 font-bold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10'
+            }`}
+          >
+            <Server className="w-5 h-5" />
+            <span className="absolute left-full ml-3 px-2 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50">
+              Admin Console
+            </span>
+          </Link>
+
+          {/* User Account */}
+          <Link
+            href="/account"
+            title="User Account & Settings"
+            className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              currentActive === 'account'
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30 font-bold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-white/10'
+            }`}
+          >
+            <User className="w-5 h-5" />
+            <span className="absolute left-full ml-3 px-2 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50">
+              Account & Profile
             </span>
           </Link>
 

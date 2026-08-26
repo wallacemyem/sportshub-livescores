@@ -1,6 +1,6 @@
 /**
  * API & WebSocket Endpoint Resolution Helper
- * Supports direct non-standard port access (17080 / 18443) and production reverse proxy domains (games.wallacecloud.online).
+ * Supports direct non-standard port access (17080 / 18443 / 19080) and production reverse proxy domains.
  */
 
 export function getApiBaseUrl(): string {
@@ -27,4 +27,16 @@ export function getWsUrl(): string {
   const isHttps = window.location.protocol === 'https:';
   const proto = isHttps ? 'wss:' : 'ws:';
   return `${proto}//${window.location.host}/ws`;
+}
+
+export function getAdminUrl(): string {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_ADMIN_URL || 'http://localhost:19080';
+  }
+  // Direct port access
+  if (window.location.port === '17080') {
+    return `http://${window.location.hostname}:19080`;
+  }
+  // Domain / standard port
+  return `http://${window.location.hostname}:19080`;
 }

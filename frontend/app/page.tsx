@@ -25,7 +25,8 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { TeamCrest } from '@/components/ui/TeamCrest';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { getCachedData, setCachedData } from '@/lib/cache';
-import { getApiBaseUrl } from '@/lib/api';
+import { getApiBaseUrl, getAdminUrl } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import {
   Radio,
   Search,
@@ -33,6 +34,7 @@ import {
   Ticket,
   Headphones,
   Calendar,
+  User,
   Layers,
   Activity,
   Maximize2,
@@ -63,6 +65,7 @@ const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ classN
 
 export default function HomePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedSport, setSelectedSport] = useState<SportType>('soccer');
   // First page default is strictly LIVE
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
@@ -342,14 +345,37 @@ export default function HomePage() {
               <span>PRO</span>
             </Link>
 
-            <a
-              href="http://localhost:19080"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden xl:flex items-center gap-1 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            {/* Admin Dashboard */}
+            <Link
+              href="/admin"
+              className="hidden xl:flex items-center gap-1 bg-surface-subtle hover:bg-surface-hover border border-surface-border px-2.5 py-1.5 rounded-lg text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+              title="Admin Console (Port 19080)"
             >
+              <span>Admin</span>
               <ExternalLink className="w-3 h-3" />
-            </a>
+            </Link>
+
+            {/* Auth / Account Profile */}
+            {user ? (
+              <Link
+                href="/account"
+                className="flex items-center gap-1.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border p-1 sm:px-2 sm:py-1 rounded-lg text-xs font-semibold text-foreground transition-all"
+                title={`Logged in as ${user.name}`}
+              >
+                <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span className="hidden md:inline max-w-[80px] truncate text-[11px]">{user.name}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/auth/login"
+                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm shadow-blue-500/20 cursor-pointer"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </Link>
+            )}
           </div>
         </div>
 

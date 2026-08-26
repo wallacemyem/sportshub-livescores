@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
   title: "SportsHub Live Scores | Ultra-Fast Global Score Tracker",
@@ -21,7 +22,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-150">
         <ThemeProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
