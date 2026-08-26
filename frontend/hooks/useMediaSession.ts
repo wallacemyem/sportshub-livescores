@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Match } from '@/types';
+import { formatClock, formatScore } from '@/lib/sportFormat';
 
 export function useMediaSession(match: Match | null, isStreaming: boolean = true) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -20,8 +21,8 @@ export function useMediaSession(match: Match | null, isStreaming: boolean = true
       audioRef.current = audio;
     }
 
-    const title = `${match.home_team.name} ${match.home_score} - ${match.away_score} ${match.away_team.name}`;
-    const artist = `🔴 LIVE (${match.minute}') • ${match.league.name}`;
+    const title = `${match.home_team.name} ${formatScore(match)} ${match.away_team.name}`;
+    const artist = `🔴 LIVE (${formatClock(match)}) • ${match.league.name}`;
     const album = `SlipRadar Live Match Center • ${match.venue || 'Stadium'}`;
 
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -55,5 +56,5 @@ export function useMediaSession(match: Match | null, isStreaming: boolean = true
         audioRef.current = null;
       }
     };
-  }, [match?.id, match?.home_score, match?.away_score, match?.minute, match?.period, isStreaming]);
+  }, [match?.id, match?.home_score, match?.away_score, match?.minute, match?.display_clock, match?.period, isStreaming]);
 }

@@ -52,6 +52,8 @@ import type {
   AdminUserRow,
   SupportTicket,
 } from '@/types';
+import { formatClock } from '@/lib/sportFormat';
+import type { Match } from '@/types';
 
 type SectionId = 'overview' | 'users' | 'slips' | 'transactions' | 'live' | 'support';
 
@@ -1076,7 +1078,7 @@ function LiveSection({
         <Chip
           tone={m.status === 'LIVE' ? 'danger' : m.status === 'FINISHED' ? 'neutral' : 'warning'}
         >
-          {m.status === 'LIVE' ? `${m.period} ${m.minute}'` : m.status}
+          {m.status === 'LIVE' ? formatClock(m as Match) : m.status}
         </Chip>
       ),
       sortValue: (m) => m.status,

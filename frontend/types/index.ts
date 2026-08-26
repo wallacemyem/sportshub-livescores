@@ -94,7 +94,18 @@ export interface Match {
   period_scores?: string[];
   status: MatchStatus;
   period: string;
+  /**
+   * Elapsed minutes. Only meaningful where the clock counts up (soccer);
+   * 0 for every other sport. Use formatClock() from lib/sportFormat rather
+   * than rendering this directly.
+   */
   minute: number;
+  /** Provider clock text, already in the sport's convention ("45+2", "8:32", "12.3"). */
+  display_clock?: string;
+  /** Ordinal period: half, quarter, set, innings or round. */
+  period_number?: number;
+  /** Seconds remaining in the period, for sports that count down. */
+  clock_seconds?: number;
   start_time: string;
   stats: MatchStats;
   events: MatchEvent[];
@@ -144,6 +155,9 @@ export interface LiveDelta {
   away_score?: number;
   period?: string;
   minute?: number;
+  display_clock?: string;
+  period_number?: number;
+  clock_seconds?: number;
   status?: MatchStatus;
   event?: MatchEvent;
   stats?: MatchStats;

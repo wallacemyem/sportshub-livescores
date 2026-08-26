@@ -133,7 +133,24 @@ type Match struct {
 	PeriodScores []string   `json:"period_scores,omitempty"` // e.g. ["25-22", "18-20"] for sets/quarters
 	Status      MatchStatus `json:"status"`
 	Period      string      `json:"period"` // "1H", "2H", "HT", "Q1", "Q2", "Q3", "Q4", "OT", "SET 1", "FT"
-	Minute      int         `json:"minute"`
+
+	// Minute is elapsed minutes and is only meaningful for sports whose clock
+	// counts UP (soccer). It is left at 0 for everything else — do not render
+	// it as "<n>'" for basketball, NFL, tennis, cricket, baseball or golf.
+	Minute int `json:"minute"`
+
+	// DisplayClock is the provider's own clock text, already formatted in the
+	// convention of that sport: "45+2" for soccer, "8:32" for a basketball or
+	// NFL countdown, "12.3" overs for cricket. When present it is authoritative
+	// and should be shown verbatim rather than recomputed.
+	DisplayClock string `json:"display_clock,omitempty"`
+
+	// PeriodNumber is the ordinal period: half, quarter, set, innings or round.
+	PeriodNumber int `json:"period_number,omitempty"`
+
+	// ClockSeconds is the seconds REMAINING in the current period for sports
+	// that count down (basketball, NFL). Zero for count-up and untimed sports.
+	ClockSeconds int `json:"clock_seconds,omitempty"`
 	StartTime   time.Time   `json:"start_time"`
 	Stats       MatchStats  `json:"stats"`
 	Events      []MatchEvent `json:"events"`
@@ -342,6 +359,11 @@ type LiveDelta struct {
 	AwayScore *int         `json:"away_score,omitempty"`
 	Period    string       `json:"period,omitempty"`
 	Minute    *int         `json:"minute,omitempty"`
+	// Mirrors Match.DisplayClock / PeriodNumber / ClockSeconds so a clock tick
+	// carries the sport's own convention rather than only an elapsed minute.
+	DisplayClock string `json:"display_clock,omitempty"`
+	PeriodNumber *int   `json:"period_number,omitempty"`
+	ClockSeconds *int   `json:"clock_seconds,omitempty"`
 	Status    MatchStatus  `json:"status,omitempty"`
 	Event     *MatchEvent  `json:"event,omitempty"`
 	Stats     *MatchStats  `json:"stats,omitempty"`

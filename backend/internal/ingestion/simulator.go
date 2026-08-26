@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,14 +35,10 @@ func (s *Simulator) TickLiveMatches(ctx context.Context) {
 	for _, m := range liveMatches {
 		matchCopy := m
 
-		// Advance clock
-		matchCopy.Minute++
-		if matchCopy.Minute > 90 && matchCopy.Sport == models.SportSoccer {
-			if matchCopy.Minute > 95 {
-				matchCopy.Status = models.StatusFinished
-				matchCopy.Period = "FT"
-			}
-		}
+		// Advance the clock in the convention of the sport. A single
+		// `Minute++` for everything is what used to push basketball past 48
+		// and tennis past 112 as if both were 90-minute soccer matches.
+		advanceClock(&matchCopy)
 
 		// Update 2D pitch / court ball position
 		matchCopy.Stats.BallPositionX = float64(s.rnd.Intn(90) + 5)
@@ -129,9 +127,12 @@ func (s *Simulator) TickLiveMatches(ctx context.Context) {
 			Sport:     matchCopy.Sport,
 			HomeScore: &matchCopy.HomeScore,
 			AwayScore: &matchCopy.AwayScore,
-			Period:    matchCopy.Period,
-			Minute:    &min,
-			Status:    matchCopy.Status,
+			Period:       matchCopy.Period,
+			Minute:       &min,
+			DisplayClock: matchCopy.DisplayClock,
+			PeriodNumber: &matchCopy.PeriodNumber,
+			ClockSeconds: &matchCopy.ClockSeconds,
+			Status:       matchCopy.Status,
 			Stats:     &matchCopy.Stats,
 			Event:     newEvent,
 			Timestamp: time.Now().UnixMilli(),
@@ -186,9 +187,12 @@ func (s *Simulator) TriggerSimulatedGoal(ctx context.Context, matchID, teamSide,
 		Sport:     match.Sport,
 		HomeScore: &match.HomeScore,
 		AwayScore: &match.AwayScore,
-		Period:    match.Period,
-		Minute:    &min,
-		Status:    match.Status,
+		Period:       match.Period,
+		Minute:       &min,
+		DisplayClock: match.DisplayClock,
+		PeriodNumber: &match.PeriodNumber,
+		ClockSeconds: &match.ClockSeconds,
+		Status:       match.Status,
 		Event:     &event,
 		Stats:     &match.Stats,
 		Timestamp: time.Now().UnixMilli(),
@@ -196,4 +200,181 @@ func (s *Simulator) TriggerSimulatedGoal(ctx context.Context, matchID, teamSide,
 
 	_ = s.redis.PublishDelta(ctx, match.ID, match.League.ID, delta)
 	return match, &event, nil
+}
+
+// Regulation shape of each timed sport, used by the simulator's clock.
+const (
+	soccerHalfMinutes    = 45
+	basketballQuarterSec = 12 * 60
+	nflQuarterSec        = 15 * 60
+	basketballQuarters   = 4
+	nflQuarters          = 4
+	tennisMaxSets        = 5
+	baseballInnings      = 9
+	cricketOversPerInns  = 20
+)
+
+// advanceClock moves one match forward by a single simulation tick, following
+// the timing convention of its sport:
+//
+//	soccer      minute counts UP through two 45-minute halves plus stoppage
+//	basketball  seconds count DOWN through four 12-minute quarters
+//	nfl         seconds count DOWN through four 15-minute quarters
+//	tennis      no clock; progress is sets
+//	cricket     no clock; progress is overs, rendered as "12.3"
+//	baseball    no clock; progress is innings, alternating top and bottom
+//	golf        no clock; progress is rounds
+func advanceClock(m *models.Match) {
+	switch m.Sport {
+
+	case models.SportSoccer:
+		m.Minute++
+		m.ClockSeconds = 0
+		if m.Minute <= soccerHalfMinutes {
+			m.PeriodNumber = 1
+			m.Period = "1H"
+			m.DisplayClock = fmt.Sprintf("%d'", m.Minute)
+		} else if m.Minute <= soccerHalfMinutes*2 {
+			m.PeriodNumber = 2
+			m.Period = "2H"
+			m.DisplayClock = fmt.Sprintf("%d'", m.Minute)
+		} else {
+			// Past 90: show stoppage as 90+n, and end the match a few on.
+			extra := m.Minute - soccerHalfMinutes*2
+			m.PeriodNumber = 2
+			m.Period = "2H"
+			m.DisplayClock = fmt.Sprintf("90+%d", extra)
+			if extra > 5 {
+				m.Status = models.StatusFinished
+				m.Period = "FT"
+				m.DisplayClock = ""
+			}
+		}
+
+	case models.SportBasketball, models.SportNFL:
+		quarterSec := basketballQuarterSec
+		quarters := basketballQuarters
+		if m.Sport == models.SportNFL {
+			quarterSec = nflQuarterSec
+			quarters = nflQuarters
+		}
+		if m.PeriodNumber == 0 {
+			m.PeriodNumber = 1
+		}
+		if m.ClockSeconds <= 0 {
+			m.ClockSeconds = quarterSec
+		}
+
+		// One tick burns a slice of game clock rather than a whole minute.
+		m.ClockSeconds -= 24
+		if m.ClockSeconds <= 0 {
+			if m.PeriodNumber >= quarters {
+				m.Status = models.StatusFinished
+				m.Period = "Final"
+				m.ClockSeconds = 0
+				m.DisplayClock = ""
+				m.Minute = 0
+				return
+			}
+			m.PeriodNumber++
+			m.ClockSeconds = quarterSec
+		}
+
+		m.Period = fmt.Sprintf("Q%d", m.PeriodNumber)
+		m.DisplayClock = fmt.Sprintf("%d:%02d", m.ClockSeconds/60, m.ClockSeconds%60)
+		m.Minute = 0 // no elapsed-minute reading for a countdown sport
+
+	case models.SportTennis:
+		m.Minute = 0
+		m.ClockSeconds = 0
+		m.DisplayClock = ""
+		if m.PeriodNumber == 0 {
+			m.PeriodNumber = 1
+		}
+		// A set changes hands when the set score moves; the score updates
+		// elsewhere, so only clamp the ceiling here.
+		if m.PeriodNumber > tennisMaxSets {
+			m.PeriodNumber = tennisMaxSets
+		}
+		m.Period = fmt.Sprintf("Set %d", m.PeriodNumber)
+
+	case models.SportCricket:
+		m.Minute = 0
+		m.ClockSeconds = 0
+		if m.PeriodNumber == 0 {
+			m.PeriodNumber = 1
+		}
+		// Overs are "o.b": six balls to an over.
+		overs, balls := parseOvers(m.DisplayClock)
+		balls++
+		if balls > 5 {
+			balls = 0
+			overs++
+		}
+		if overs >= cricketOversPerInns {
+			if m.PeriodNumber >= 2 {
+				m.Status = models.StatusFinished
+				m.Period = "Result"
+				m.DisplayClock = ""
+				return
+			}
+			m.PeriodNumber++
+			overs, balls = 0, 0
+		}
+		m.DisplayClock = fmt.Sprintf("%d.%d", overs, balls)
+		m.Period = fmt.Sprintf("Innings %d", m.PeriodNumber)
+
+	case models.SportBaseball:
+		m.Minute = 0
+		m.ClockSeconds = 0
+		m.DisplayClock = ""
+		if m.PeriodNumber == 0 {
+			m.PeriodNumber = 1
+			m.Period = "Top 1"
+			return
+		}
+		// Alternate top and bottom, advancing the innings after the bottom.
+		if strings.HasPrefix(strings.ToLower(m.Period), "top") {
+			m.Period = fmt.Sprintf("Bot %d", m.PeriodNumber)
+		} else {
+			if m.PeriodNumber >= baseballInnings {
+				m.Status = models.StatusFinished
+				m.Period = "Final"
+				return
+			}
+			m.PeriodNumber++
+			m.Period = fmt.Sprintf("Top %d", m.PeriodNumber)
+		}
+
+	case models.SportGolf:
+		m.Minute = 0
+		m.ClockSeconds = 0
+		m.DisplayClock = ""
+		if m.PeriodNumber == 0 {
+			m.PeriodNumber = 1
+		}
+		m.Period = fmt.Sprintf("Round %d", m.PeriodNumber)
+
+	default:
+		m.Minute++
+	}
+}
+
+// parseOvers reads "12.3" into (12, 3). Anything unparseable starts at 0.0.
+func parseOvers(display string) (int, int) {
+	parts := strings.SplitN(strings.TrimSpace(display), ".", 2)
+	if len(parts) == 0 || parts[0] == "" {
+		return 0, 0
+	}
+	overs, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0
+	}
+	balls := 0
+	if len(parts) == 2 {
+		if b, err := strconv.Atoi(parts[1]); err == nil {
+			balls = b
+		}
+	}
+	return overs, balls
 }

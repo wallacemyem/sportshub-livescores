@@ -3,6 +3,7 @@
 import { Match } from '@/types';
 import Link from 'next/link';
 import { ExternalLink, Zap } from 'lucide-react';
+import { formatClock } from '@/lib/sportFormat';
 
 interface MatchEmbedProps {
   match: Match;
@@ -24,7 +25,7 @@ export function MatchEmbed({ match }: MatchEmbedProps) {
         {isLive ? (
           <div className="flex items-center gap-1.5 text-white font-mono font-bold text-xs bg-red-500 px-2.5 py-0.5 rounded-full shadow-sm shadow-red-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-            <span>{match.period} {match.minute}&apos;</span>
+            <span>{formatClock(match)}</span>
           </div>
         ) : (
           <span className="font-mono text-muted-foreground bg-surface-subtle px-2 py-0.5 rounded text-[11px] border border-surface-border">

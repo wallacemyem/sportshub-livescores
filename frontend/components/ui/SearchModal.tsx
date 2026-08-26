@@ -23,6 +23,7 @@ import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { formatClock } from '@/lib/sportFormat';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -302,7 +303,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                         </span>
                         <span className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-0.5 uppercase">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                          {m.period} {m.minute}&apos;
+                          {formatClock(m)}
                         </span>
                       </div>
                     ) : m.status === 'FINISHED' ? (
@@ -310,7 +311,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                         <span className="text-sm font-bold text-foreground">
                           {m.home_score} - {m.away_score}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">FINAL (FT)</span>
+                        <span className="text-[10px] text-muted-foreground">{formatClock(m)}</span>
                       </div>
                     ) : (
                       <div className="flex flex-col items-end font-mono">

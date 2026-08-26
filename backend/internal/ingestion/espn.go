@@ -338,15 +338,37 @@ func ConvertESPNToMatch(event ESPNEvent, cfg ESPNLeagueConfig) *models.Match {
 	if period == "" {
 		period = event.Status.Type.Description
 	}
-	minute := int(event.Status.Clock)
-	if minute == 0 && event.Status.DisplayClock != "" {
-		var m int
-		cleanClock := strings.TrimSuffix(event.Status.DisplayClock, "'")
-		if val, err := strconv.Atoi(cleanClock); err == nil {
-			minute = val
-		} else if _, err := fmt.Sscanf(event.Status.DisplayClock, "%d'", &m); err == nil {
-			minute = m
+
+	// Clock resolution.
+	//
+	// This used to do `minute := int(event.Status.Clock)` for every sport. For
+	// basketball and the NFL, ESPN's Clock is SECONDS REMAINING in the current
+	// period, so a fourth quarter with 8:32 left arrived as Minute=512 and was
+	// rendered "Q4 512'". DisplayClock — which ESPN already formats in each
+	// sport's own convention — was parsed for an integer and then discarded.
+	//
+	// Now DisplayClock is preserved verbatim, Clock is kept as seconds for the
+	// count-down sports, and Minute is only populated where the clock actually
+	// counts up.
+	displayClock := strings.TrimSpace(event.Status.DisplayClock)
+	periodNumber := event.Status.Period
+
+	var minute, clockSeconds int
+	switch cfg.Sport {
+	case models.SportSoccer:
+		// Counts up. Prefer the display clock ("45+2"), which carries stoppage.
+		minute = parseSoccerMinute(displayClock)
+		if minute == 0 {
+			minute = int(event.Status.Clock)
 		}
+
+	case models.SportBasketball, models.SportNFL:
+		// Counts down inside the period; Clock is seconds remaining.
+		clockSeconds = int(event.Status.Clock)
+
+	default:
+		// Tennis, cricket, baseball and golf have no game clock. Leaving Minute
+		// at 0 is what stops the UI printing a meaningless "112'".
 	}
 
 	leagueObj := models.League{
@@ -418,6 +440,9 @@ func ConvertESPNToMatch(event ESPNEvent, cfg ESPNLeagueConfig) *models.Match {
 		HomeScore:    homeScore,
 		AwayScore:    awayScore,
 		PeriodScores: periodScores,
+		DisplayClock: displayClock,
+		PeriodNumber: periodNumber,
+		ClockSeconds: clockSeconds,
 		Status:       status,
 		Period:       period,
 		Minute:       minute,
@@ -447,4 +472,38 @@ func moneyLineToDecimal(ml int) float64 {
 		return 100.0/float64(-ml) + 1.0
 	}
 	return 2.00
+}
+
+// parseSoccerMinute reads an elapsed minute out of a soccer display clock.
+//
+// ESPN sends "68'", "45'+2" or plain "68". Stoppage time is folded into the
+// elapsed total (45+2 becomes 47) so ordering and comparisons stay simple; the
+// UI re-splits it back into "45+2'" for display from the same DisplayClock.
+func parseSoccerMinute(displayClock string) int {
+	clean := strings.TrimSpace(strings.ReplaceAll(displayClock, "'", ""))
+	if clean == "" {
+		return 0
+	}
+
+	if idx := strings.Index(clean, "+"); idx >= 0 {
+		base, err1 := strconv.Atoi(strings.TrimSpace(clean[:idx]))
+		extra, err2 := strconv.Atoi(strings.TrimSpace(clean[idx+1:]))
+		if err1 == nil {
+			if err2 == nil {
+				return base + extra
+			}
+			return base
+		}
+		return 0
+	}
+
+	// A soccer display clock is occasionally "68:12"; the minute is enough.
+	if idx := strings.Index(clean, ":"); idx >= 0 {
+		clean = clean[:idx]
+	}
+
+	if val, err := strconv.Atoi(clean); err == nil {
+		return val
+	}
+	return 0
 }

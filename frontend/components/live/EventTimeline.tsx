@@ -1,16 +1,19 @@
 'use client';
 
-import { MatchEvent } from '@/types';
+import { MatchEvent, SportType } from '@/types';
 import { motion } from 'framer-motion';
 import { Award, AlertCircle, ArrowRightLeft, ShieldAlert, Sparkles, Activity } from 'lucide-react';
+import { formatEventClock } from '@/lib/sportFormat';
 
 interface EventTimelineProps {
   events: MatchEvent[];
   homeTeamName: string;
   awayTeamName: string;
+  /** Drives the clock convention on each row. Defaults to soccer. */
+  sport?: SportType;
 }
 
-export function EventTimeline({ events, homeTeamName, awayTeamName }: EventTimelineProps) {
+export function EventTimeline({ events, homeTeamName, awayTeamName, sport = 'soccer' }: EventTimelineProps) {
   if (!events || events.length === 0) {
     return (
       <div className="bg-surface rounded-xl border border-surface-border p-6 text-center text-muted-foreground text-xs">
@@ -18,6 +21,8 @@ export function EventTimeline({ events, homeTeamName, awayTeamName }: EventTimel
       </div>
     );
   }
+
+  const eventClock = (ev: MatchEvent) => formatEventClock(sport, ev.minute, ev.extra_minute);
 
   // Sort events chronologically (latest first)
   const sorted = [...events].sort((a, b) => b.minute - a.minute);
@@ -71,7 +76,9 @@ export function EventTimeline({ events, homeTeamName, awayTeamName }: EventTimel
               <div className="min-w-0 flex-1 rounded-lg border border-surface-border bg-surface-subtle p-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="shrink-0 font-mono font-bold text-red-500">{ev.minute}&apos;</span>
+                    {eventClock(ev) && (
+                      <span className="shrink-0 font-mono font-bold text-red-500">{eventClock(ev)}</span>
+                    )}
                     <span className="truncate font-bold text-foreground">{ev.player_name}</span>
                     <span className="hidden truncate text-[10px] text-muted-foreground sm:inline">
                       ({isHome ? homeTeamName : awayTeamName})

@@ -45,6 +45,7 @@ import {
   Search,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { formatClock } from '@/lib/sportFormat';
 
 interface WordProcessorProps {
   initialPost?: Partial<BlogPost>;
@@ -184,7 +185,7 @@ export function WordProcessor({ initialPost, onSave, matches = [] }: WordProcess
       <div class="match-embed-card my-6 p-4 rounded-xl bg-[#121824] border-2 border-emerald-500/50 shadow-neon-sm not-prose select-none" data-match-id="${targetMatch.id}">
         <div class="flex items-center justify-between text-xs text-slate-400 mb-2 pb-2 border-b border-slate-700">
           <span class="font-mono text-emerald-neon font-bold">🔴 LIVE EMBED: ${targetMatch.league.name}</span>
-          <span class="font-mono font-bold text-white">${targetMatch.period} ${targetMatch.minute}'</span>
+          <span class="font-mono font-bold text-white">${formatClock(targetMatch)}</span>
         </div>
         <div class="flex items-center justify-between py-2 font-sans font-bold text-base text-white">
           <span>${targetMatch.home_team.name}</span>
@@ -510,7 +511,7 @@ export function WordProcessor({ initialPost, onSave, matches = [] }: WordProcess
                   })
                   .map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.home_team.name} vs {m.away_team.name} ({m.period} {m.minute}&apos;)
+                      {m.home_team.name} vs {m.away_team.name} ({formatClock(m)})
                     </option>
                   ))}
               </select>

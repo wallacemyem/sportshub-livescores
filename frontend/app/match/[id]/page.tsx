@@ -21,6 +21,7 @@ import { getApiBaseUrl } from '@/lib/api';
 import { formatTimeAMPM, formatProperDate } from '@/lib/date';
 import { useNotification } from '@/context/NotificationContext';
 import Link from 'next/link';
+import { formatClock, scoreNoun } from '@/lib/sportFormat';
 
 export default function MatchDetailPage() {
   const params = useParams();
@@ -116,11 +117,12 @@ export default function MatchDetailPage() {
           ) {
             const isGoal = prev.sport === 'soccer';
             const scoringTeam = newHome > prevScoreRef.current.home ? prev.home_team.name : prev.away_team.name;
-            const term = isGoal ? 'GOAL!' : 'POINT!';
+            // Name the unit the way the sport does: goal, point, run or stroke.
+            const term = isGoal ? 'GOAL!' : `${scoreNoun(prev.sport, 1).toUpperCase()}!`;
 
             triggerAlert(
-              `⚽ ${term} ${scoringTeam}`,
-              `${prev.home_team.name} ${newHome} - ${newAway} ${prev.away_team.name} (${delta.minute || prev.minute}')`,
+              `${isGoal ? '⚽' : '🏅'} ${term} ${scoringTeam}`,
+              `${prev.home_team.name} ${newHome} - ${newAway} ${prev.away_team.name} (${formatClock({ ...prev, home_score: newHome, away_score: newAway })})`,
               isGoal ? 'goal' : 'point',
               matchId
             );
@@ -129,6 +131,9 @@ export default function MatchDetailPage() {
           if (delta.home_score !== undefined) updated.home_score = delta.home_score;
           if (delta.away_score !== undefined) updated.away_score = delta.away_score;
           if (delta.minute !== undefined) updated.minute = delta.minute;
+          if (delta.display_clock !== undefined) updated.display_clock = delta.display_clock;
+          if (delta.period_number !== undefined) updated.period_number = delta.period_number;
+          if (delta.clock_seconds !== undefined) updated.clock_seconds = delta.clock_seconds;
           if (delta.period) updated.period = delta.period;
           if (delta.status) updated.status = delta.status;
           if (delta.stats) updated.stats = { ...prev.stats, ...delta.stats };
@@ -211,11 +216,11 @@ export default function MatchDetailPage() {
             {isLive ? (
               <span className="text-xs font-mono bg-red-500 text-white px-3 py-1 rounded-full flex items-center gap-1.5 font-bold uppercase tracking-wider shadow-sm shadow-red-500/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                {match.period} {match.minute}&apos;
+                {formatClock(match)}
               </span>
             ) : match.status === 'FINISHED' ? (
               <span className="text-xs font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2.5 py-1 rounded-full font-bold uppercase">
-                FINAL (FT)
+                {formatClock(match)}
               </span>
             ) : (
               <span className="text-xs font-mono bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-2.5 py-1 rounded-full font-bold">
@@ -378,6 +383,7 @@ export default function MatchDetailPage() {
             events={match.events}
             homeTeamName={match.home_team.name}
             awayTeamName={match.away_team.name}
+            sport={match.sport}
           />
         )}
         {activeTab === 'lineups' && <LineupsView match={match} />}

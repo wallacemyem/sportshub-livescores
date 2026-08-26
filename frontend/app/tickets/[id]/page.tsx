@@ -27,6 +27,7 @@ import { getCachedData, setCachedData } from '@/lib/cache';
 import { formatTimeAMPM, formatProperDate, formatMatchDateTime } from '@/lib/date';
 import { useNotification } from '@/context/NotificationContext';
 import { useAuth } from '@/context/AuthContext';
+import { formatClock } from '@/lib/sportFormat';
 
 export default function TicketDetailPage() {
   const params = useParams();
@@ -298,11 +299,11 @@ export default function TicketDetailPage() {
                       {isMatchLive ? (
                         <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
                           <Radio className="w-3 h-3" />
-                          <span>{leg.match?.period || 'LIVE'} {leg.match?.minute || 0}&apos;</span>
+                          <span>{leg.match ? formatClock(leg.match) : 'LIVE'}</span>
                         </span>
                       ) : isMatchFinished ? (
                         <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                          Final (FT)
+                          {leg.match ? formatClock(leg.match) : 'Final'}
                         </span>
                       ) : (
                         <span className="text-[11px] font-medium text-muted-foreground">

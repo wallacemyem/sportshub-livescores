@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
 import { formatTimeAMPM } from '@/lib/date';
+import { formatClock } from '@/lib/sportFormat';
 
 interface LiveScoreCardProps {
   match: Match;
@@ -79,7 +80,7 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
           {isLive ? (
             <div className="flex items-center gap-1 bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider shadow-sm shadow-red-500/30">
               <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              <span>{match.period} {match.minute}&apos;</span>
+              <span>{formatClock(match)}</span>
             </div>
           ) : match.status === 'FINISHED' ? (
             <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded text-[10px] font-mono font-bold">

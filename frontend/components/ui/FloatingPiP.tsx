@@ -3,6 +3,7 @@
 import { Match } from '@/types';
 import { motion } from 'framer-motion';
 import { X, Minimize2, Radio, ExternalLink } from 'lucide-react';
+import { formatClock } from '@/lib/sportFormat';
 
 interface FloatingPiPProps {
   match: Match | null;
@@ -30,7 +31,7 @@ export function FloatingPiP({ match, isOpen, onClose }: FloatingPiPProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
           </span>
-          <span className="font-mono text-[11px]">LIVE • {match.period} {match.minute}&apos;</span>
+          <span className="font-mono text-[11px]">LIVE • {formatClock(match)}</span>
         </div>
 
         <button

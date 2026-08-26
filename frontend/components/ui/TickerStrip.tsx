@@ -4,6 +4,7 @@ import { Match } from '@/types';
 import { Activity } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { TeamCrest } from './TeamCrest';
+import { formatClock } from '@/lib/sportFormat';
 
 interface TickerStripProps {
   matches: Match[];
@@ -39,7 +40,7 @@ export function TickerStrip({ matches, onSelectMatch }: TickerStripProps) {
               className="flex items-center gap-2 bg-surface hover:bg-surface-hover border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 px-2.5 py-1 rounded-lg text-xs transition-all shrink-0 cursor-pointer"
             >
               <span className="font-mono text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 px-1.5 py-0.5 rounded font-bold">
-                {m.minute}&apos;
+                {formatClock(m)}
               </span>
               <div className="flex items-center gap-1.5 font-medium text-foreground text-xs font-mono">
                 <TeamCrest name={m.home_team.name} shortName={m.home_team.short_name} logoUrl={m.home_team.logo} size="xs" />

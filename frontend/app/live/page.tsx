@@ -46,6 +46,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
+import { formatClock } from '@/lib/sportFormat';
+import { formatTimeAMPM } from '@/lib/date';
 
 const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'soccer', label: 'Soccer', icon: Activity },
@@ -249,6 +251,9 @@ export default function HomePage() {
           if (delta.home_score !== undefined && delta.home_score !== null) updated.home_score = delta.home_score;
           if (delta.away_score !== undefined && delta.away_score !== null) updated.away_score = delta.away_score;
           if (delta.minute !== undefined && delta.minute !== null) updated.minute = delta.minute;
+          if (delta.display_clock !== undefined) updated.display_clock = delta.display_clock;
+          if (delta.period_number !== undefined && delta.period_number !== null) updated.period_number = delta.period_number;
+          if (delta.clock_seconds !== undefined && delta.clock_seconds !== null) updated.clock_seconds = delta.clock_seconds;
           if (delta.period) updated.period = delta.period;
           if (delta.status) updated.status = delta.status;
           if (delta.stats) updated.stats = { ...m.stats, ...delta.stats };
@@ -735,7 +740,7 @@ export default function HomePage() {
                       {selectedMatch.status === 'LIVE' ? (
                         <>
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
-                          <span>{selectedMatch.period} {selectedMatch.minute}&apos;</span>
+                          <span>{formatClock(selectedMatch)}</span>
                         </>
                       ) : selectedMatch.status === 'SCHEDULED' ? (
                         formatTimeAMPM(selectedMatch.start_time)
@@ -791,6 +796,7 @@ export default function HomePage() {
                   events={selectedMatch.events}
                   homeTeamName={selectedMatch.home_team.name}
                   awayTeamName={selectedMatch.away_team.name}
+                  sport={selectedMatch.sport}
                 />
               )}
               {detailTab === 'lineups' && <LineupsView match={selectedMatch} />}
