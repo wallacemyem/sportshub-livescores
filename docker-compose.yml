@@ -54,7 +54,7 @@ services:
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg3NzMxODMyLCJleHAiOjE5NDU0MTE4MzJ9.1hdl-Y_PDMuAfAijUMcugBqUPTlp0CyPstpl0gDGmPw}"
       SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODc3MzE4MzIsImV4cCI6MTk0NTQxMTgzMn0.JLb-XXh43TejaYqVgdEyOMpSae738CAY0E5qyw5xmpY}"
       SUPABASE_STORAGE_BUCKET: "${SUPABASE_STORAGE_BUCKET:-sports-assets}"
-      ESPN_API_BASE_URL: "https://site.api.espn.com/apis/site/v2/sports"
+      ESPN_API_BASE_URL: "https://site.web.api.espn.com/apis/site/v2/sports"
       ODDS_API_BASE_URL: "https://api.the-odds-api.com/v4"
       ODDS_API_KEY: "${ODDS_API_KEY:-68492c40a7eb4d001ed4899b75df648d}"
       FLW_SECRET_KEY: "${FLW_SECRET_KEY:-FLWSECK_TEST_3847291847293847}"

@@ -386,6 +386,13 @@ type IngestionMetrics struct {
 	ConnectedClients    int       `json:"connected_clients"`
 	BroadcastsPerMinute int       `json:"broadcasts_per_minute"`
 	LastUpdated         time.Time `json:"last_updated"`
+
+	// Feed health. Without these a provider outage looked identical to a quiet
+	// fixture list: no matches, no error, nothing to act on.
+	FeedsOK            int       `json:"feeds_ok"`
+	FeedsFailed        int       `json:"feeds_failed"`
+	LastIngestError    string    `json:"last_ingest_error,omitempty"`
+	LastSuccessfulPoll time.Time `json:"last_successful_poll,omitempty"`
 }
 
 type FinancialMetrics struct {

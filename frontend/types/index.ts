@@ -106,6 +106,12 @@ export interface Match {
   period_number?: number;
   /** Seconds remaining in the period, for sports that count down. */
   clock_seconds?: number;
+  /**
+   * Client-only: epoch ms when this clock value arrived. Set by stampClock()
+   * so useLiveClock can advance the display between polls. Never sent to the
+   * server.
+   */
+  clock_updated_at?: number;
   start_time: string;
   stats: MatchStats;
   events: MatchEvent[];

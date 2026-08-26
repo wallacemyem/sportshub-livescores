@@ -25,6 +25,13 @@ type IngestionWorker struct {
 	broadcastsCount   int
 	espnPollCount     int
 	stopChan          chan struct{}
+
+	// Feed health, surfaced through telemetry so the admin console can show
+	// that ingestion is broken instead of just showing zero matches.
+	lastIngestError    string
+	lastIngestOK       int
+	lastIngestFailed   int
+	lastSuccessfulPoll time.Time
 }
 
 func NewIngestionWorker(
@@ -106,11 +113,23 @@ func (w *IngestionWorker) Start(ctx context.Context) {
 }
 
 func (w *IngestionWorker) pollESPN(ctx context.Context) {
+	var succeeded, failed int
+
 	for _, l := range ActiveESPNLeagues {
 		resp, err := w.espnClient.FetchScoreboard(ctx, l.SportPath, l.LeaguePath)
 		if err != nil {
+			// This used to be a bare `continue`. When ESPN's edge started
+			// returning 403 for every request the app simply showed no scores,
+			// with nothing in the log to say why. Failures are now counted and
+			// reported so a dead feed is visible rather than silent.
+			failed++
+			w.mu.Lock()
+			w.lastIngestError = err.Error()
+			w.mu.Unlock()
+			log.Printf("[INGESTION] %s/%s failed: %v", l.SportPath, l.LeaguePath, err)
 			continue
 		}
+		succeeded++
 
 		w.mu.Lock()
 		w.espnPollCount++
@@ -147,6 +166,21 @@ func (w *IngestionWorker) pollESPN(ctx context.Context) {
 			}
 		}
 	}
+
+	// A feed that is entirely down should say so once per cycle, not never.
+	if failed > 0 && succeeded == 0 {
+		log.Printf("[INGESTION] ALL %d league feeds failed — no scores will update", failed)
+	} else if failed > 0 {
+		log.Printf("[INGESTION] %d/%d league feeds ok, %d failed", succeeded, succeeded+failed, failed)
+	}
+
+	w.mu.Lock()
+	w.lastIngestOK = succeeded
+	w.lastIngestFailed = failed
+	if succeeded > 0 {
+		w.lastSuccessfulPoll = time.Now()
+	}
+	w.mu.Unlock()
 }
 
 func (w *IngestionWorker) pollOdds(ctx context.Context) {
@@ -207,5 +241,10 @@ func (w *IngestionWorker) GetTelemetry(ctx context.Context, connectedClients int
 		ConnectedClients:      connectedClients,
 		BroadcastsPerMinute:   w.broadcastsCount * 6,
 		LastUpdated:           time.Now(),
+
+		FeedsOK:            w.lastIngestOK,
+		FeedsFailed:        w.lastIngestFailed,
+		LastIngestError:    w.lastIngestError,
+		LastSuccessfulPoll: w.lastSuccessfulPoll,
 	}
 }

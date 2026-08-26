@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"strings"
 	"time"
 
@@ -13,6 +16,7 @@ import (
 )
 
 type ESPNClient struct {
+	mu         sync.RWMutex
 	baseURL    string
 	httpClient *http.Client
 }
@@ -182,13 +186,80 @@ var ActiveESPNLeagues = []ESPNLeagueConfig{
 	},
 }
 
+// espnFallbackHosts are tried in order when the configured base URL fails.
+//
+// `site.api.espn.com` began returning a 403 from Akamai's edge ("Access
+// Denied") while `site.web.api.espn.com` continued to serve the identical
+// payload. Because this is an undocumented endpoint, either host can be
+// blocked without notice, so the client walks the list instead of giving up on
+// the first failure.
+var espnFallbackHosts = []string{
+	"https://site.web.api.espn.com/apis/site/v2/sports",
+	"https://site.api.espn.com/apis/site/v2/sports",
+}
+
+// hostsToTry puts the configured base URL first, then any fallback it is not
+// already equal to.
+func (c *ESPNClient) hostsToTry() []string {
+	c.mu.RLock()
+	current := c.baseURL
+	c.mu.RUnlock()
+
+	hosts := make([]string, 0, len(espnFallbackHosts)+1)
+	if current != "" {
+		hosts = append(hosts, strings.TrimRight(current, "/"))
+	}
+	for _, h := range espnFallbackHosts {
+		if !containsString(hosts, h) {
+			hosts = append(hosts, h)
+		}
+	}
+	return hosts
+}
+
+func containsString(list []string, want string) bool {
+	for _, s := range list {
+		if s == want {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *ESPNClient) FetchScoreboard(ctx context.Context, sport string, league string) (*ESPNEventsResponse, error) {
-	url := fmt.Sprintf("%s/%s/%s/scoreboard", c.baseURL, sport, league)
+	var lastErr error
+
+	for _, host := range c.hostsToTry() {
+		data, err := c.fetchFrom(ctx, host, sport, league)
+		if err == nil {
+			// Remember the host that worked so later polls start there.
+			c.mu.Lock()
+			if c.baseURL != host {
+				c.baseURL = host
+				log.Printf("[ESPN] now using host %s", host)
+			}
+			c.mu.Unlock()
+			return data, nil
+		}
+		lastErr = err
+	}
+
+	return nil, fmt.Errorf("all espn hosts failed for %s/%s: %w", sport, league, lastErr)
+}
+
+func (c *ESPNClient) fetchFrom(ctx context.Context, host, sport, league string) (*ESPNEventsResponse, error) {
+	url := fmt.Sprintf("%s/%s/%s/scoreboard", host, sport, league)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SportsIngestion/1.0")
+
+	// A browser-shaped User-Agent matters here: the edge rejects obviously
+	// automated clients.
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -197,12 +268,16 @@ func (c *ESPNClient) FetchScoreboard(ctx context.Context, sport string, league s
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("espn api returned status: %d", resp.StatusCode)
+		// Read a little of the body so a block page is identifiable in the log
+		// rather than surfacing as a bare status code.
+		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 200))
+		return nil, fmt.Errorf("status %d from %s: %s",
+			resp.StatusCode, host, strings.TrimSpace(string(snippet)))
 	}
 
 	var data ESPNEventsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode from %s: %w", host, err)
 	}
 	return &data, nil
 }

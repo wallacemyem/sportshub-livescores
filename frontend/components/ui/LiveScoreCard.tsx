@@ -12,11 +12,13 @@ import { formatClock } from '@/lib/sportFormat';
 interface LiveScoreCardProps {
   match: Match;
   isSelected?: boolean;
+  /** Side that scored in the last ~90s. Drives the highlight ring. */
+  justScored?: 'HOME' | 'AWAY';
   onSelect?: () => void;
   onRemove?: (id: string) => void;
 }
 
-export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }: LiveScoreCardProps) {
+export function LiveScoreCard({ match, isSelected = false, justScored, onSelect, onRemove }: LiveScoreCardProps) {
   const router = useRouter();
   const prevScoreRef = useRef(`${match.home_score}-${match.away_score}`);
 
@@ -53,9 +55,11 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
       whileHover={{ y: -1.5 }}
       onClick={handleCardClick}
       className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer select-none p-3.5 sm:p-4 group ${
-        isSelected
-          ? 'bg-surface border-blue-500 ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10'
-          : 'bg-surface border-surface-border hover:border-blue-400 dark:hover:border-blue-600 hover:bg-surface-subtle shadow-sm'
+        justScored
+          ? 'bg-surface border-emerald-500 ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-500/15'
+          : isSelected
+            ? 'bg-surface border-blue-500 ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10'
+            : 'bg-surface border-surface-border hover:border-blue-400 dark:hover:border-blue-600 hover:bg-surface-subtle shadow-sm'
       }`}
     >
       {/* 1. Header Info Row (League, Country, Sport, Live Clock, Action) */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Match, SportType, BetSlip, LiveDelta } from '@/types';
@@ -47,6 +47,20 @@ import {
   X,
 } from 'lucide-react';
 import { formatClock } from '@/lib/sportFormat';
+import { useLiveClock, stampClocks } from '@/hooks/useLiveClock';
+import {
+  detectScoreChanges,
+  orderLiveFeed,
+  pruneFlashes,
+  SCORE_HIGHLIGHT_MS,
+  type ScoreFlashMap,
+} from '@/lib/liveOrder';
+import {
+  registerServiceWorker,
+  syncLiveActivities,
+  clearAllLiveActivities,
+} from '@/lib/liveActivity';
+import { useNotification } from '@/context/NotificationContext';
 import { formatTimeAMPM } from '@/lib/date';
 
 const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -62,6 +76,7 @@ const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ classN
 export default function HomePage() {
   const router = useRouter();
   const { user, token } = useAuth();
+  const { alertsEnabled } = useNotification();
   const [selectedSport, setSelectedSport] = useState<SportType>('soccer');
   // First page default is strictly LIVE
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
@@ -76,6 +91,12 @@ export default function HomePage() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
   const [detailTab, setDetailTab] = useState<'stats' | 'timeline' | 'lineups' | 'odds'>('stats');
+
+  // Matches that scored recently: drives both the feed ordering and the
+  // highlight on the card.
+  const [scoreFlashes, setScoreFlashes] = useState<ScoreFlashMap>({});
+  // Scores seen since the last activity sync, so a notification alerts once.
+  const scoredSinceLastSync = useRef<Map<string, 'HOME' | 'AWAY'>>(new Map());
 
   const slipCacheKey = `slips_${user?.id || 'guest'}`;
 
@@ -194,7 +215,7 @@ export default function HomePage() {
     const cachedSlips = getCachedData<BetSlip[]>(slipCacheKey);
 
     if (cachedMatches && cachedMatches.length > 0) {
-      setMatches(cachedMatches);
+      setMatches(stampClocks(cachedMatches));
     }
     if (cachedSlips && cachedSlips.length > 0) {
       setBetSlips(cachedSlips);
@@ -216,7 +237,26 @@ export default function HomePage() {
         if (matchRes.ok) {
           const data = await matchRes.json();
           if (data.matches && data.matches.length > 0) {
-            setMatches(data.matches);
+            // Stamp arrival time so the clock can be ticked forward between
+            // polls, and diff against the previous snapshot to catch scores.
+            const fresh = stampClocks(data.matches as Match[]);
+            setMatches((prev) => {
+              const changes = detectScoreChanges(prev, fresh);
+              if (changes.length > 0) {
+                const now = Date.now();
+                setScoreFlashes((current) => {
+                  const next = pruneFlashes(current, now);
+                  for (const change of changes) {
+                    next[change.matchId] = { at: now, side: change.side };
+                  }
+                  return next;
+                });
+                scoredSinceLastSync.current = new Map(
+                  changes.map((c) => [c.matchId, c.side])
+                );
+              }
+              return fresh;
+            });
             setCachedData('matches', data.matches);
           }
         }
@@ -267,9 +307,54 @@ export default function HomePage() {
     });
   }, [subscribe]);
 
+  // Tick the clock forward between polls so it reads as live rather than
+  // jumping in 12-second steps.
+  const tickingMatches = useLiveClock(matches);
+
+  // Register the service worker once. Without a registration there is no push
+  // handler and no notification that can outlive the tab — it was never being
+  // registered at all.
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
+  // Drop score highlights once they age out, so the feed settles back.
+  useEffect(() => {
+    if (Object.keys(scoreFlashes).length === 0) return;
+    const id = setInterval(() => {
+      setScoreFlashes((current) => {
+        const pruned = pruneFlashes(current);
+        return Object.keys(pruned).length === Object.keys(current).length ? current : pruned;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [scoreFlashes]);
+
+  // Keep an ongoing notification per live match the user is tracking, updating
+  // it in place as the score and clock move.
+  const trackedLive = useMemo(
+    () =>
+      matches.filter(
+        (m) =>
+          m.status === 'LIVE' &&
+          (betSlips.length === 0 ? false : ticketMatchIds.has(m.id))
+      ),
+    [matches, betSlips.length, ticketMatchIds]
+  );
+
+  useEffect(() => {
+    if (!alertsEnabled) {
+      clearAllLiveActivities();
+      return;
+    }
+    const scored = scoredSinceLastSync.current;
+    scoredSinceLastSync.current = new Map();
+    syncLiveActivities(trackedLive, scored);
+  }, [trackedLive, alertsEnabled]);
+
   // Filtered Matches (Spotlights matches from loaded ticket on first/Live page)
   const filteredMatches = useMemo(() => {
-    return matches.filter((m) => {
+    const visible = tickingMatches.filter((m) => {
       // 1. When in ticket mode on LIVE tab with loaded tickets, show matches from the user's ticket across any sport
       if (statusFilter === 'LIVE' && ticketFilterMode === 'MY_TICKETS' && betSlips.length > 0) {
         if (!ticketMatchIds.has(m.id)) return false;
@@ -288,7 +373,20 @@ export default function HomePage() {
       }
       return true;
     });
-  }, [matches, selectedSport, statusFilter, ticketFilterMode, betSlips, ticketMatchIds, searchQuery]);
+
+    // A match that just scored jumps to the top; otherwise live first, then
+    // by how far through it is.
+    return orderLiveFeed(visible, scoreFlashes);
+  }, [
+    tickingMatches,
+    selectedSport,
+    statusFilter,
+    ticketFilterMode,
+    betSlips,
+    ticketMatchIds,
+    searchQuery,
+    scoreFlashes,
+  ]);
 
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'LIVE').length, [matches]);
   const ticketLiveCount = useMemo(
@@ -439,7 +537,7 @@ export default function HomePage() {
       </header>
 
       {/* Breaking Live Ticker Strip */}
-      <TickerStrip matches={matches} onSelectMatch={(m) => setSelectedMatchId(m.id)} />
+      <TickerStrip matches={tickingMatches} onSelectMatch={(m) => setSelectedMatchId(m.id)} />
 
       {/* Main Three-Column Workspace Layout */}
       <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 md:pl-20 xl:px-4 py-4 grid grid-cols-12 gap-5">
@@ -661,6 +759,7 @@ export default function HomePage() {
                   key={m.id}
                   match={m}
                   isSelected={selectedMatch?.id === m.id}
+                  justScored={scoreFlashes[m.id]?.side}
                   onSelect={() => setSelectedMatchId((prev) => (prev === m.id ? null : m.id))}
                   onRemove={handleRemoveMatch}
                 />
