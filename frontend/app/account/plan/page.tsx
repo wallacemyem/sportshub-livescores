@@ -73,7 +73,7 @@ const PLANS: PlanOption[] = [
     badgeBg: 'bg-gradient-to-r from-violet-600 to-indigo-600',
     features: [
       'Unlimited tracked bet slips',
-      'Real-time cashout valuation engine',
+      'Instant multi-sportsbook booking code sync',
       'Pop-out Picture-in-Picture scoreboard',
       'Lock screen live widget stream',
       'Multi-sportsbook odds comparison',

@@ -22,9 +22,8 @@ func NewBetSlipHandler(store *database.Store, p *parser.BetSlipParser) *BetSlipH
 }
 
 type ImportSlipRequest struct {
-	Bookmaker   string  `json:"bookmaker"`
-	BookingCode string  `json:"booking_code"`
-	Stake       float64 `json:"stake"`
+	Bookmaker   string `json:"bookmaker"`
+	BookingCode string `json:"booking_code"`
 }
 
 func (h *BetSlipHandler) ImportBetSlip(w http.ResponseWriter, r *http.Request) {
@@ -34,11 +33,7 @@ func (h *BetSlipHandler) ImportBetSlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Stake <= 0 {
-		req.Stake = 10.00
-	}
-
-	slip, err := h.parser.ParseBookingCode(req.Bookmaker, req.BookingCode, req.Stake)
+	slip, err := h.parser.ParseBookingCode(req.Bookmaker, req.BookingCode)
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)
 		return
@@ -56,17 +51,12 @@ func (h *BetSlipHandler) GetBetSlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.parser.RecalculateCashout(slip)
-
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(slip)
 }
 
 func (h *BetSlipHandler) GetAllBetSlips(w http.ResponseWriter, r *http.Request) {
 	slips := h.store.GetAllBetSlips()
-	for _, s := range slips {
-		h.parser.RecalculateCashout(s)
-	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{

@@ -102,7 +102,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
             </div>
             <div>
               <h3 className="font-bold text-foreground text-sm font-sans">Import & Track Bet Slip</h3>
-              <p className="text-[11px] text-muted-foreground">Real-time live scores and cashout tracking</p>
+              <p className="text-[11px] text-muted-foreground">Real-time live scores and match event tracking</p>
             </div>
           </div>
           <button

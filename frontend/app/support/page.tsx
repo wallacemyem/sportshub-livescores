@@ -46,7 +46,7 @@ const FAQS: FAQItem[] = [
     categoryLabel: 'Betting & Odds',
     q: 'How does the Multi-Bookmaker Auto-Looping Bet Slip Resolver work?',
     a: 'Paste any booking code (for example BC99214, B9JA-44912, 1X-88231 or BK-10294) and SlipRadar checks SportyBet, Bet9ja, 1xBet and BetKing until it finds the slip. It then reads out the legs, matches each one to its live fixture, and starts tracking — you never have to say which sportsbook it came from.',
-    tags: ['SportyBet', 'Bet9ja', '1xBet', 'BetKing', 'Booking Code', 'Cashout'],
+    tags: ['SportyBet', 'Bet9ja', '1xBet', 'BetKing', 'Booking Code', 'Live Odds'],
   },
   {
     id: 'faq-2',
@@ -597,7 +597,7 @@ export default function SupportPage() {
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. Booking code BC99214 cashout rate calculation inquiry"
+                    placeholder="e.g. Booking code BC99214 fixture sync inquiry"
                     className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-xl px-3.5 py-2.5 text-xs text-foreground focus:outline-none"
                     required
                   />

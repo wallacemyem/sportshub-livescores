@@ -31,7 +31,7 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   pro: {
     id: 'pro',
     name: 'Pro',
-    tagline: 'Unlimited slips, cashout valuation & PiP scoreboard',
+    tagline: 'Unlimited slips, real-time sync & PiP scoreboard',
     icon: Crown,
     badgeClass: 'bg-gradient-to-r from-violet-500/15 via-indigo-500/15 to-blue-500/15 border-violet-500/30 text-violet-700 dark:text-violet-300 hover:border-violet-500/50 shadow-sm shadow-violet-500/10',
     iconClass: 'text-violet-600 dark:text-violet-400',

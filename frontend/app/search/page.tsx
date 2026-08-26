@@ -113,7 +113,7 @@ export default function SearchPage() {
             <div>
               <h3 className="text-sm font-bold text-foreground">Have a sportsbook booking code?</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Import and track your accumulator tickets with live cashout monitoring on the dedicated Tickets page.
+                Import and track your multi-leg accumulator tickets with real-time match events on the dedicated Tickets page.
               </p>
             </div>
           </div>

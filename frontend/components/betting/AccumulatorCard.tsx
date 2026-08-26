@@ -1,29 +1,20 @@
+'use client';
+
 import { BetSlip } from '@/types';
 import { motion } from 'framer-motion';
-import { DollarSign, CheckCircle2, Clock, XCircle, TrendingUp, Trash2 } from 'lucide-react';
-import confetti from 'canvas-confetti';
+import { CheckCircle2, Clock, XCircle, Trash2, Layers } from 'lucide-react';
 import Link from 'next/link';
+import { BookmakerLogo } from '@/components/brand/BookmakerLogo';
 
 interface AccumulatorCardProps {
   slip: BetSlip;
-  onCashOut?: (slipId: string) => void;
   onDelete?: (slipId: string) => void;
 }
 
-export function AccumulatorCard({ slip, onCashOut, onDelete }: AccumulatorCardProps) {
-  const probPct = Math.round(slip.cashout_probability * 100);
-
-  const handleCashoutClick = () => {
-    confetti({
-      particleCount: 40,
-      spread: 60,
-      origin: { y: 0.6 },
-      colors: ['#10B981', '#34D399', '#6EE7B7', '#3B82F6', '#8B5CF6'],
-    });
-    if (onCashOut) {
-      onCashOut(slip.id);
-    }
-  };
+export function AccumulatorCard({ slip, onDelete }: AccumulatorCardProps) {
+  const wonCount = slip.legs?.filter((l) => l.status === 'WON').length || 0;
+  const lostCount = slip.legs?.filter((l) => l.status === 'LOST').length || 0;
+  const totalLegs = slip.legs?.length || 0;
 
   const statusColor = slip.status === 'WON'
     ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
@@ -35,15 +26,16 @@ export function AccumulatorCard({ slip, onCashOut, onDelete }: AccumulatorCardPr
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-surface border border-surface-border rounded-xl p-4 shadow-subtle select-none"
+      className="bg-surface border border-surface-border rounded-2xl p-4 sm:p-5 shadow-subtle select-none space-y-3.5"
     >
       {/* Top Header */}
-      <div className="flex items-center justify-between gap-2 border-b border-surface-border pb-3 mb-3">
+      <div className="flex items-center justify-between gap-2 border-b border-surface-border pb-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 bg-violet-100 dark:bg-violet-500/15 border border-violet-200 dark:border-violet-500/30 text-violet-700 dark:text-violet-400 text-[10px] font-bold uppercase px-2 py-0.5 rounded font-mono">
+          <BookmakerLogo bookmaker={slip.bookmaker} size="sm" className="shrink-0" />
+          <span className="shrink-0 bg-surface-subtle border border-surface-border text-foreground text-[10px] font-bold uppercase px-2 py-0.5 rounded font-mono">
             {slip.bookmaker}
           </span>
-          <span className="truncate font-mono text-xs font-bold text-foreground tracking-wide">
+          <span className="truncate font-mono text-xs font-black text-foreground tracking-wide">
             #{slip.booking_code}
           </span>
         </div>
@@ -57,7 +49,7 @@ export function AccumulatorCard({ slip, onCashOut, onDelete }: AccumulatorCardPr
               type="button"
               onClick={() => onDelete(slip.id)}
               title="Delete bet slip"
-              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -65,121 +57,55 @@ export function AccumulatorCard({ slip, onCashOut, onDelete }: AccumulatorCardPr
         </div>
       </div>
 
-      {/* Stake and Potential Win Strip */}
-      <div className="grid grid-cols-3 gap-2 bg-surface-subtle p-2.5 rounded-lg border border-surface-border mb-3 font-mono text-xs text-center">
+      {/* Slip Overview Bar: Total Odds & Legs Summary */}
+      <div className="grid grid-cols-2 gap-2 bg-surface-subtle p-3 rounded-xl border border-surface-border font-mono text-xs text-center">
         <div>
-          <span className="text-[10px] text-muted-foreground block uppercase">Stake</span>
-          <span className="text-foreground font-bold">${slip.stake.toFixed(2)}</span>
+          <span className="text-[10px] text-muted-foreground block uppercase font-bold">Total Combined Odds</span>
+          <span className="text-amber-600 dark:text-amber-400 font-black text-sm">{slip.total_odds?.toFixed(2) || '1.00'}x</span>
         </div>
         <div>
-          <span className="text-[10px] text-muted-foreground block uppercase">Total Odds</span>
-          <span className="text-amber-600 dark:text-amber-400 font-bold">{slip.total_odds.toFixed(2)}x</span>
-        </div>
-        <div>
-          <span className="text-[10px] text-muted-foreground block uppercase">Potential Win</span>
-          <span className="text-emerald-600 dark:text-emerald-400 font-bold">${slip.potential_win.toFixed(2)}</span>
+          <span className="text-[10px] text-muted-foreground block uppercase font-bold">Accumulator Legs</span>
+          <span className="text-foreground font-black text-sm">
+            {totalLegs} {totalLegs === 1 ? 'Leg' : 'Legs'} ({wonCount} Won{lostCount > 0 ? `, ${lostCount} Lost` : ''})
+          </span>
         </div>
       </div>
 
-      {/* Legs List */}
-      <div className="space-y-2 mb-4">
-        {slip.legs.map((leg) => {
+      {/* Real Fixture Legs List */}
+      <div className="space-y-2">
+        {slip.legs?.map((leg) => {
           const matchId = leg.match_id || leg.match?.id;
           return (
             <Link
               key={leg.id}
               href={matchId ? `/match/${matchId}` : '#'}
-              className="block bg-surface-subtle/50 hover:bg-surface-subtle border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 rounded-lg p-2.5 text-xs transition-all cursor-pointer group"
+              className="block bg-surface-subtle/40 hover:bg-surface-subtle border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 rounded-xl p-3 text-xs transition-all cursor-pointer group"
             >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="min-w-0 flex-1 truncate font-semibold text-foreground group-hover:text-blue-600 transition-colors">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="min-w-0 flex-1 truncate font-bold text-foreground group-hover:text-blue-600 transition-colors">
                   <span className="inline sm:hidden">{leg.match?.home_team?.short_name || 'Home'} vs {leg.match?.away_team?.short_name || 'Away'}</span>
                   <span className="hidden sm:inline">{leg.match?.home_team?.name || 'Home'} vs {leg.match?.away_team?.name || 'Away'}</span>
                 </span>
-                <span className="shrink-0 font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                  {leg.odds.toFixed(2)}
+                <span className="shrink-0 font-mono text-xs font-black text-amber-600 dark:text-amber-400">
+                  {leg.odds?.toFixed(2)}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                 <span className="min-w-0 flex-1 truncate">
-                  Pick: <strong className="text-foreground">{leg.selection}</strong> ({leg.market})
+                  Pick: <strong className="text-foreground font-semibold">{leg.selection}</strong> ({leg.market})
                 </span>
-                <span className="shrink-0 font-mono flex items-center gap-1">
+                <span className="shrink-0 font-mono flex items-center gap-1.5">
                   {leg.status === 'WON' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
-                  {leg.status === 'RUNNING' && <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />}
+                  {leg.status === 'RUNNING' && <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0 animate-spin" />}
                   {leg.status === 'LOST' && <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                  <span className="text-foreground font-bold">{leg.current_score}</span>
+                  {leg.status === 'PENDING' && <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                  <span className="text-foreground font-bold">{leg.current_score || 'Upcoming'}</span>
                 </span>
-              </div>
-
-              {/* Leg Fulfillment Mini Progress */}
-              <div className="w-full h-1 bg-surface-border rounded-full mt-2 overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-500 rounded-full ${
-                    leg.status === 'WON' ? 'bg-emerald-500' : leg.status === 'LOST' ? 'bg-red-500' : 'bg-blue-500'
-                  }`}
-                  style={{ width: `${leg.fulfillment_pct || 50}%` }}
-                />
               </div>
             </Link>
           );
         })}
-      </div>
-
-      {/* Cash-out estimate.
-          SlipRadar is read-only: it never settles a bet, so this is framed as an
-          estimate and the action hands off to the sportsbook rather than claiming
-          to cash out here. The binding figure is always the bookmaker's own. */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-500/5 dark:to-teal-500/5 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-3">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="min-w-0">
-            <span className="flex items-center gap-1 text-[11px] font-bold text-foreground">
-              <TrendingUp className="w-3.5 h-3.5 shrink-0" />
-              <span>Cash-out estimate</span>
-            </span>
-            <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              {probPct}% confidence
-            </span>
-          </div>
-
-          <div className="shrink-0 text-right">
-            <span className="block text-[10px] uppercase text-muted-foreground">Worth now</span>
-            <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-400">
-              ${slip.current_cashout.toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {/* Probability Bar */}
-        <div
-          className="w-full h-1.5 bg-emerald-200/50 dark:bg-emerald-500/10 rounded-full overflow-hidden mb-3"
-          role="progressbar"
-          aria-valuenow={probPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Cash-out confidence"
-        >
-          <div
-            className="bg-emerald-500 h-full transition-all duration-500 rounded-full"
-            style={{ width: `${probPct}%` }}
-          />
-        </div>
-
-        {slip.status === 'RUNNING' && (
-          <>
-            <button
-              onClick={handleCashoutClick}
-              className="w-full py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90 font-bold text-xs uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 transition-opacity cursor-pointer shadow-md shadow-emerald-500/20"
-            >
-              <DollarSign className="w-4 h-4 shrink-0" />
-              <span className="truncate">Cash out at {slip.bookmaker}</span>
-            </button>
-            <p className="mt-1.5 text-center text-[10px] leading-relaxed text-muted-foreground">
-              Estimate only. Cashing out happens in your sportsbook.
-            </p>
-          </>
-        )}
       </div>
     </motion.div>
   );

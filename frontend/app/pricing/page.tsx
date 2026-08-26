@@ -48,7 +48,7 @@ const PLANS: Plan[] = [
     featured: true,
     highlights: [
       'Unlimited tracked slips',
-      'Real-time cashout valuation',
+      'Real-time odds & scoreline sync',
       'Pop-out floating scoreboard',
       'Lock screen live widget',
       'Full bookmaker odds comparison',
@@ -81,7 +81,7 @@ const COMPARISON: { section: string; rows: { label: string; free: Availability; 
       { label: 'Concurrent tracked slips', free: '1', pro: 'Unlimited', elite: 'Unlimited' },
       { label: 'Supported sportsbooks', free: '6 Sportsbooks', pro: '6 Sportsbooks', elite: '6 Sportsbooks' },
       { label: 'Automatic booking code detection', free: true, pro: true, elite: true },
-      { label: 'Real-time live cashout estimator', free: false, pro: true, elite: true },
+      { label: 'Real-time live multi-bookmaker tracker', free: false, pro: true, elite: true },
       { label: 'Slip history and export', free: false, pro: '90 days', elite: 'Unlimited' },
     ],
   },
@@ -99,7 +99,7 @@ const COMPARISON: { section: string; rows: { label: string; free: Availability; 
     section: 'Alerts & Displays',
     rows: [
       { label: 'Instant goal and card alerts', free: true, pro: true, elite: true },
-      { label: 'Cashout swing notifications', free: false, pro: true, elite: true },
+      { label: 'Custom match event notifications', free: false, pro: true, elite: true },
       { label: 'Pop-out floating scoreboard (PiP)', free: false, pro: true, elite: true },
       { label: 'Phone lock screen widget', free: false, pro: true, elite: true },
     ],
@@ -117,7 +117,7 @@ const COMPARISON: { section: string; rows: { label: string; free: Availability; 
 const FAQS = [
   {
     q: 'Does SlipRadar place bets for me?',
-    a: 'No. SlipRadar is read-only. It parses and monitors booking codes you generate at your bookmaker and tracks fixtures in real-time. It never touches your sportsbook account.',
+    a: 'No. It parses and monitors booking codes you generate at your bookmaker and tracks fixtures in real-time. It never touches your sportsbook account.',
   },
   {
     q: 'What happens when I reach the free limit?',
@@ -136,8 +136,8 @@ const FAQS = [
     a: 'Yes. You can cancel with 1-click directly from your Account page. You retain full paid access until the end of your prepaid billing period.',
   },
   {
-    q: 'Is the cashout calculation official?',
-    a: 'SlipRadar calculates a real-time statistical cashout valuation based on live match clocks, scorelines, xG, and bookmaker odds. The final settlement is determined by your sportsbook.',
+    q: 'How does booking code parsing work?',
+    a: 'SlipRadar connects to live bookmaker networks to pull real match fixtures, starting lineups, and real-time odds for your booking code.',
   },
 ];
 
@@ -192,7 +192,7 @@ export default function PricingPage() {
               </h1>
               <p className="mx-auto mt-4 max-w-xl text-sm sm:text-base leading-relaxed text-muted-foreground">
                 Start completely free for a single slip. Upgrade to Pro or Elite when you want
-                unlimited tracked tickets, real-time cashout, and pop-out scoreboards.
+                unlimited tracked tickets, live sync, and pop-out scoreboards.
               </p>
             </div>
 

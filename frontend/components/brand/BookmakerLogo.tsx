@@ -59,7 +59,7 @@ export const BOOKMAKER_BRANDS: Record<string, BookmakerBrand> = {
   mozzartbet: {
     id: 'mozzartbet',
     name: 'MozzartBet',
-    tagline: 'Live Cashout Radar',
+    tagline: 'Live Sportsbook Radar',
     bgGradient: 'from-yellow-500 to-amber-600',
     borderColor: 'border-yellow-500/30',
     accentColor: '#FFE000',

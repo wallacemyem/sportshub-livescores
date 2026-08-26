@@ -6,13 +6,12 @@ import {
   Ticket,
   Trash2,
   Plus,
-  TrendingUp,
-  DollarSign,
   ArrowRight,
   CheckCircle2,
   X,
-  Radio,
   Layers,
+  Radio,
+  Clock,
   Sparkles,
 } from 'lucide-react';
 import { BetSlip } from '@/types';
@@ -42,7 +41,6 @@ export default function TicketsPage() {
   // Importer Form State
   const [selectedBookmaker, setSelectedBookmaker] = useState('auto');
   const [bookingCode, setBookingCode] = useState('');
-  const [stake, setStake] = useState('20.00');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
@@ -70,7 +68,7 @@ export default function TicketsPage() {
     fetchSlips();
   }, []);
 
-  // Handle Ticket Import
+  // Handle Ticket Import from Real Bookmaker
   const handleImportSlip = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCode = bookingCode.trim().toUpperCase();
@@ -91,7 +89,6 @@ export default function TicketsPage() {
         body: JSON.stringify({
           bookmaker: selectedBookmaker,
           booking_code: cleanCode,
-          stake: parseFloat(stake) || 20.0,
         }),
       });
 
@@ -100,7 +97,7 @@ export default function TicketsPage() {
         throw new Error(data.error || 'Failed to resolve booking code.');
       }
 
-      setImportSuccess(`Successfully added ticket #${data.booking_code} (${data.bookmaker.toUpperCase()})!`);
+      setImportSuccess(`Successfully tracked ticket #${data.booking_code} (${data.bookmaker.toUpperCase()}) with ${data.legs?.length || 0} real fixtures!`);
       setBookingCode('');
 
       // Update slips list
@@ -150,12 +147,22 @@ export default function TicketsPage() {
   };
 
   // Calculations for summary stats
-  const totalPotentialReturn = useMemo(() => {
-    return betSlips.reduce((sum, s) => sum + (s.potential_win || 0), 0);
+  const totalLegsCount = useMemo(() => {
+    return betSlips.reduce((acc, s) => acc + (s.legs?.length || 0), 0);
   }, [betSlips]);
 
-  const totalCurrentCashout = useMemo(() => {
-    return betSlips.reduce((sum, s) => sum + (s.current_cashout || 0), 0);
+  const activeRunningCount = useMemo(() => {
+    return betSlips.reduce((acc, s) => {
+      const runningInSlip = s.legs?.filter((l) => l.status === 'RUNNING').length || 0;
+      return acc + runningInSlip;
+    }, 0);
+  }, [betSlips]);
+
+  const wonLegsCount = useMemo(() => {
+    return betSlips.reduce((acc, s) => {
+      const wonInSlip = s.legs?.filter((l) => l.status === 'WON').length || 0;
+      return acc + wonInSlip;
+    }, 0);
   }, [betSlips]);
 
   return (
@@ -164,7 +171,7 @@ export default function TicketsPage() {
       <AppPageHeader
         icon={Ticket}
         title="My Bet Tickets"
-        subtitle="Import sportsbook booking codes and monitor real-time accumulator odds and cashout"
+        subtitle="Import sportsbook booking codes and monitor accumulator fixtures and live odds in real-time"
         accentClassName="bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
       />
 
@@ -184,28 +191,28 @@ export default function TicketsPage() {
 
           <div className="bg-surface border border-surface-border rounded-2xl p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
-              Total Legs
+              Total Fixtures
             </span>
             <span className="font-mono text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">
-              {betSlips.reduce((acc, s) => acc + (s.legs?.length || 0), 0)}
+              {totalLegsCount}
             </span>
           </div>
 
           <div className="bg-surface border border-surface-border rounded-2xl p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
-              Est. Cashout Value
+              Active In-Play Legs
+            </span>
+            <span className="font-mono text-2xl font-black text-red-500 mt-1 block">
+              {activeRunningCount}
+            </span>
+          </div>
+
+          <div className="bg-surface border border-surface-border rounded-2xl p-4 shadow-sm">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+              Won / Settled Legs
             </span>
             <span className="font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">
-              ${totalCurrentCashout.toFixed(2)}
-            </span>
-          </div>
-
-          <div className="bg-surface border border-surface-border rounded-2xl p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
-              Potential Return
-            </span>
-            <span className="font-mono text-2xl font-black text-foreground mt-1 block">
-              ${totalPotentialReturn.toFixed(2)}
+              {wonLegsCount}
             </span>
           </div>
         </div>
@@ -215,10 +222,10 @@ export default function TicketsPage() {
           <div className="border-b border-surface-border pb-4">
             <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
               <Plus className="w-5 h-5 text-emerald-500" />
-              <span>Import New Sportsbook Ticket</span>
+              <span>Import Sportsbook Booking Code</span>
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter any booking code to automatically parse matches, calculate live odds, and track cashout confidence.
+              Enter any booking code to pull real live match fixtures directly from the bookmaker network.
             </p>
           </div>
 
@@ -250,49 +257,28 @@ export default function TicketsPage() {
               </div>
             </div>
 
-            {/* Code & Stake Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  2. Enter Booking Code
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={bookingCode}
-                    onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. KDSA0G, BC99214, 557877Y, DPK3Q..."
-                    className="w-full pl-4 pr-10 py-3 bg-surface-subtle border border-surface-border rounded-xl text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all uppercase"
-                  />
-                  {bookingCode && (
-                    <button
-                      type="button"
-                      onClick={() => setBookingCode('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  3. Stake Amount ($)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-mono text-sm">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={stake}
-                    onChange={(e) => setStake(e.target.value)}
-                    className="w-full pl-8 pr-4 py-3 bg-surface-subtle border border-surface-border rounded-xl text-sm font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                  />
-                </div>
+            {/* Code Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                2. Enter Booking Code
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={bookingCode}
+                  onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. KDSA0G, BC99214, 557877Y, DPK3Q, BK-10294..."
+                  className="w-full pl-4 pr-10 py-3.5 bg-surface-subtle border border-surface-border rounded-xl text-sm font-mono font-bold text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all uppercase"
+                />
+                {bookingCode && (
+                  <button
+                    type="button"
+                    onClick={() => setBookingCode('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -320,7 +306,7 @@ export default function TicketsPage() {
               {isImporting ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Resolving Ticket Fixtures...</span>
+                  <span>Connecting to Bookmaker Live Network...</span>
                 </>
               ) : (
                 <>
@@ -358,7 +344,7 @@ export default function TicketsPage() {
               <Ticket className="w-12 h-12 text-muted-foreground mx-auto opacity-30" />
               <p className="text-base font-bold text-foreground">No Tickets Added Yet</p>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                Paste any booking code from SportyBet, Bet9ja, 1xBet, or BetKing above to start monitoring accumulator legs and cashouts.
+                Paste any booking code from SportyBet, Bet9ja, 1xBet, or BetKing above to pull real fixtures and live scores directly from the bookmaker.
               </p>
             </div>
           ) : (
