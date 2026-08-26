@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { LiveDelta, Match } from '@/types';
+import { getWsUrl } from '@/lib/api';
 
 type DeltaListener = (delta: LiveDelta) => void;
 
@@ -27,9 +28,7 @@ export function useLiveMatchSocket(activeMatchId?: string) {
         return;
       }
 
-      // Determine backend WS URL (Host port 18443)
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const wsUrl = `ws://${host}:18443/ws`;
+      const wsUrl = getWsUrl();
 
       try {
         const ws = new WebSocket(wsUrl);

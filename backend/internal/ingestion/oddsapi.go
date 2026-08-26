@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/sports/livescores/internal/models"
 )
 
 type OddsAPIClient struct {

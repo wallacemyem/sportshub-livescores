@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { MobileNav } from '@/components/ui/MobileNav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { getApiBaseUrl } from '@/lib/api';
 
 const CATEGORIES = [
   'ALL',
@@ -33,8 +34,8 @@ export default function BlogHubPage() {
   useEffect(() => {
     async function fetchPosts() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:18443/api/v1/blog`);
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/blog`);
         if (res.ok) {
           const data = await res.json();
           setPosts(data.posts || []);

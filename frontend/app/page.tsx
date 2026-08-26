@@ -25,6 +25,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { TeamCrest } from '@/components/ui/TeamCrest';
 import { CountryFlag } from '@/components/ui/CountryFlag';
 import { getCachedData, setCachedData } from '@/lib/cache';
+import { getApiBaseUrl } from '@/lib/api';
 import {
   Radio,
   Search,
@@ -138,10 +139,10 @@ export default function HomePage() {
     // 2. Fetch from API in background to update cache
     async function fetchData() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const apiBase = getApiBaseUrl();
         const [matchRes, slipRes] = await Promise.all([
-          fetch(`http://${host}:18443/api/v1/matches`),
-          fetch(`http://${host}:18443/api/v1/betslip`),
+          fetch(`${apiBase}/matches`),
+          fetch(`${apiBase}/betslip`),
         ]);
 
         if (matchRes.ok) {
@@ -176,8 +177,8 @@ export default function HomePage() {
   const handleLoadSampleTicket = async () => {
     setIsImportingSample(true);
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/betslip/import`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/betslip/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,13 +334,13 @@ export default function HomePage() {
               )}
             </button>
 
-            <button
-              onClick={() => setIsProModalOpen(true)}
+            <Link
+              href="/pro"
               className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 shadow-md shadow-violet-500/20"
             >
               <Shield className="w-3.5 h-3.5" />
               <span>PRO</span>
-            </button>
+            </Link>
 
             <a
               href="http://localhost:19080"

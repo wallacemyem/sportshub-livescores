@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BetSlip } from '@/types';
 import { Ticket, X, Check, Loader2, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface TicketImporterModalProps {
   isOpen: boolean;
@@ -59,8 +60,8 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
     }, 350);
 
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/betslip/import`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/betslip/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

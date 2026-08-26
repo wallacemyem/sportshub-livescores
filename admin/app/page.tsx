@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Search,
 } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface TelemetryData {
   active_pollers: number;
@@ -141,15 +142,15 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const apiBase = getApiBaseUrl();
         const [telRes, finRes, parRes, matRes, cliRes, whRes, supRes] = await Promise.all([
-          fetch(`http://${host}:18443/api/v1/admin/telemetry`),
-          fetch(`http://${host}:18443/api/v1/admin/financials`),
-          fetch(`http://${host}:18443/api/v1/admin/parser/metrics`),
-          fetch(`http://${host}:18443/api/v1/matches`),
-          fetch(`http://${host}:18443/api/v1/admin/clients`),
-          fetch(`http://${host}:18443/api/v1/admin/webhooks`),
-          fetch(`http://${host}:18443/api/v1/support/tickets`),
+          fetch(`${apiBase}/admin/telemetry`),
+          fetch(`${apiBase}/admin/financials`),
+          fetch(`${apiBase}/admin/parser/metrics`),
+          fetch(`${apiBase}/matches`),
+          fetch(`${apiBase}/admin/clients`),
+          fetch(`${apiBase}/admin/webhooks`),
+          fetch(`${apiBase}/support/tickets`),
         ]);
 
         if (telRes.ok) setTelemetry(await telRes.json());
@@ -187,8 +188,8 @@ export default function AdminDashboardPage() {
   // Trigger Goal Simulation
   async function triggerGoal(matchId: string, teamSide: 'HOME' | 'AWAY') {
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/admin/matches/${matchId}/simulate-goal`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/admin/matches/${matchId}/simulate-goal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ team_side: teamSide }),
@@ -205,8 +206,8 @@ export default function AdminDashboardPage() {
   // Override Match Score
   async function handleOverride(match: any, homeDelta: number, awayDelta: number) {
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/admin/matches/${match.id}/override`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/admin/matches/${match.id}/override`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,8 +231,8 @@ export default function AdminDashboardPage() {
   async function handleTestParser() {
     try {
       setTestResult(null);
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/betslip/import`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/betslip/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -255,8 +256,8 @@ export default function AdminDashboardPage() {
     if (!selectedTicket || !agentReplyText.trim()) return;
 
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/support/tickets/${selectedTicket.id}/messages`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/support/tickets/${selectedTicket.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

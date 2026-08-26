@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { SupportTicket, SupportTicketMessage } from '@/types';
 import { X, Headphones, Send, MessageSquare, AlertCircle, CheckCircle2, Clock, ShieldCheck, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -34,8 +35,8 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
   useEffect(() => {
     async function fetchTickets() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:18443/api/v1/support/tickets`);
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/support/tickets`);
         if (res.ok) {
           const data = await res.json();
           setTickets(data.tickets || []);
@@ -60,8 +61,8 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
 
     setIsLoading(true);
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/support/tickets`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/support/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,8 +106,8 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
     setReplyMessage('');
 
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/support/tickets/${selectedTicket.id}/messages`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/support/tickets/${selectedTicket.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

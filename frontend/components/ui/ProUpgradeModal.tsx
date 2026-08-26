@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Crown, Check, X, ShieldCheck, Zap, Sparkles, Loader2, CreditCard, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface ProUpgradeModalProps {
   isOpen: boolean;
@@ -20,8 +21,8 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
   async function handleCheckout() {
     setIsLoading(true);
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      const res = await fetch(`http://${host}:18443/api/v1/payments/simulate`, {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/payments/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

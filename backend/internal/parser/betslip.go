@@ -166,7 +166,6 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string, stake float64) 
 
 	// 3. Loop over bookmakers and attempt resolution
 	var resolvedSlip *models.BetSlip
-	var matchedBookmaker string
 
 	allMatches := p.store.GetAllMatches("", "")
 	if len(allMatches) == 0 {
@@ -183,7 +182,6 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string, stake float64) 
 		slip, err := p.buildSlipForBookmaker(currentBookie, cleanCode, stake, allMatches)
 		if err == nil && slip != nil {
 			resolvedSlip = slip
-			matchedBookmaker = currentBookie
 			break
 		}
 	}
@@ -223,7 +221,7 @@ func (p *BetSlipParser) buildSlipForBookmaker(bookmaker, code string, stake floa
 	// Group matches by sport to ensure multi-sport accumulator representation
 	matchesBySport := make(map[models.SportType][]models.Match)
 	for _, m := range matches {
-		matchesBySport[m.SportID] = append(matchesBySport[m.SportID], m)
+		matchesBySport[m.Sport] = append(matchesBySport[m.Sport], m)
 	}
 
 	// Pick diverse matches across sports

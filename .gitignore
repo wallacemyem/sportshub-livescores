@@ -23,6 +23,9 @@ pnpm-debug.log*
 
 # Environment secrets
 .env
+.env.*
+.env.save
+.env*.save
 .env.local
 .env.development.local
 .env.test.local

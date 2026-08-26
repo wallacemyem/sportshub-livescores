@@ -17,6 +17,7 @@ import { ArrowLeft, Volume2, Calendar, MapPin, User, Activity } from 'lucide-rea
 import { MobileNav } from '@/components/ui/MobileNav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { getCachedData, setCachedData } from '@/lib/cache';
+import { getApiBaseUrl } from '@/lib/api';
 import Link from 'next/link';
 
 export default function MatchDetailPage() {
@@ -52,8 +53,8 @@ export default function MatchDetailPage() {
   useEffect(() => {
     async function fetchMatch() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:18443/api/v1/matches/${matchId}`);
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/matches/${matchId}`);
         if (res.ok) {
           const data = await res.json();
           setMatch(data);

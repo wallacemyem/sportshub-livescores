@@ -7,6 +7,7 @@ import { WordProcessor } from '@/components/blog/WordProcessor';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, ExternalLink } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { getApiBaseUrl } from '@/lib/api';
 
 export default function BlogEditorPage() {
   const router = useRouter();
@@ -16,8 +17,8 @@ export default function BlogEditorPage() {
   useEffect(() => {
     async function fetchMatches() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:18443/api/v1/matches`);
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/matches`);
         if (res.ok) {
           const data = await res.json();
           setMatches(data.matches || []);
@@ -30,8 +31,8 @@ export default function BlogEditorPage() {
   }, []);
 
   const handleSavePost = async (postData: Partial<BlogPost>) => {
-    const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-    const res = await fetch(`http://${host}:18443/api/v1/blog`, {
+    const apiBase = getApiBaseUrl();
+    const res = await fetch(`${apiBase}/blog`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(postData),

@@ -17,6 +17,7 @@ import confetti from 'canvas-confetti';
 import { motion, useScroll, useSpring } from 'framer-motion';
 import { MobileNav } from '@/components/ui/MobileNav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { getApiBaseUrl } from '@/lib/api';
 
 export default function ArticleReaderPage() {
   const params = useParams();
@@ -35,8 +36,8 @@ export default function ArticleReaderPage() {
   useEffect(() => {
     async function fetchArticle() {
       try {
-        const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const res = await fetch(`http://${host}:18443/api/v1/blog/${slug}`);
+        const apiBase = getApiBaseUrl();
+        const res = await fetch(`${apiBase}/blog/${slug}`);
         if (res.ok) {
           const data = await res.json();
           setPost(data);
@@ -64,8 +65,8 @@ export default function ArticleReaderPage() {
     });
 
     try {
-      const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-      await fetch(`http://${host}:18443/api/v1/blog/${post.id}/like`, { method: 'POST' });
+      const apiBase = getApiBaseUrl();
+      await fetch(`${apiBase}/blog/${post.id}/like`, { method: 'POST' });
     } catch (err) {
       console.error(err);
     }

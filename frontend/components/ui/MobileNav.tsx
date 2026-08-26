@@ -11,7 +11,7 @@ interface MobileNavProps {
   onOpenSearchModal?: () => void;
   onSelectScores?: () => void;
   onSelectLive?: () => void;
-  activeNav?: 'scores' | 'live' | 'blog' | 'support';
+  activeNav?: 'scores' | 'live' | 'blog' | 'support' | 'pro';
   liveCount?: number;
 }
 
@@ -28,9 +28,11 @@ export function MobileNav({
   const router = useRouter();
 
   // Determine current active item
-  let currentActive: 'scores' | 'live' | 'blog' | 'support' = 'scores';
+  let currentActive: 'scores' | 'live' | 'blog' | 'support' | 'pro' = 'scores';
   if (activeNav) {
     currentActive = activeNav;
+  } else if (pathname.startsWith('/pro')) {
+    currentActive = 'pro';
   } else if (pathname.startsWith('/support')) {
     currentActive = 'support';
   } else if (pathname.startsWith('/blog')) {
@@ -155,23 +157,17 @@ export function MobileNav({
             </Link>
 
             {/* PRO */}
-            {onOpenProModal ? (
-              <button
-                onClick={onOpenProModal}
-                className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 active:scale-95 transition-all duration-200 cursor-pointer min-w-[52px]"
-              >
-                <Shield className="w-4 h-4" />
-                <span className="text-[9px] font-bold">PRO</span>
-              </button>
-            ) : (
-              <Link
-                href="/"
-                className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all duration-200 min-w-[52px]"
-              >
-                <Shield className="w-4 h-4" />
-                <span className="text-[9px] font-bold">PRO</span>
-              </Link>
-            )}
+            <Link
+              href="/pro"
+              className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 min-w-[52px] ${
+                currentActive === 'pro'
+                  ? 'bg-white/90 dark:bg-white/15 text-violet-600 dark:text-violet-400 font-bold shadow-sm'
+                  : 'text-violet-600 dark:text-violet-400 hover:bg-white/40 dark:hover:bg-white/10'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              <span className="text-[9px] font-bold">PRO</span>
+            </Link>
           </div>
         </div>
       </nav>
@@ -286,29 +282,20 @@ export function MobileNav({
           </Link>
 
           {/* PRO Upgrade */}
-          {onOpenProModal ? (
-            <button
-              onClick={onOpenProModal}
-              title="Upgrade to PRO"
-              className="group relative p-2.5 rounded-xl text-violet-600 dark:text-violet-400 hover:bg-violet-500/15 flex items-center justify-center transition-all duration-200 cursor-pointer"
-            >
-              <Shield className="w-5 h-5" />
-              <span className="absolute left-full ml-3 px-2 py-1 bg-violet-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50">
-                PRO Pass
-              </span>
-            </button>
-          ) : (
-            <Link
-              href="/"
-              title="Upgrade to PRO"
-              className="group relative p-2.5 rounded-xl text-violet-600 dark:text-violet-400 hover:bg-violet-500/15 flex items-center justify-center transition-all duration-200"
-            >
-              <Shield className="w-5 h-5" />
-              <span className="absolute left-full ml-3 px-2 py-1 bg-violet-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50">
-                PRO Pass
-              </span>
-            </Link>
-          )}
+          <Link
+            href="/pro"
+            title="Upgrade to PRO"
+            className={`group relative p-2.5 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              currentActive === 'pro'
+                ? 'bg-violet-600 text-white shadow-md shadow-violet-500/30 font-bold'
+                : 'text-violet-600 dark:text-violet-400 hover:bg-violet-500/15'
+            }`}
+          >
+            <Shield className="w-5 h-5" />
+            <span className="absolute left-full ml-3 px-2 py-1 bg-violet-900 text-white text-[11px] font-bold rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-50">
+              PRO Pass
+            </span>
+          </Link>
 
           <div className="w-6 h-px bg-white/40 dark:bg-white/10 my-0.5" />
 
