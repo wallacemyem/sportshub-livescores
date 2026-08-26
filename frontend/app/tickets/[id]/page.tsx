@@ -306,7 +306,7 @@ export default function TicketDetailPage() {
                         </span>
                       ) : (
                         <span className="text-[11px] font-medium text-muted-foreground">
-                          {formatTimeAMPM(leg.match?.start_time)} ({formatProperDate(leg.match?.start_time)})
+                          {formatProperDate(leg.match?.start_time)} • {formatTimeAMPM(leg.match?.start_time)}
                         </span>
                       )}
                     </div>
@@ -332,7 +332,7 @@ export default function TicketDetailPage() {
                       {isMatchLive || isMatchFinished ? (
                         `${leg.match?.home_score ?? 0} - ${leg.match?.away_score ?? 0}`
                       ) : (
-                        formatTimeAMPM(leg.match?.start_time)
+                        <span className="text-muted-foreground font-semibold text-xs">{formatTimeAMPM(leg.match?.start_time)}</span>
                       )}
                     </div>
 

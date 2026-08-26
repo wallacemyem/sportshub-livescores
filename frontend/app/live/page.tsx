@@ -727,12 +727,21 @@ export default function HomePage() {
                         ? 'text-indigo-700 dark:text-indigo-200 bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30'
                         : 'text-foreground bg-surface-subtle border-surface-border'
                     }`}>
-                      {selectedMatch.home_score} : {selectedMatch.away_score}
+                      {selectedMatch.status === 'SCHEDULED' ? 'vs' : `${selectedMatch.home_score} : ${selectedMatch.away_score}`}
                     </div>
-                    <p className={`text-xs font-bold mt-1.5 uppercase font-mono ${
-                      selectedMatch.status === 'LIVE' ? 'text-red-500' : 'text-muted-foreground'
+                    <p className={`text-xs mt-1.5 uppercase font-mono ${
+                      selectedMatch.status === 'LIVE' ? 'text-red-500 font-bold flex items-center justify-center gap-1' : 'text-muted-foreground font-semibold'
                     }`}>
-                      {selectedMatch.status === 'LIVE' ? `${selectedMatch.period} ${selectedMatch.minute}'` : selectedMatch.status}
+                      {selectedMatch.status === 'LIVE' ? (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                          <span>{selectedMatch.period} {selectedMatch.minute}&apos;</span>
+                        </>
+                      ) : selectedMatch.status === 'SCHEDULED' ? (
+                        formatTimeAMPM(selectedMatch.start_time)
+                      ) : (
+                        selectedMatch.status
+                      )}
                     </p>
                   </div>
 

@@ -130,13 +130,13 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
 
               {/* Home Cards */}
               <div className="flex items-center gap-1 shrink-0">
-                {match.stats.yellow_cards_home > 0 && (
+                {(match.stats?.yellow_cards_home ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-yellow-600 dark:text-yellow-400">
                     <span className="w-2 h-2.5 bg-yellow-400 rounded-sm inline-block" />
                     {match.stats.yellow_cards_home}
                   </span>
                 )}
-                {match.stats.red_cards_home > 0 && (
+                {(match.stats?.red_cards_home ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold text-red-500">
                     <span className="w-2 h-2.5 bg-red-500 rounded-sm inline-block" />
                     {match.stats.red_cards_home}
@@ -153,14 +153,18 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
                 ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-200'
                 : 'bg-surface-subtle border-surface-border text-foreground'
             }`}>
-              <motion.span
-                key={`h-${match.home_score}`}
-                initial={{ scale: 1.25 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {match.home_score}
-              </motion.span>
+              {isLive || match.status === 'FINISHED' ? (
+                <motion.span
+                  key={`h-${match.home_score}`}
+                  initial={{ scale: 1.25 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {match.home_score}
+                </motion.span>
+              ) : (
+                <span className="text-muted-foreground font-normal text-xs">-</span>
+              )}
             </div>
           </div>
         </div>
@@ -183,13 +187,13 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
 
               {/* Away Cards */}
               <div className="flex items-center gap-1 shrink-0">
-                {match.stats.yellow_cards_away > 0 && (
+                {(match.stats?.yellow_cards_away ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-yellow-600 dark:text-yellow-400">
                     <span className="w-2 h-2.5 bg-yellow-400 rounded-sm inline-block" />
                     {match.stats.yellow_cards_away}
                   </span>
                 )}
-                {match.stats.red_cards_away > 0 && (
+                {(match.stats?.red_cards_away ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold text-red-500">
                     <span className="w-2 h-2.5 bg-red-500 rounded-sm inline-block" />
                     {match.stats.red_cards_away}
@@ -206,21 +210,25 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
                 ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-200'
                 : 'bg-surface-subtle border-surface-border text-foreground'
             }`}>
-              <motion.span
-                key={`a-${match.away_score}`}
-                initial={{ scale: 1.25 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {match.away_score}
-              </motion.span>
+              {isLive || match.status === 'FINISHED' ? (
+                <motion.span
+                  key={`a-${match.away_score}`}
+                  initial={{ scale: 1.25 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {match.away_score}
+                </motion.span>
+              ) : (
+                <span className="text-muted-foreground font-normal text-xs">-</span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* 3. Period Breakdown or Possession Bar (for Live/Finished matches) */}
-      {isLive && match.stats.possession_home > 0 && (
+      {isLive && (match.stats?.possession_home ?? 0) > 0 && (
         <div className="mt-3 pt-2.5 border-t border-surface-border">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1 font-mono">
             <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{match.stats.possession_home}%</span>

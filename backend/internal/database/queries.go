@@ -444,6 +444,32 @@ func (s *Store) SaveBetSlip(slip *models.BetSlip) {
 	}
 }
 
+func (s *Store) hydrateSlipWithMatches(slip *models.BetSlip) *models.BetSlip {
+	if slip == nil {
+		return nil
+	}
+	slipCopy := *slip
+	slipCopy.Legs = make([]models.BetSlipLeg, len(slip.Legs))
+	for i, leg := range slip.Legs {
+		legCopy := leg
+		if m, exists := s.matches[leg.MatchID]; exists && m != nil {
+			legCopy.Match = *m
+			if m.Status == models.StatusLive {
+				legCopy.Status = models.LegRunning
+				legCopy.CurrentScore = fmt.Sprintf("%d-%d (%d')", m.HomeScore, m.AwayScore, m.Minute)
+			} else if m.Status == models.StatusFinished {
+				legCopy.Status = models.LegWon
+				legCopy.CurrentScore = fmt.Sprintf("%d-%d (FT)", m.HomeScore, m.AwayScore)
+			} else {
+				legCopy.Status = models.LegPending
+				legCopy.CurrentScore = "Upcoming"
+			}
+		}
+		slipCopy.Legs[i] = legCopy
+	}
+	return &slipCopy
+}
+
 func (s *Store) GetBetSlip(idOrCode string) (*models.BetSlip, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -452,7 +478,7 @@ func (s *Store) GetBetSlip(idOrCode string) (*models.BetSlip, bool) {
 	if !ok || slip.IsDeleted || slip.DeletedAt != nil {
 		return nil, false
 	}
-	return slip, true
+	return s.hydrateSlipWithMatches(slip), true
 }
 
 // GetBetSlipForUser retrieves a bet slip only if owned by the user or requested by an admin
@@ -467,7 +493,7 @@ func (s *Store) GetBetSlipForUser(idOrCode, userID string, isAdmin bool) (*model
 	if !isAdmin && userID != "" && slip.UserID != "" && slip.UserID != userID {
 		return nil, false
 	}
-	return slip, true
+	return s.hydrateSlipWithMatches(slip), true
 }
 
 // GetBetSlipsByUser returns only the bet slips belonging to the specified user
@@ -486,7 +512,7 @@ func (s *Store) GetBetSlipsByUser(userID string) []*models.BetSlip {
 		}
 		if !seen[slip.ID] {
 			seen[slip.ID] = true
-			result = append(result, slip)
+			result = append(result, s.hydrateSlipWithMatches(slip))
 		}
 	}
 	return result
@@ -526,7 +552,7 @@ func (s *Store) GetAllBetSlips() []*models.BetSlip {
 		}
 		if !seen[slip.ID] {
 			seen[slip.ID] = true
-			result = append(result, slip)
+			result = append(result, s.hydrateSlipWithMatches(slip))
 		}
 	}
 	return result
