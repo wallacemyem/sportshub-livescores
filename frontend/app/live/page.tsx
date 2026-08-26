@@ -58,7 +58,7 @@ const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ classN
 
 export default function HomePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [selectedSport, setSelectedSport] = useState<SportType>('soccer');
   // First page default is strictly LIVE
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
@@ -73,6 +73,8 @@ export default function HomePage() {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isProUser, setIsProUser] = useState(false);
   const [detailTab, setDetailTab] = useState<'stats' | 'timeline' | 'lineups' | 'odds'>('stats');
+
+  const slipCacheKey = `slips_${user?.id || 'guest'}`;
 
   // Remove an individual match from the tracker and database
   const handleRemoveMatch = async (matchId: string) => {
@@ -112,12 +114,16 @@ export default function HomePage() {
   const handleDeleteSlip = async (slipId: string) => {
     setBetSlips((prev) => {
       const next = prev.filter((s) => s.id !== slipId);
-      setCachedData('slips', next);
+      setCachedData(slipCacheKey, next);
       return next;
     });
     try {
       const apiBase = getApiBaseUrl();
-      await fetch(`${apiBase}/betslip/${slipId}`, { method: 'DELETE' });
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await fetch(`${apiBase}/betslip/${slipId}`, { method: 'DELETE', headers });
     } catch (err) {
       console.warn('Failed to delete bet slip', err);
     }
@@ -139,20 +145,31 @@ export default function HomePage() {
     onBetSlipUpdate: (updatedSlip) => {
       if (!updatedSlip.id) return;
       setBetSlips((prev) => {
-        const next = prev.map((s) => (s.id === updatedSlip.id ? updatedSlip : s));
-        setCachedData('slips', next);
+        const next = prev.map((s) => (s.id === updatedSlip.id ? { ...s, ...updatedSlip } : s));
+        setCachedData(slipCacheKey, next);
         return next;
       });
     },
   });
 
-  // Picture-in-Picture & Media Session
+  // Media Session Metadata API & Selected Match
+  const selectedMatch = useMemo(() => {
+    return matches.find((m) => m.id === selectedMatchId) || matches[0] || null;
+  }, [matches, selectedMatchId]);
+  useMediaSession(selectedMatch);
+
+  // Picture-in-Picture & Scoreboard Hook
   const { isPiPActive, isSupported: isPiPSupported, openPiP, closePiP } = usePiPScoreboard();
-  const selectedMatch = useMemo(
-    () => matches.find((m) => m.id === selectedMatchId) || matches[0] || null,
-    [matches, selectedMatchId]
-  );
-  useMediaSession(selectedMatch, true);
+
+  // Live WebSocket delta listener
+  useEffect(() => {
+    const unsubscribe = subscribe((delta) => {
+      if (delta && delta.type) {
+        // Live delta received
+      }
+    });
+    return () => unsubscribe();
+  }, [subscribe]);
 
   // Extract Match IDs loaded by user's tickets (multi-sport support)
   const ticketMatchIds = useMemo(() => {
@@ -170,7 +187,7 @@ export default function HomePage() {
   useEffect(() => {
     // 1. Instant Cache Load (0ms - saves tokens and preserves API rate limits)
     const cachedMatches = getCachedData<Match[]>('matches');
-    const cachedSlips = getCachedData<BetSlip[]>('slips');
+    const cachedSlips = getCachedData<BetSlip[]>(slipCacheKey);
 
     if (cachedMatches && cachedMatches.length > 0) {
       setMatches(cachedMatches);
@@ -184,9 +201,13 @@ export default function HomePage() {
     async function fetchData() {
       try {
         const apiBase = getApiBaseUrl();
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
         const [matchRes, slipRes] = await Promise.all([
           fetch(`${apiBase}/matches`),
-          fetch(`${apiBase}/betslip`),
+          fetch(`${apiBase}/betslip`, { headers }),
         ]);
 
         if (matchRes.ok) {
@@ -204,7 +225,7 @@ export default function HomePage() {
           const data = await slipRes.json();
           if (data.slips) {
             setBetSlips(data.slips);
-            setCachedData('slips', data.slips);
+            setCachedData(slipCacheKey, data.slips);
           }
         }
       } catch (err) {
@@ -215,7 +236,7 @@ export default function HomePage() {
     fetchData();
     const interval = setInterval(fetchData, 12000);
     return () => clearInterval(interval);
-  }, [selectedMatchId]);
+  }, [selectedMatchId, user?.id, token]);
 
 
 

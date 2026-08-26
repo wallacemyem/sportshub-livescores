@@ -84,7 +84,7 @@ func main() {
 		Auth:    authHandler,
 		Match:   handlers.NewMatchHandler(store),
 		Odds:    handlers.NewOddsHandler(store),
-		Bet:     handlers.NewBetSlipHandler(store, betParser),
+		Bet:     handlers.NewBetSlipHandler(store, betParser, jwtSecret),
 		Pay:     handlers.NewPaymentHandler(store, flwSvc, cryptSvc),
 		Blog:    handlers.NewBlogHandler(store),
 		Support: handlers.NewSupportHandler(store),

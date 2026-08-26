@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { BetSlip } from '@/types';
-import { Ticket, X, Check, Loader2, AlertCircle, Zap } from 'lucide-react';
+import { Ticket, X, Check, Loader2, AlertCircle, Zap, Crown } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getApiBaseUrl } from '@/lib/api';
 import { BookmakerIcon } from '@/components/brand/BookmakerLogo';
+import { useAuth } from '@/context/AuthContext';
 
 interface TicketImporterModalProps {
   isOpen: boolean;
@@ -14,11 +16,13 @@ interface TicketImporterModalProps {
 }
 
 export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: TicketImporterModalProps) {
+  const { user, token } = useAuth();
   const [bookmaker, setBookmaker] = useState('auto');
   const [bookingCode, setBookingCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [scanStep, setScanStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [isPlanLimit, setIsPlanLimit] = useState(false);
 
   if (!isOpen) return null;
 
@@ -32,6 +36,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
     setIsLoading(true);
     setError(null);
+    setIsPlanLimit(false);
     setScanStep('Connecting to sportsbook network...');
 
     const scanSteps = [
@@ -52,9 +57,13 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
     try {
       const apiBase = getApiBaseUrl();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const res = await fetch(`${apiBase}/betslip/import`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           bookmaker,
           booking_code: cleanCode,
@@ -65,6 +74,9 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
+        if (errData.code === 'PLAN_LIMIT_EXCEEDED') {
+          setIsPlanLimit(true);
+        }
         throw new Error(
           errData.error ||
           `Could not find a bet slip matching code "${cleanCode}". Please verify the code or select your sportsbook.`
@@ -117,12 +129,26 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
         <form onSubmit={handleImport} className="p-4 space-y-4">
           {/* Error Notification */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 rounded-xl text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold">Bet Slip Not Found</p>
-                <p className="mt-0.5 text-xs leading-relaxed">{error}</p>
+            <div className="p-3.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 rounded-xl text-xs flex flex-col gap-2">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">{isPlanLimit ? 'Plan Limit Reached' : 'Unable to Import Ticket'}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed">{error}</p>
+                </div>
               </div>
+              {isPlanLimit && (
+                <div className="pt-1 flex justify-end">
+                  <Link
+                    href="/account/plan"
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Upgrade to Pro / Elite</span>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 

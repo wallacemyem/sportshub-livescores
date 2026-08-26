@@ -455,6 +455,65 @@ func (s *Store) GetBetSlip(idOrCode string) (*models.BetSlip, bool) {
 	return slip, true
 }
 
+// GetBetSlipForUser retrieves a bet slip only if owned by the user or requested by an admin
+func (s *Store) GetBetSlipForUser(idOrCode, userID string, isAdmin bool) (*models.BetSlip, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	slip, ok := s.betSlips[idOrCode]
+	if !ok || slip.IsDeleted || slip.DeletedAt != nil {
+		return nil, false
+	}
+	if !isAdmin && userID != "" && slip.UserID != "" && slip.UserID != userID {
+		return nil, false
+	}
+	return slip, true
+}
+
+// GetBetSlipsByUser returns only the bet slips belonging to the specified user
+func (s *Store) GetBetSlipsByUser(userID string) []*models.BetSlip {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	seen := make(map[string]bool)
+	result := make([]*models.BetSlip, 0)
+	for _, slip := range s.betSlips {
+		if slip.IsDeleted || slip.DeletedAt != nil {
+			continue
+		}
+		if userID != "" && slip.UserID != userID {
+			continue
+		}
+		if !seen[slip.ID] {
+			seen[slip.ID] = true
+			result = append(result, slip)
+		}
+	}
+	return result
+}
+
+// CountActiveBetSlipsForUser returns the number of active bet slips owned by a user
+func (s *Store) CountActiveBetSlipsForUser(userID string) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	seen := make(map[string]bool)
+	count := 0
+	for _, slip := range s.betSlips {
+		if slip.IsDeleted || slip.DeletedAt != nil {
+			continue
+		}
+		if userID != "" && slip.UserID != userID {
+			continue
+		}
+		if !seen[slip.ID] {
+			seen[slip.ID] = true
+			count++
+		}
+	}
+	return count
+}
+
 func (s *Store) GetAllBetSlips() []*models.BetSlip {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -473,7 +532,8 @@ func (s *Store) GetAllBetSlips() []*models.BetSlip {
 	return result
 }
 
-func (s *Store) DeleteBetSlip(idOrCode string) bool {
+// DeleteBetSlipForUser deletes a bet slip only if the user owns it or is an admin
+func (s *Store) DeleteBetSlipForUser(idOrCode, userID string, isAdmin bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -481,6 +541,10 @@ func (s *Store) DeleteBetSlip(idOrCode string) bool {
 	if !ok || slip.IsDeleted {
 		return false
 	}
+	if !isAdmin && userID != "" && slip.UserID != "" && slip.UserID != userID {
+		return false
+	}
+
 	now := time.Now()
 	slip.IsDeleted = true
 	slip.DeletedAt = &now
@@ -494,7 +558,12 @@ func (s *Store) DeleteBetSlip(idOrCode string) bool {
 	return true
 }
 
-func (s *Store) ClearAllBetSlips() int {
+func (s *Store) DeleteBetSlip(idOrCode string) bool {
+	return s.DeleteBetSlipForUser(idOrCode, "", true)
+}
+
+// ClearBetSlipsForUser clears all bet slips belonging to a specific user
+func (s *Store) ClearBetSlipsForUser(userID string) int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -503,6 +572,9 @@ func (s *Store) ClearAllBetSlips() int {
 	count := 0
 	for _, slip := range s.betSlips {
 		if !seen[slip.ID] && !slip.IsDeleted {
+			if userID != "" && slip.UserID != userID {
+				continue
+			}
 			seen[slip.ID] = true
 			slip.IsDeleted = true
 			slip.DeletedAt = &now
@@ -513,10 +585,18 @@ func (s *Store) ClearAllBetSlips() int {
 	if s.db != nil && s.db.Pool != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		_, _ = s.db.Pool.Exec(ctx, `UPDATE bet_slips SET is_deleted = TRUE, deleted_at = NOW() WHERE is_deleted = FALSE`)
+		if userID != "" {
+			_, _ = s.db.Pool.Exec(ctx, `UPDATE bet_slips SET is_deleted = TRUE, deleted_at = NOW() WHERE user_id = $1 AND is_deleted = FALSE`, userID)
+		} else {
+			_, _ = s.db.Pool.Exec(ctx, `UPDATE bet_slips SET is_deleted = TRUE, deleted_at = NOW() WHERE is_deleted = FALSE`)
+		}
 	}
 
 	return count
+}
+
+func (s *Store) ClearAllBetSlips() int {
+	return s.ClearBetSlipsForUser("")
 }
 
 // Users & Subscriptions

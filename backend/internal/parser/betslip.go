@@ -71,19 +71,28 @@ type SportyShareResponse struct {
 
 // ParseBookingCode resolves the booking code from real live bookmaker API endpoints
 func (p *BetSlipParser) ParseBookingCode(bookmaker, code string) (*models.BetSlip, error) {
+	return p.ParseBookingCodeForUser(bookmaker, code, "")
+}
+
+// ParseBookingCodeForUser resolves booking code scoped to a specific user
+func (p *BetSlipParser) ParseBookingCodeForUser(bookmaker, code, userID string) (*models.BetSlip, error) {
 	cleanCode := strings.ToUpper(strings.TrimSpace(code))
 	if cleanCode == "" {
 		return nil, fmt.Errorf("please provide a valid booking code")
 	}
 
-	// 1. Check if already stored/cached in store
-	if existing, ok := p.store.GetBetSlip(cleanCode); ok {
-		p.store.SaveBetSlip(existing)
-		for _, leg := range existing.Legs {
-			legMatch := leg.Match
-			p.store.SaveMatch(&legMatch)
+	// 1. Check if user already tracked this booking code
+	if userID != "" {
+		userSlips := p.store.GetBetSlipsByUser(userID)
+		for _, s := range userSlips {
+			if strings.EqualFold(s.BookingCode, cleanCode) {
+				return s, nil
+			}
 		}
-		return existing, nil
+	} else {
+		if existing, ok := p.store.GetBetSlip(cleanCode); ok {
+			return existing, nil
+		}
 	}
 
 	// 2. Fetch real data from live bookmaker APIs
@@ -96,6 +105,10 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string) (*models.BetSli
 	if reqBookmaker == "" || reqBookmaker == "auto" || reqBookmaker == "sportybet" {
 		slip, err = p.fetchSportyBetLive(cleanCode)
 		if err == nil && slip != nil {
+			if userID != "" {
+				slip.UserID = userID
+				slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
+			}
 			p.store.SaveBetSlip(slip)
 			return slip, nil
 		}
@@ -105,6 +118,10 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string) (*models.BetSli
 	if reqBookmaker == "" || reqBookmaker == "auto" || reqBookmaker == "msport" {
 		slip, err = p.fetchMSportLive(cleanCode)
 		if err == nil && slip != nil {
+			if userID != "" {
+				slip.UserID = userID
+				slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
+			}
 			p.store.SaveBetSlip(slip)
 			return slip, nil
 		}
@@ -114,6 +131,10 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string) (*models.BetSli
 	if reqBookmaker == "bet9ja" || reqBookmaker == "1xbet" || reqBookmaker == "betking" || reqBookmaker == "mozzartbet" {
 		slip, err = p.fetchOtherBookmakerLive(reqBookmaker, cleanCode)
 		if err == nil && slip != nil {
+			if userID != "" {
+				slip.UserID = userID
+				slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
+			}
 			p.store.SaveBetSlip(slip)
 			return slip, nil
 		}
@@ -130,6 +151,10 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string) (*models.BetSli
 				slip, err = p.fetchOtherBookmakerLive(bm, cleanCode)
 			}
 			if err == nil && slip != nil {
+				if userID != "" {
+					slip.UserID = userID
+					slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
+				}
 				p.store.SaveBetSlip(slip)
 				return slip, nil
 			}

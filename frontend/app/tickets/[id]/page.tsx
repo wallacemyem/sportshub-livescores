@@ -26,30 +26,42 @@ import { getApiBaseUrl } from '@/lib/api';
 import { getCachedData, setCachedData } from '@/lib/cache';
 import { formatTimeAMPM, formatProperDate, formatMatchDateTime } from '@/lib/date';
 import { useNotification } from '@/context/NotificationContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function TicketDetailPage() {
   const params = useParams();
   const router = useRouter();
   const ticketId = params.id as string;
+  const { user, token } = useAuth();
   const { alertsEnabled, setAlertsEnabled, triggerAlert, requestPermission } = useNotification();
+
+  const cacheKey = `slips_${user?.id || 'guest'}`;
 
   const [slip, setSlip] = useState<BetSlip | null>(() => {
     if (typeof window !== 'undefined') {
-      const cached = getCachedData<BetSlip[]>('slips');
+      const cached = getCachedData<BetSlip[]>(`slips_${user?.id || 'guest'}`);
       return cached?.find((s) => s.id === ticketId || s.booking_code === ticketId) || null;
     }
     return null;
   });
+  const [notFound, setNotFound] = useState(false);
 
   // Fetch Slip Details
   useEffect(() => {
     async function fetchSlip() {
       try {
         const apiBase = getApiBaseUrl();
-        const res = await fetch(`${apiBase}/betslip/${ticketId}`);
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(`${apiBase}/betslip/${ticketId}`, { headers });
         if (res.ok) {
           const data = await res.json();
           setSlip(data);
+          setNotFound(false);
+        } else if (res.status === 404 || res.status === 403) {
+          setNotFound(true);
         }
       } catch (err) {
         console.warn('Failed to fetch ticket details', err);
@@ -59,7 +71,7 @@ export default function TicketDetailPage() {
     if (ticketId) {
       fetchSlip();
     }
-  }, [ticketId]);
+  }, [ticketId, token]);
 
   // Handle Delete Slip
   const handleDeleteSlip = async () => {
@@ -70,11 +82,15 @@ export default function TicketDetailPage() {
 
     try {
       const apiBase = getApiBaseUrl();
-      await fetch(`${apiBase}/betslip/${slip.id}`, { method: 'DELETE' });
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await fetch(`${apiBase}/betslip/${slip.id}`, { method: 'DELETE', headers });
 
       // Update cached slips
-      const cached = getCachedData<BetSlip[]>('slips') || [];
-      setCachedData('slips', cached.filter((s) => s.id !== slip.id));
+      const cached = getCachedData<BetSlip[]>(cacheKey) || [];
+      setCachedData(cacheKey, cached.filter((s) => s.id !== slip.id));
 
       router.push('/tickets');
     } catch (err) {
@@ -87,6 +103,34 @@ export default function TicketDetailPage() {
   const lostCount = slip?.legs?.filter((l) => l.status === 'LOST').length || 0;
   const pendingCount = slip?.legs?.filter((l) => l.status === 'PENDING').length || 0;
   const totalLegs = slip?.legs?.length || 0;
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-surface border border-surface-border rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center mx-auto">
+              <XCircle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-foreground">Ticket Not Found or Access Restricted</h3>
+              <p className="text-xs text-muted-foreground">
+                This ticket could not be found or belongs to another user. You can only view your own tracked tickets.
+              </p>
+            </div>
+            <Link
+              href="/tickets"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-2xl shadow-md transition-all"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to My Tickets</span>
+            </Link>
+          </div>
+        </div>
+        <MobileNav />
+      </div>
+    );
+  }
 
   if (!slip) {
     return (
