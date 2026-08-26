@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
+import { formatTimeAMPM } from '@/lib/date';
 
 interface LiveScoreCardProps {
   match: Match;
@@ -86,7 +87,7 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
             </span>
           ) : (
             <span className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-mono font-bold">
-              {new Date(match.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {formatTimeAMPM(match.start_time)}
             </span>
           )}
 

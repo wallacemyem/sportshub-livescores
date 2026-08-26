@@ -18,6 +18,7 @@ import {
   Sparkles,
   Flag,
 } from 'lucide-react';
+import { formatTimeAMPM } from '@/lib/date';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
 import { useRouter } from 'next/navigation';
@@ -314,7 +315,7 @@ export function SearchModal({ isOpen, onClose, matches, onSelectMatch }: SearchM
                     ) : (
                       <div className="flex flex-col items-end font-mono">
                         <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                          {new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {formatTimeAMPM(m.start_time)}
                         </span>
                         <span className="text-[10px] text-muted-foreground">Upcoming</span>
                       </div>

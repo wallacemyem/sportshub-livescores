@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import { NotificationProvider } from "@/context/NotificationContext";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://slipradar.app"),
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
     template: "%s | SlipRadar",
   },
   description:
-    "Paste a booking code from SportyBet, Bet9ja, 1xBet or BetKing and watch every leg of your accumulator settle in real time, with live cash-out value and instant goal alerts.",
+    "Paste a booking code from SportyBet, Bet9ja, 1xBet or BetKing and watch every leg of your accumulator settle in real time, with instant goal alerts.",
   applicationName: "SlipRadar",
   manifest: "/manifest.json",
   openGraph: {
@@ -18,13 +19,13 @@ export const metadata: Metadata = {
     siteName: "SlipRadar",
     title: "SlipRadar | Track every bet slip live",
     description:
-      "One booking code. Every leg of your accumulator, live, with running cash-out value.",
+      "One booking code. Every leg of your accumulator, live with instant alerts.",
   },
   twitter: {
     card: "summary_large_image",
     title: "SlipRadar | Track every bet slip live",
     description:
-      "One booking code. Every leg of your accumulator, live, with running cash-out value.",
+      "One booking code. Every leg of your accumulator, live with instant alerts.",
   },
 };
 
@@ -51,7 +52,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-150">
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

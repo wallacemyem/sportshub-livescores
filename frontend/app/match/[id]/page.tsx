@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Match } from '@/types';
 import { useLiveMatchSocket } from '@/hooks/useLiveMatchSocket';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
@@ -13,18 +13,26 @@ import { LineupsView } from '@/components/live/LineupsView';
 import { OddsComparisonTable } from '@/components/live/OddsComparisonTable';
 import { TeamCrest } from '@/components/ui/TeamCrest';
 import { CountryFlag } from '@/components/ui/CountryFlag';
-import { ArrowLeft, Volume2, Calendar, MapPin, User, Activity } from 'lucide-react';
+import { ArrowLeft, Volume2, MapPin, User, Bell, BellOff, Ticket, Radio } from 'lucide-react';
 import { MobileNav } from '@/components/ui/MobileNav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { getCachedData, setCachedData } from '@/lib/cache';
+import { getCachedData } from '@/lib/cache';
 import { getApiBaseUrl } from '@/lib/api';
+import { formatTimeAMPM, formatProperDate } from '@/lib/date';
+import { useNotification } from '@/context/NotificationContext';
 import Link from 'next/link';
 
 export default function MatchDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const matchId = params.id as string;
+
+  const fromTicket = searchParams.get('fromTicket');
+  const ticketCode = searchParams.get('ticketCode');
+
+  const { alertsEnabled, setAlertsEnabled, triggerAlert } = useNotification();
+
   const [match, setMatch] = useState<Match | null>(() => {
-    // 0ms Cache Resolution
     if (typeof window !== 'undefined') {
       const cached = getCachedData<Match[]>('matches');
       return cached?.find((m) => m.id === matchId) || null;
@@ -35,6 +43,12 @@ export default function MatchDetailPage() {
 
   const { isConnected, subscribe } = useLiveMatchSocket(matchId);
   useMediaSession(match, true);
+
+  const prevScoreRef = useRef<{ home: number; away: number; status: string }>({
+    home: match?.home_score ?? 0,
+    away: match?.away_score ?? 0,
+    status: match?.status ?? 'SCHEDULED',
+  });
 
   useSupabaseRealtime({
     onMatchUpdate: (updatedMatch) => {
@@ -58,6 +72,11 @@ export default function MatchDetailPage() {
         if (res.ok) {
           const data = await res.json();
           setMatch(data);
+          prevScoreRef.current = {
+            home: data.home_score,
+            away: data.away_score,
+            status: data.status,
+          };
         }
       } catch (err) {
         console.warn('API fetch background sync:', err);
@@ -69,13 +88,44 @@ export default function MatchDetailPage() {
     }
   }, [matchId]);
 
-  // Real-time WebSocket Deltas
+  // Real-time WebSocket Deltas & Notifications
   useEffect(() => {
     return subscribe((delta) => {
       if (delta.match_id === matchId) {
         setMatch((prev) => {
           if (!prev) return prev;
           const updated = { ...prev };
+
+          // 1. Kick-off alert
+          if (delta.status === 'LIVE' && prevScoreRef.current.status !== 'LIVE') {
+            triggerAlert(
+              `🔔 KICK-OFF: ${prev.home_team.name} vs ${prev.away_team.name}`,
+              `Match is now LIVE! (${prev.league.name})`,
+              'kickoff',
+              matchId
+            );
+          }
+
+          // 2. Goal / Point score alert
+          const newHome = delta.home_score !== undefined ? delta.home_score : prev.home_score;
+          const newAway = delta.away_score !== undefined ? delta.away_score : prev.away_score;
+
+          if (
+            (newHome > prevScoreRef.current.home || newAway > prevScoreRef.current.away) &&
+            prev.status === 'LIVE'
+          ) {
+            const isGoal = prev.sport === 'soccer';
+            const scoringTeam = newHome > prevScoreRef.current.home ? prev.home_team.name : prev.away_team.name;
+            const term = isGoal ? 'GOAL!' : 'POINT!';
+
+            triggerAlert(
+              `⚽ ${term} ${scoringTeam}`,
+              `${prev.home_team.name} ${newHome} - ${newAway} ${prev.away_team.name} (${delta.minute || prev.minute}')`,
+              isGoal ? 'goal' : 'point',
+              matchId
+            );
+          }
+
           if (delta.home_score !== undefined) updated.home_score = delta.home_score;
           if (delta.away_score !== undefined) updated.away_score = delta.away_score;
           if (delta.minute !== undefined) updated.minute = delta.minute;
@@ -84,11 +134,18 @@ export default function MatchDetailPage() {
           if (delta.stats) updated.stats = { ...prev.stats, ...delta.stats };
           if (delta.event) updated.events = [delta.event, ...(prev.events || [])];
           if (delta.odds) updated.odds = delta.odds;
+
+          prevScoreRef.current = {
+            home: updated.home_score,
+            away: updated.away_score,
+            status: updated.status,
+          };
+
           return updated;
         });
       }
     });
-  }, [matchId, subscribe]);
+  }, [matchId, subscribe, triggerAlert]);
 
   if (!match) {
     return (
@@ -109,16 +166,48 @@ export default function MatchDetailPage() {
     <div className="min-h-screen bg-background text-foreground p-3 sm:p-4 md:p-8 md:pl-24 pb-24 md:pb-8">
       <div className="max-w-5xl mx-auto space-y-5">
         {/* Navigation & Status Header */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/live"
-            className="flex items-center gap-2 text-xs font-semibold text-foreground hover:text-blue-600 transition-colors bg-surface border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 px-3 py-1.5 rounded-lg shadow-subtle cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" /> Scores
-          </Link>
+        <div className="flex items-center justify-between gap-3">
+          {fromTicket ? (
+            <Link
+              href={`/tickets/${fromTicket}`}
+              className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 px-3.5 py-2 rounded-xl shadow-sm transition-all cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Ticket #{ticketCode || fromTicket}</span>
+            </Link>
+          ) : (
+            <Link
+              href="/live"
+              className="flex items-center gap-2 text-xs font-bold text-foreground hover:text-blue-600 transition-colors bg-surface border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 px-3 py-1.5 rounded-xl shadow-sm cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" /> Scores
+            </Link>
+          )}
 
           <div className="flex items-center gap-2.5">
+            {/* Live Alerts Bell Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !alertsEnabled;
+                setAlertsEnabled(next);
+                if (next) {
+                  triggerAlert('Alerts Enabled', `You will receive instant goal and kickoff alerts for ${match.home_team.name} vs ${match.away_team.name}`, 'kickoff', matchId);
+                }
+              }}
+              title={alertsEnabled ? 'Disable match notifications' : 'Enable match notifications'}
+              className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                alertsEnabled
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-surface border-surface-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {alertsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+              <span className="hidden sm:inline">{alertsEnabled ? 'Alerts ON' : 'Alerts OFF'}</span>
+            </button>
+
             <ThemeToggle />
+
             {isLive ? (
               <span className="text-xs font-mono bg-red-500 text-white px-3 py-1 rounded-full flex items-center gap-1.5 font-bold uppercase tracking-wider shadow-sm shadow-red-500/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
@@ -130,7 +219,7 @@ export default function MatchDetailPage() {
               </span>
             ) : (
               <span className="text-xs font-mono bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 px-2.5 py-1 rounded-full font-bold">
-                Upcoming ({new Date(match.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                Upcoming ({formatTimeAMPM(match.start_time)})
               </span>
             )}
           </div>
@@ -142,7 +231,7 @@ export default function MatchDetailPage() {
             <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-orange-400 to-indigo-500" />
           )}
 
-          {/* League, Flag, Venue & Referee Info */}
+          {/* League, Flag, Kickoff Date/Time Info */}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground mb-6 pb-3 border-b border-surface-border font-mono">
             <div className="flex items-center gap-2">
               <CountryFlag country={match.league.country} size="sm" />
@@ -153,14 +242,17 @@ export default function MatchDetailPage() {
             </div>
 
             <div className="flex items-center gap-3 text-[11px]">
+              <span className="font-bold text-foreground">
+                {formatProperDate(match.start_time, true)} at {formatTimeAMPM(match.start_time)}
+              </span>
               {match.venue && (
-                <span className="flex items-center gap-1">
+                <span className="hidden md:flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-muted-foreground" />
                   <span>{match.venue}</span>
                 </span>
               )}
               {match.referee && (
-                <span className="hidden sm:flex items-center gap-1">
+                <span className="hidden lg:flex items-center gap-1">
                   <User className="w-3 h-3 text-muted-foreground" />
                   <span>Ref: {match.referee}</span>
                 </span>

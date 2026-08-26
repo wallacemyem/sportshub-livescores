@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Ticket,
   Trash2,
@@ -10,18 +11,18 @@ import {
   CheckCircle2,
   X,
   Layers,
-  Radio,
+  ChevronRight,
   Clock,
   Sparkles,
 } from 'lucide-react';
 import { BetSlip } from '@/types';
 import { AppPageHeader } from '@/components/ui/AppPageHeader';
 import { MobileNav } from '@/components/ui/MobileNav';
-import { AccumulatorCard } from '@/components/betting/AccumulatorCard';
 import { BookmakerLogo } from '@/components/brand/BookmakerLogo';
 import { getApiBaseUrl } from '@/lib/api';
 import { getCachedData, setCachedData } from '@/lib/cache';
-import { useAuth } from '@/context/AuthContext';
+import { formatProperDate, formatMatchDateTime } from '@/lib/date';
+import { useNotification } from '@/context/NotificationContext';
 
 const BOOKMAKERS = [
   { id: 'auto', name: 'Auto-Detect', color: 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 text-violet-600' },
@@ -34,7 +35,8 @@ const BOOKMAKERS = [
 ];
 
 export default function TicketsPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { triggerAlert } = useNotification();
   const [betSlips, setBetSlips] = useState<BetSlip[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -106,6 +108,17 @@ export default function TicketsPage() {
         setCachedData('slips', next);
         return next;
       });
+
+      triggerAlert(
+        `Ticket #${data.booking_code} Imported`,
+        `Loaded ${data.legs?.length || 0} fixtures from ${data.bookmaker.toUpperCase()} with ${data.total_odds?.toFixed(2)}x odds!`,
+        'event'
+      );
+
+      // Navigate to ticket detail after brief moment
+      setTimeout(() => {
+        router.push(`/tickets/${data.id || data.booking_code}`);
+      }, 1000);
     } catch (err: any) {
       setImportError(err.message || 'Error resolving booking code.');
     } finally {
@@ -114,7 +127,10 @@ export default function TicketsPage() {
   };
 
   // Soft Delete a Single Bet Slip
-  const handleDeleteSlip = async (slipId: string) => {
+  const handleDeleteSlip = async (e: React.MouseEvent, slipId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     setBetSlips((prev) => {
       const next = prev.filter((s) => s.id !== slipId);
       setCachedData('slips', next);
@@ -348,14 +364,81 @@ export default function TicketsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {betSlips.map((slip) => (
-                <AccumulatorCard
-                  key={slip.id}
-                  slip={slip}
-                  onDelete={handleDeleteSlip}
-                />
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {betSlips.map((slip) => {
+                const totalLegs = slip.legs?.length || 0;
+                const wonCount = slip.legs?.filter((l) => l.status === 'WON').length || 0;
+                const runningCount = slip.legs?.filter((l) => l.status === 'RUNNING').length || 0;
+                const lostCount = slip.legs?.filter((l) => l.status === 'LOST').length || 0;
+
+                const statusColor = slip.status === 'WON'
+                  ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                  : slip.status === 'LOST'
+                  ? 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30'
+                  : 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30';
+
+                return (
+                  <Link
+                    key={slip.id}
+                    href={`/tickets/${slip.id || slip.booking_code}`}
+                    className="block bg-surface hover:bg-surface-subtle border border-surface-border hover:border-emerald-500/50 rounded-2xl p-5 shadow-sm transition-all group cursor-pointer"
+                  >
+                    {/* Top Row: Sportsbook & Booking Code */}
+                    <div className="flex items-center justify-between gap-2 border-b border-surface-border pb-3.5 mb-3.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <BookmakerLogo bookmaker={slip.bookmaker} size="sm" className="shrink-0" />
+                        <span className="font-mono text-sm font-black text-foreground truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          #{slip.booking_code}
+                        </span>
+                        <span className="shrink-0 text-[10px] uppercase px-2 py-0.5 rounded bg-surface-subtle border border-surface-border text-muted-foreground font-bold font-mono">
+                          {slip.bookmaker}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full border ${statusColor}`}>
+                          {slip.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSlip(e, slip.id)}
+                          title="Delete ticket"
+                          className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Middle Overview */}
+                    <div className="grid grid-cols-2 gap-3 bg-surface-subtle p-3 rounded-xl border border-surface-border font-mono text-center mb-3.5">
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block uppercase font-bold">Total Odds</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-black text-base mt-0.5 block">
+                          {slip.total_odds?.toFixed(2) || '1.00'}x
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-muted-foreground block uppercase font-bold">Accumulator Legs</span>
+                        <span className="text-foreground font-black text-base mt-0.5 block">
+                          {totalLegs} {totalLegs === 1 ? 'Game' : 'Games'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Status & CTA */}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                      <span className="truncate">
+                        {wonCount} Won{runningCount > 0 ? `, ${runningCount} Live` : ''}{lostCount > 0 ? `, ${lostCount} Lost` : ''}
+                      </span>
+                      <div className="flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 shrink-0 group-hover:translate-x-1 transition-transform">
+                        <span>View All Games</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
