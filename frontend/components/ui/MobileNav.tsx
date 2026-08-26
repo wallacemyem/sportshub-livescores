@@ -9,6 +9,7 @@ import {
   Crown,
   Activity,
   Search,
+  Ticket,
   User,
   Server,
   Home,
@@ -19,14 +20,13 @@ import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { getPlanConfig } from '@/components/brand/PlanBadge';
 
-type NavKey = 'scores' | 'live' | 'search' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
+type NavKey = 'scores' | 'search' | 'tickets' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
 
 interface MobileNavProps {
   onOpenProModal?: () => void;
   onOpenSupportModal?: () => void;
   onOpenSearchModal?: () => void;
   onSelectScores?: () => void;
-  onSelectLive?: () => void;
   activeNav?: NavKey;
   liveCount?: number;
 }
@@ -34,6 +34,7 @@ interface MobileNavProps {
 /** Resolve the highlighted item from the route when the page does not pin one. */
 function resolveActive(pathname: string, activeNav?: NavKey): NavKey {
   if (activeNav) return activeNav;
+  if (pathname.startsWith('/tickets')) return 'tickets';
   if (pathname.startsWith('/search')) return 'search';
   if (pathname.startsWith('/account/plan')) return 'plan';
   if (pathname.startsWith('/pro') || pathname.startsWith('/pricing')) return 'pro';
@@ -47,7 +48,6 @@ function resolveActive(pathname: string, activeNav?: NavKey): NavKey {
 export function MobileNav({
   onOpenSearchModal,
   onSelectScores,
-  onSelectLive,
   activeNav,
   liveCount = 0,
 }: MobileNavProps) {
@@ -59,18 +59,11 @@ export function MobileNav({
   const planConfig = getPlanConfig(user?.plan);
   const PlanIcon = planConfig.icon;
 
-  // On the tracker itself these switch the feed filter in place instead of navigating.
+  // On the tracker itself this can reset the feed filter.
   const handleScoresClick = (e: React.MouseEvent) => {
     if (isTrackerPage && onSelectScores) {
       e.preventDefault();
       onSelectScores();
-    }
-  };
-
-  const handleLiveClick = (e: React.MouseEvent) => {
-    if (isTrackerPage && onSelectLive) {
-      e.preventDefault();
-      onSelectLive();
     }
   };
 
@@ -85,41 +78,26 @@ export function MobileNav({
       >
         <div className="pointer-events-auto mx-auto w-full max-w-[420px] rounded-2xl p-1.5 backdrop-blur-2xl backdrop-saturate-200 bg-white/80 dark:bg-slate-900/80 border border-white/60 dark:border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
           <div className="grid grid-cols-5 items-stretch gap-0.5">
-            {/* Scores */}
+            {/* Scores (Merged Scores + Live) */}
             <Link
               href="/live"
               onClick={handleScoresClick}
               aria-current={currentActive === 'scores' ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 transition-colors duration-200 ${
+              className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 transition-colors duration-200 ${
                 currentActive === 'scores'
                   ? 'bg-white/90 dark:bg-white/15 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-muted-foreground active:bg-white/50 dark:active:bg-white/10'
               }`}
             >
-              <Activity className="w-[18px] h-[18px] shrink-0" />
-              <span className="text-[10px] font-semibold leading-none">Scores</span>
-            </Link>
-
-            {/* Live */}
-            <Link
-              href="/live?filter=LIVE"
-              onClick={handleLiveClick}
-              aria-current={currentActive === 'live' ? 'page' : undefined}
-              className={`relative flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 transition-colors duration-200 ${
-                currentActive === 'live'
-                  ? 'bg-white/90 dark:bg-white/15 text-red-600 dark:text-red-400 shadow-sm'
-                  : 'text-muted-foreground active:bg-white/50 dark:active:bg-white/10'
-              }`}
-            >
               <span className="relative shrink-0">
-                <Radio className={`w-[18px] h-[18px] ${currentActive === 'live' ? '' : 'text-red-500'}`} />
+                <Radio className={`w-[18px] h-[18px] ${liveCount > 0 ? 'text-red-500 animate-pulse' : ''}`} />
                 {liveCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[15px] rounded-full bg-red-500 px-1 text-[9px] font-bold leading-[15px] text-white text-center">
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[15px] rounded-full bg-red-500 px-1 text-[9px] font-bold leading-[15px] text-white text-center">
                     {liveCount > 99 ? '99+' : liveCount}
                   </span>
                 )}
               </span>
-              <span className="text-[10px] font-semibold leading-none">Live</span>
+              <span className="text-[10px] font-semibold leading-none">Scores</span>
             </Link>
 
             {/* Search */}
@@ -134,6 +112,20 @@ export function MobileNav({
             >
               <Search className="w-[18px] h-[18px] shrink-0" />
               <span className="text-[10px] font-semibold leading-none">Search</span>
+            </Link>
+
+            {/* My Tickets */}
+            <Link
+              href="/tickets"
+              aria-current={currentActive === 'tickets' ? 'page' : undefined}
+              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 transition-colors duration-200 ${
+                currentActive === 'tickets'
+                  ? 'bg-white/90 dark:bg-white/15 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-muted-foreground active:bg-white/50 dark:active:bg-white/10'
+              }`}
+            >
+              <Ticket className="w-[18px] h-[18px] shrink-0" />
+              <span className="text-[10px] font-semibold leading-none">Tickets</span>
             </Link>
 
             {/* Plan with Dynamic Icon */}
@@ -179,32 +171,32 @@ export function MobileNav({
         <div className="relative flex max-h-[92vh] flex-col items-center gap-1.5 overflow-y-auto scrollbar-none rounded-2xl border border-white/60 bg-white/75 p-2 shadow-[0_16px_48px_rgba(0,0,0,0.14)] backdrop-blur-2xl backdrop-saturate-200 dark:border-white/15 dark:bg-slate-900/80 dark:shadow-[0_20px_56px_rgba(0,0,0,0.5)]">
           <DockLink href="/" label="Home" icon={Home} isActive={false} />
 
+          {/* Scores (Merged Scores + Live) */}
           <DockLink
             href="/live"
-            label="Scores feed"
-            icon={Activity}
+            label={liveCount > 0 ? `Live Scores (${liveCount})` : 'Live Scores'}
+            icon={Radio}
             isActive={currentActive === 'scores'}
             activeClass="bg-blue-600 text-white shadow-md shadow-blue-500/30"
+            idleIconClass={liveCount > 0 ? 'text-red-500 animate-pulse' : ''}
             onClick={handleScoresClick}
+            badge={liveCount}
           />
 
           <DockLink
             href="/search"
-            label="Search & Tickets"
+            label="Search games & leagues"
             icon={Search}
             isActive={currentActive === 'search'}
-            activeClass="bg-blue-600 text-white shadow-md shadow-blue-500/30"
+            activeClass="bg-violet-600 text-white shadow-md shadow-violet-500/30"
           />
 
           <DockLink
-            href="/live?filter=LIVE"
-            label={liveCount > 0 ? `Live matches (${liveCount})` : 'Live matches'}
-            icon={Radio}
-            isActive={currentActive === 'live'}
-            activeClass="bg-red-500 text-white shadow-md shadow-red-500/30"
-            idleIconClass="text-red-500"
-            onClick={handleLiveClick}
-            badge={liveCount}
+            href="/tickets"
+            label="My Bet Tickets"
+            icon={Ticket}
+            isActive={currentActive === 'tickets'}
+            activeClass="bg-emerald-600 text-white shadow-md shadow-emerald-500/30"
           />
 
           <span className="my-0.5 h-px w-6 bg-white/40 dark:bg-white/10" />

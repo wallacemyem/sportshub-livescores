@@ -10,8 +10,9 @@ import { useAuth } from '@/context/AuthContext';
 import { PlanBadge } from '@/components/brand/PlanBadge';
 
 const NAV_LINKS = [
-  { href: '/live', label: 'Live Scores' },
-  { href: '/search', label: 'Search & Tickets' },
+  { href: '/live', label: 'Scores' },
+  { href: '/search', label: 'Search' },
+  { href: '/tickets', label: 'My Tickets' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/blog', label: 'Blog' },
   { href: '/support', label: 'Support' },
