@@ -18,44 +18,49 @@ export function OddsComparisonTable({ odds }: OddsComparisonTableProps) {
 
   return (
     <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 font-mono">
-          <Layers className="w-3.5 h-3.5 text-muted-foreground" /> Sportsbook Odds & Live Lines
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h4 className="flex min-w-0 items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-foreground">
+          <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate">Sportsbook odds</span>
         </h4>
-        <span className="text-[10px] text-muted-foreground font-mono">
-          Live Market
-        </span>
+        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">Live market</span>
       </div>
 
-      {/* Consensus Highlight */}
-      <div className="bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-500/10 dark:to-blue-500/10 border border-sky-200 dark:border-sky-500/30 rounded-xl p-3 mb-3 flex items-center justify-between">
-        <div>
-          <span className="text-xs font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> Best Market Average
+      {/* Consensus Highlight — wraps rather than letting the caption and the three
+          prices squeeze into each other in the narrow detail column. */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 to-blue-50 p-3 dark:border-sky-500/30 dark:from-sky-500/10 dark:to-blue-500/10">
+        <div className="min-w-0">
+          <span className="flex items-center gap-1 text-xs font-bold text-sky-800 dark:text-sky-300">
+            <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+            <span>Market average</span>
           </span>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Aggregated odds across top sportsbooks</p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            Aggregated across the sportsbooks below
+          </p>
         </div>
-        <div className="flex items-center gap-4 font-mono text-sm font-bold">
+        <div className="flex shrink-0 items-center gap-4 font-mono text-sm font-bold">
           <div className="text-center">
-            <span className="text-[9px] text-muted-foreground block">1 (Home)</span>
+            <span className="block text-[9px] text-muted-foreground">1 (Home)</span>
             <span className="text-emerald-600 dark:text-emerald-400">{odds.consensus.home_win}</span>
           </div>
           {odds.consensus.draw && (
             <div className="text-center">
-              <span className="text-[9px] text-muted-foreground block">X (Draw)</span>
+              <span className="block text-[9px] text-muted-foreground">X (Draw)</span>
               <span className="text-amber-600 dark:text-amber-400">{odds.consensus.draw}</span>
             </div>
           )}
           <div className="text-center">
-            <span className="text-[9px] text-muted-foreground block">2 (Away)</span>
+            <span className="block text-[9px] text-muted-foreground">2 (Away)</span>
             <span className="text-blue-600 dark:text-blue-400">{odds.consensus.away_win}</span>
           </div>
         </div>
       </div>
 
-      {/* Bookmakers Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs text-left">
+      {/* Bookmakers Table.
+          min-w on the table is what makes the overflow container actually scroll;
+          with `w-full` alone the six columns just crushed into each other. */}
+      <div className="-mx-1 overflow-x-auto px-1">
+        <table className="w-full min-w-[520px] text-left text-xs">
           <thead>
             <tr className="border-b border-surface-border text-muted-foreground text-[10px] uppercase font-mono">
               <th className="py-2 px-3">Sportsbook</th>
@@ -69,9 +74,11 @@ export function OddsComparisonTable({ odds }: OddsComparisonTableProps) {
           <tbody className="divide-y divide-surface-border font-mono">
             {odds.bookmakers.map((bk) => (
               <tr key={bk.bookmaker_key} className="hover:bg-surface-subtle transition-colors">
-                <td className="py-2.5 px-3 font-sans font-semibold text-foreground flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                  {bk.bookmaker_title}
+                <td className="whitespace-nowrap px-3 py-2.5 font-sans font-semibold text-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                    {bk.bookmaker_title}
+                  </span>
                 </td>
                 <td className="py-2.5 px-3 text-center font-bold text-emerald-600 dark:text-emerald-400">
                   <span className="flex items-center justify-center gap-0.5">

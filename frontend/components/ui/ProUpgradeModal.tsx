@@ -26,9 +26,9 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 'pro_client_17080',
+          user_id: 'pro_client',
           gateway,
-          amount: 29.00,
+          amount: 9.00,
         }),
       });
 
@@ -54,7 +54,7 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-surface border border-violet-300 dark:border-violet-500/40 rounded-2xl w-full max-w-lg overflow-hidden shadow-elevated animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-surface border border-violet-300 dark:border-violet-500/40 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-elevated animate-in fade-in zoom-in-95 duration-200">
         {/* Banner */}
         <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 p-6 relative text-white">
           <button
@@ -63,15 +63,15 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-center gap-3.5 pr-10">
             <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white shadow-lg">
               <Crown className="w-6 h-6" />
             </div>
             <div>
               <span className="text-xs font-mono font-bold text-violet-200 uppercase tracking-wider">
-                PRO TIER MEMBERSHIP
+                PRO PLAN
               </span>
-              <h2 className="text-xl font-black text-white">Unlock Ultra-Fast Pro Feeds</h2>
+              <h2 className="text-xl font-black text-white">Upgrade to SlipRadar Pro</h2>
             </div>
           </div>
         </div>
@@ -83,19 +83,19 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
               <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Check className="w-3.5 h-3.5" />
               </div>
-              <span><strong>The Odds API Integration:</strong> Live bookmaker line comparison & sharp consensus</span>
+              <span><strong>Full odds comparison:</strong> prices bookmaker by bookmaker, next to the consensus line</span>
             </div>
             <div className="flex items-center gap-2.5">
               <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Check className="w-3.5 h-3.5" />
               </div>
-              <span><strong>Sub-Millisecond WebSockets:</strong> Zero-delay delta score streams on port 18443</span>
+              <span><strong>Live scores:</strong> a persistent connection, so the score moves with the match</span>
             </div>
             <div className="flex items-center gap-2.5">
               <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <Check className="w-3.5 h-3.5" />
               </div>
-              <span><strong>Accumulator Cash-Out Engine:</strong> Automatic fuzzy parsing for SportyBet, Bet9ja, 1xBet, BetKing</span>
+              <span><strong>Cash-out value:</strong> what your slip is worth right now, on every tracked accumulator</span>
             </div>
           </div>
 
@@ -103,11 +103,11 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
           <div className="bg-surface-subtle border border-surface-border rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-xs font-bold text-foreground">Monthly Pro Pass</p>
-                <p className="text-[11px] text-muted-foreground">Cancel anytime. Instant automatic activation.</p>
+                <p className="text-xs font-bold text-foreground">Pro, billed monthly</p>
+                <p className="text-[11px] text-muted-foreground">Cancel any time. Activates instantly.</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-black text-violet-600 dark:text-violet-400 font-mono">$29<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
+                <p className="text-2xl font-black text-violet-600 dark:text-violet-400 font-mono">$9<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
               </div>
             </div>
 
@@ -155,11 +155,11 @@ export function ProUpgradeModal({ isOpen, onClose, onSuccess }: ProUpgradeModalP
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Verifying Gateway Signature...
+                <Loader2 className="w-4 h-4 animate-spin" /> Confirming payment…
               </>
             ) : isDone ? (
               <>
-                <Check className="w-4 h-4" /> PRO Plan Activated!
+                <Check className="w-4 h-4" /> Pro plan active
               </>
             ) : (
               `Subscribe with ${gateway === 'cryptomus' ? 'Cryptomus Crypto' : 'Flutterwave'}`

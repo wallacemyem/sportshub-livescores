@@ -1,21 +1,37 @@
 {
-  "name": "SportsHub Live Scores",
-  "short_name": "SportsHub",
-  "start_url": "/",
+  "name": "SlipRadar — Track every bet slip live",
+  "short_name": "SlipRadar",
+  "id": "/",
+  "start_url": "/live",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0B0E14",
-  "theme_color": "#00F59B",
-  "description": "Ultra-fast global multi-sport live score tracking platform",
+  "orientation": "portrait-primary",
+  "background_color": "#090A0F",
+  "theme_color": "#4F46E5",
+  "description": "Paste a booking code and watch every leg of your accumulator settle in real time, with live cash-out value and instant goal alerts.",
+  "categories": ["sports", "utilities"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    { "name": "Live scores", "url": "/live?filter=LIVE" },
+    { "name": "Pricing", "url": "/pricing" }
   ]
 }

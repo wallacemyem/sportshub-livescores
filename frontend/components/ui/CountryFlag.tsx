@@ -36,7 +36,7 @@ export function CountryFlag({
             ? `linear-gradient(135deg, ${info.colors[0]}, ${info.colors[1]})`
             : undefined,
         }}
-        className={`relative inline-block ${sizeConfig.box} rounded-sm overflow-hidden border border-surface-border shadow-xs shrink-0 select-none bg-surface-subtle`}
+        className={`relative inline-block ${sizeConfig.box} rounded-sm overflow-hidden border border-surface-border shadow-sm shrink-0 select-none bg-surface-subtle`}
       >
         {!imgError ? (
           // eslint-disable-next-line @next/next/no-img-element

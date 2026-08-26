@@ -43,3 +43,9 @@ Thumbs.db
 # Docker / Postgres / Redis local volumes
 **/postgres_data/
 **/redis_data/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+
+# TypeScript incremental build cache
+*.tsbuildinfo

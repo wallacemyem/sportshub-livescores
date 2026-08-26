@@ -25,7 +25,7 @@ export function TickerStrip({ matches, onSelectMatch }: TickerStripProps) {
 
   return (
     <div className="w-full max-w-full overflow-hidden bg-emerald-50/50 dark:bg-emerald-500/5 border-y border-emerald-200/70 dark:border-emerald-500/15 py-1.5 select-none">
-      <div className="max-w-[1720px] mx-auto px-3 sm:px-4 flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-none">
+      <div className="max-w-[1720px] mx-auto px-3 sm:px-4 md:pl-20 xl:px-4 flex items-center gap-3 sm:gap-4 overflow-x-auto scrollbar-none">
         <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold uppercase tracking-wider shrink-0 pr-3 border-r border-emerald-300 dark:border-emerald-500/30">
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
           <span className="text-red-600 dark:text-red-400">LIVE</span>

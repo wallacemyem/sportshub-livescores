@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
-  Activity,
   Mail,
   Lock,
   User,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Logo } from '@/components/brand/Logo';
 
 export default function RegisterPage() {
   const { signUp } = useAuth();
@@ -52,7 +52,7 @@ export default function RegisterPage() {
     if (res.error) {
       setErrorMsg(res.error);
     } else {
-      router.push('/');
+      router.push('/live');
     }
   };
 
@@ -60,17 +60,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* Top Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b border-surface-border">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
-            <Activity className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black text-foreground tracking-tight font-mono">
-              SPORTSHUB
-            </h1>
-            <p className="text-[10px] text-muted-foreground">Live Scores & Telemetry</p>
-          </div>
-        </Link>
+        <Logo size="sm" href="/" tagline="Track every slip live" />
 
         <ThemeToggle />
       </header>

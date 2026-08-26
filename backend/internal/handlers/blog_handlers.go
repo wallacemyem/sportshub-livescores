@@ -74,7 +74,7 @@ func (h *BlogHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		post.Slug = generateSlug(post.Title)
 	}
 	if post.AuthorName == "" {
-		post.AuthorName = "SportsHub Editorial"
+		post.AuthorName = "SlipRadar Editorial"
 	}
 	if post.AuthorAvatar == "" {
 		post.AuthorAvatar = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80"

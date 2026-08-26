@@ -103,7 +103,7 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-lg overflow-hidden shadow-elevated animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface border border-surface-border rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-elevated animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="p-4 border-b border-surface-border flex items-center justify-between bg-surface-subtle">
           <div className="flex items-center gap-2.5">

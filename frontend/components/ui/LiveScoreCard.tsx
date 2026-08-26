@@ -54,7 +54,7 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
       className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer select-none p-3.5 sm:p-4 group ${
         isSelected
           ? 'bg-surface border-blue-500 ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10'
-          : 'bg-surface border-surface-border hover:border-blue-400 dark:hover:border-blue-600 hover:bg-surface-subtle shadow-xs'
+          : 'bg-surface border-surface-border hover:border-blue-400 dark:hover:border-blue-600 hover:bg-surface-subtle shadow-sm'
       }`}
     >
       {/* 1. Header Info Row (League, Country, Sport, Live Clock, Action) */}
@@ -117,13 +117,13 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
               <div className="flex items-center gap-1 shrink-0">
                 {match.stats.yellow_cards_home > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-yellow-600 dark:text-yellow-400">
-                    <span className="w-2 h-2.5 bg-yellow-400 rounded-xs inline-block" />
+                    <span className="w-2 h-2.5 bg-yellow-400 rounded-sm inline-block" />
                     {match.stats.yellow_cards_home}
                   </span>
                 )}
                 {match.stats.red_cards_home > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold text-red-500">
-                    <span className="w-2 h-2.5 bg-red-500 rounded-xs inline-block" />
+                    <span className="w-2 h-2.5 bg-red-500 rounded-sm inline-block" />
                     {match.stats.red_cards_home}
                   </span>
                 )}
@@ -170,13 +170,13 @@ export function LiveScoreCard({ match, isSelected = false, onSelect }: LiveScore
               <div className="flex items-center gap-1 shrink-0">
                 {match.stats.yellow_cards_away > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-yellow-600 dark:text-yellow-400">
-                    <span className="w-2 h-2.5 bg-yellow-400 rounded-xs inline-block" />
+                    <span className="w-2 h-2.5 bg-yellow-400 rounded-sm inline-block" />
                     {match.stats.yellow_cards_away}
                   </span>
                 )}
                 {match.stats.red_cards_away > 0 && (
                   <span className="inline-flex items-center gap-0.5 text-[9px] font-mono font-bold text-red-500">
-                    <span className="w-2 h-2.5 bg-red-500 rounded-xs inline-block" />
+                    <span className="w-2 h-2.5 bg-red-500 rounded-sm inline-block" />
                     {match.stats.red_cards_away}
                   </span>
                 )}

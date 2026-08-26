@@ -8,11 +8,10 @@ import {
   Newspaper,
   PenTool,
   Search,
-  ArrowLeft,
   Activity,
 } from 'lucide-react';
 import { MobileNav } from '@/components/ui/MobileNav';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { AppPageHeader } from '@/components/ui/AppPageHeader';
 import { getApiBaseUrl } from '@/lib/api';
 
 const CATEGORIES = [
@@ -70,74 +69,61 @@ export default function BlogHubPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-8">
       {/* Editorial Navigation Header */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 md:pl-20 xl:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-xs font-semibold">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Scores</span>
-          </Link>
-
-          <div className="h-4 w-px bg-surface-border" />
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
-              <Newspaper className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-sm font-black text-foreground tracking-tight flex items-center gap-1.5 font-mono">
-                EDITORIAL
-              </h1>
-              <p className="text-[10px] text-muted-foreground">Tactics & Analytics</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <div className="hidden sm:flex items-center relative w-56 md:w-64">
-            <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-3 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search analysis, tactics..."
-              className="w-full bg-surface-subtle border border-surface-border focus:border-blue-500 rounded-lg pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors"
-            />
-          </div>
-
-          <ThemeToggle />
-
+      <AppPageHeader
+        icon={Newspaper}
+        title="Blog"
+        subtitle="Tactics, analysis and product notes"
+        accentClassName="bg-blue-600/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+        actions={
           <Link
             href="/blog/editor"
-            className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider px-3.5 py-1.5 rounded-lg shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 transition-opacity hover:opacity-90"
           >
-            <PenTool className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Write Story</span>
-            <span className="sm:hidden">Write</span>
+            <PenTool className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Write</span>
           </Link>
-        </div>
-      </header>
+        }
+      />
 
       {/* Main Content Feed */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 lg:px-8 md:pl-20 xl:px-8 py-6 space-y-6">
-        {/* Category Pills Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-          {CATEGORIES.map((c) => {
-            const isSelected = selectedCategory === c;
-            return (
-              <button
-                key={c}
-                onClick={() => setSelectedCategory(c)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                    : 'bg-surface border border-surface-border text-muted-foreground hover:text-foreground hover:bg-surface-hover'
-                }`}
-              >
-                {c}
-              </button>
-            );
-          })}
+        {/* Search + category filters.
+            The search box lives here rather than in the header, where it had no room
+            to sit beside the title and the write button on anything under a laptop. */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="-mx-1 order-2 overflow-x-auto scrollbar-none px-1 lg:order-1">
+            <div className="flex w-max items-center gap-2">
+              {CATEGORIES.map((c) => {
+                const isSelected = selectedCategory === c;
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setSelectedCategory(c)}
+                    aria-current={isSelected ? 'page' : undefined}
+                    className={`shrink-0 cursor-pointer whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all ${
+                      isSelected
+                        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
+                        : 'border border-surface-border bg-surface text-muted-foreground hover:bg-surface-hover hover:text-foreground'
+                    }`}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="relative order-1 w-full shrink-0 lg:order-2 lg:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search analysis and tactics..."
+              aria-label="Search articles"
+              className="w-full rounded-lg border border-surface-border bg-surface-subtle py-2 pl-9 pr-3 text-xs text-foreground transition-colors placeholder:text-muted-foreground focus:border-blue-500 focus:outline-none"
+            />
+          </div>
         </div>
 
         {/* Featured Story Hero Card */}

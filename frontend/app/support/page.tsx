@@ -7,7 +7,6 @@ import {
   Send,
   MessageSquare,
   HelpCircle,
-  ArrowLeft,
   ChevronDown,
   ChevronUp,
   CheckCircle2,
@@ -26,8 +25,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MobileNav } from '@/components/ui/MobileNav';
+import { AppPageHeader } from '@/components/ui/AppPageHeader';
 import { getApiBaseUrl } from '@/lib/api';
 
 interface FAQItem {
@@ -45,7 +44,7 @@ const FAQS: FAQItem[] = [
     category: 'betting',
     categoryLabel: 'Betting & Odds',
     q: 'How does the Multi-Bookmaker Auto-Looping Bet Slip Resolver work?',
-    a: 'When you import any booking code (e.g. BC99214, B9JA-44912, 1X-88231, BK-10294), our Go backend parser automatically loops across SportyBet, Bet9ja, 1xBet, and BetKing in milliseconds. It extracts the legs, matches them with live fixtures, and computes dynamic cash-out probability with zero manual sportsbook selection.',
+    a: 'Paste any booking code (for example BC99214, B9JA-44912, 1X-88231 or BK-10294) and SlipRadar checks SportyBet, Bet9ja, 1xBet and BetKing until it finds the slip. It then reads out the legs, matches each one to its live fixture, and starts tracking — you never have to say which sportsbook it came from.',
     tags: ['SportyBet', 'Bet9ja', '1xBet', 'BetKing', 'Booking Code', 'Cashout'],
   },
   {
@@ -69,7 +68,7 @@ const FAQS: FAQItem[] = [
     category: 'billing',
     categoryLabel: 'VIP & Billing',
     q: 'How do I upgrade to Pro with Cryptocurrency (USDT, BTC, ETH, SOL) or Card?',
-    a: 'Visit the PRO page, select your payment method (Card or Cryptomus Crypto), and complete checkout. Crypto transactions are verified via on-chain webhooks after 1 block confirmation, granting instant Pro access with audio commentary, zero ads, and unlimited bet tracking.',
+    a: 'Open the pricing page, pick a plan, and choose card, bank transfer or crypto at checkout. Crypto payments confirm on-chain in about a minute, and your plan activates as soon as they do.',
     tags: ['PRO', 'Crypto', 'USDT', 'Bitcoin', 'Payment', 'Billing'],
   },
   {
@@ -84,8 +83,8 @@ const FAQS: FAQItem[] = [
     id: 'faq-6',
     category: 'technical',
     categoryLabel: 'Technical & Data',
-    q: 'What should I do if live scores or WebSockets experience latency?',
-    a: 'Our system maintains a dual-fallback architecture: if your browser or firewall interrupts WebSocket connections, it automatically fails over to ultra-low-latency HTTP polling every 3 seconds. Refreshing the browser or disabling aggressive ad-blockers can also restore sub-second WebSocket updates.',
+    q: 'Live scores look delayed. What should I check?',
+    a: 'SlipRadar keeps a persistent live connection, and falls back to refreshing every few seconds if your network or firewall blocks it. If scores feel behind, reload the page and check whether an ad blocker or VPN is interrupting the connection — that restores instant updates in most cases.',
     tags: ['WebSocket', 'Latency', 'Realtime', 'Data Delay', 'Troubleshooting'],
   },
   {
@@ -102,7 +101,7 @@ const TOPIC_CHIPS = [
   { id: 'all', label: 'All Topics' },
   { id: 'betting', label: 'Betting & Odds' },
   { id: 'features', label: 'Features & 2D Tracker' },
-  { id: 'billing', label: 'PRO & Crypto' },
+  { id: 'billing', label: 'Plans & billing' },
   { id: 'technical', label: 'Technical Support' },
 ];
 
@@ -251,41 +250,18 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-12">
       {/* Header */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 md:pl-20 xl:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Scores Feed</span>
-          </Link>
-
-          <div className="h-4 w-px bg-surface-border" />
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center font-bold">
-              <Headphones className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-bold text-foreground tracking-tight flex items-center gap-1.5">
-                Help & Support Center
-              </h1>
-              <p className="text-[10px] text-muted-foreground hidden sm:block">
-                Instant answers & 24/7 dedicated engineering support
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <div className="hidden sm:flex items-center gap-2 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Support Desk Active</span>
-          </div>
-        </div>
-      </header>
+      <AppPageHeader
+        icon={Headphones}
+        title="Support"
+        subtitle="Answers, guides and a direct line to the team"
+        accentClassName="bg-blue-600/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+        actions={
+          <span className="hidden items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 lg:flex">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+            <span>Desk open</span>
+          </span>
+        }
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 md:pl-24 xl:px-6 py-6 space-y-6">
@@ -297,14 +273,14 @@ export default function SupportPage() {
           <div className="max-w-2xl mx-auto relative z-10 space-y-4">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Knowledge Base & Technical Queue</span>
+              <span>Knowledge base and support queue</span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              How can we assist you today?
+              How can we help?
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto">
-              Find instant solutions for multi-bookmaker ticket resolution, live visualizers, PiP mode, and billing inquiries.
+              Answers on booking codes, live tracking, the pop-out scoreboard, plans and billing.
             </p>
 
             {/* Clean Search Input */}
@@ -314,7 +290,7 @@ export default function SupportPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search solutions, e.g. booking codes, PiP, crypto, 2D pitch..."
+                placeholder="Search help, e.g. booking codes, cash-out, billing..."
                 className="w-full pl-10 pr-10 py-2.5 bg-surface-subtle border border-surface-border focus:border-blue-500 focus:bg-surface rounded-xl text-xs sm:text-sm text-foreground focus:outline-none shadow-sm transition-all"
               />
               {searchQuery && (
@@ -329,54 +305,52 @@ export default function SupportPage() {
           </div>
         </div>
 
-        {/* Clean Segmented Navigation Tabs */}
-        <div className="flex items-center justify-between border-b border-surface-border pb-3 gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 p-1 bg-surface-subtle border border-surface-border rounded-xl">
-            <button
-              onClick={() => setActiveTab('faqs')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'faqs'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border font-bold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
-              <span>Knowledge Base & FAQs</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('ticket')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'ticket'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border font-bold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Plus className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Submit Ticket</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('inquiries')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                activeTab === 'inquiries'
-                  ? 'bg-surface text-foreground shadow-sm border border-surface-border font-bold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-violet-500" />
-              <span>My Inquiries</span>
-              {tickets.length > 0 && (
-                <span className="bg-blue-600 text-white text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold">
-                  {tickets.length}
-                </span>
-              )}
-            </button>
+        {/* Segmented navigation tabs.
+            The three labels are wider than a phone viewport, so the strip scrolls
+            inside itself instead of squeezing the buttons into each other. */}
+        <div className="flex flex-col gap-3 border-b border-surface-border pb-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="-mx-1 overflow-x-auto scrollbar-none px-1">
+            <div className="flex w-max items-center gap-1.5 rounded-xl border border-surface-border bg-surface-subtle p-1">
+              {([
+                { id: 'faqs', label: 'Knowledge base', icon: HelpCircle, iconClass: 'text-blue-500' },
+                { id: 'ticket', label: 'Submit ticket', icon: Plus, iconClass: 'text-emerald-500' },
+                {
+                  id: 'inquiries',
+                  label: 'My inquiries',
+                  icon: MessageSquare,
+                  iconClass: 'text-violet-500',
+                  count: tickets.length,
+                },
+              ] as const).map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                      isActive
+                        ? 'border border-surface-border bg-surface font-bold text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Icon className={`h-3.5 w-3.5 shrink-0 ${tab.iconClass}`} />
+                    <span>{tab.label}</span>
+                    {'count' in tab && tab.count > 0 && (
+                      <span className="rounded-full bg-blue-600 px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-white">
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-mono">
-            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>Avg Response: &lt; 3 mins</span>
+          <div className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            <span>Avg response: &lt; 3 mins</span>
           </div>
         </div>
 
@@ -514,7 +488,7 @@ export default function SupportPage() {
 
             {/* Bottom Help Banner */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-              <div className="bg-surface border border-surface-border rounded-2xl p-4.5 space-y-2">
+              <div className="bg-surface border border-surface-border rounded-2xl p-4 space-y-2">
                 <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                   <LifeBuoy className="w-4 h-4" />
                 </div>
@@ -531,13 +505,13 @@ export default function SupportPage() {
                 </button>
               </div>
 
-              <div className="bg-surface border border-surface-border rounded-2xl p-4.5 space-y-2">
+              <div className="bg-surface border border-surface-border rounded-2xl p-4 space-y-2">
                 <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                   <Activity className="w-4 h-4" />
                 </div>
                 <h4 className="text-xs font-bold text-foreground">System Status</h4>
                 <p className="text-[11px] text-muted-foreground">
-                  WebSocket delta streams, odds ingestion, and ticket resolvers operating at 99.9% uptime.
+                  Live score delivery, odds updates and booking-code lookups, all reporting healthy.
                 </p>
                 <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 flex items-center gap-1 pt-1 font-bold">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -545,19 +519,19 @@ export default function SupportPage() {
                 </div>
               </div>
 
-              <div className="bg-surface border border-surface-border rounded-2xl p-4.5 space-y-2">
+              <div className="bg-surface border border-surface-border rounded-2xl p-4 space-y-2">
                 <div className="w-7 h-7 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
-                <h4 className="text-xs font-bold text-foreground">PRO VIP Priority</h4>
+                <h4 className="text-xs font-bold text-foreground">Pro priority queue</h4>
                 <p className="text-[11px] text-muted-foreground">
                   Pro subscribers enjoy expedited sub-minute response times and direct ticket escalations.
                 </p>
                 <Link
-                  href="/pro"
+                  href="/pricing"
                   className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline inline-flex items-center gap-1 pt-1"
                 >
-                  <span>Learn about PRO</span>
+                  <span>See plans</span>
                   <span>&rarr;</span>
                 </Link>
               </div>
@@ -669,7 +643,7 @@ export default function SupportPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
-                    <span>For PRO subscription issues, include your crypto transaction hash or email.</span>
+                    <span>For billing issues, include your transaction hash or the email on the account.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 shrink-0" />
@@ -710,7 +684,7 @@ export default function SupportPage() {
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold text-foreground">No active support tickets</h4>
                   <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                    You haven&apos;t submitted any support inquiries yet. Need help with bet slips, live streams, or PRO features?
+                    You haven&apos;t opened any tickets yet. Need a hand with a slip, live scores or billing?
                   </p>
                 </div>
                 <button

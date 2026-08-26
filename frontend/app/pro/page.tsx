@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import {
   Crown,
   Check,
@@ -9,7 +9,6 @@ import {
   Loader2,
   CreditCard,
   Coins,
-  ArrowLeft,
   ShieldCheck,
   Radio,
   Sliders,
@@ -20,67 +19,110 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import confetti from 'canvas-confetti';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { MobileNav } from '@/components/ui/MobileNav';
+import { AppPageHeader } from '@/components/ui/AppPageHeader';
 import { getApiBaseUrl } from '@/lib/api';
 
 const PRO_FEATURES = [
   {
-    icon: Zap,
-    title: 'Sub-Millisecond WebSockets',
-    description: 'Direct zero-delay live delta stream connection with instant score updates and game clocks on port 18443.',
-  },
-  {
     icon: Layers,
-    title: 'Multi-Bookmaker Auto-Looping Slip Engine',
-    description: 'Auto-detects and resolves booking codes across SportyBet, Bet9ja, 1xBet, and BetKing with dynamic cash-out probability.',
+    title: 'Unlimited tracked slips',
+    description:
+      'Run as many accumulators at once as you like. Every leg is matched to its fixture automatically, whichever sportsbook the code came from.',
   },
   {
     icon: Sliders,
-    title: 'Consensus & Sharp Odds Comparison',
-    description: 'Live bookmaker margins, price movements, and market consensus from top sportsbooks via The Odds API.',
+    title: 'Live cash-out value',
+    description:
+      'A running estimate of what each slip is worth right now, updated from the score, the clock and match momentum.',
   },
   {
-    icon: Radio,
-    title: 'Live Audio Commentary & Radio',
-    description: 'Stream live match audio broadcasts directly in-browser with zero background tab throttling.',
+    icon: Zap,
+    title: 'Scores the moment they change',
+    description:
+      'A persistent live connection instead of periodic refreshes, so the scoreline moves with the match rather than a few seconds behind it.',
   },
   {
     icon: Activity,
-    title: 'OS Document Picture-in-Picture',
-    description: 'Pop out a native always-on-top draggable floating scoreboard over games, spreadsheets, or work apps.',
+    title: 'Pop-out scoreboard',
+    description:
+      'An always-on-top floating window you can drag anywhere on screen and keep in the corner while you work.',
   },
   {
     icon: Flame,
-    title: 'Mobile Lock Screen Real-Time Dynamic Widget',
-    description: 'HTML5 Media Session API integration displaying live match clocks and goals on your phone lock screen.',
+    title: 'Lock screen widget',
+    description:
+      'Live clock and scoreline on your phone lock screen, so you can follow a slip without unlocking anything.',
+  },
+  {
+    icon: Radio,
+    title: 'Full odds comparison',
+    description:
+      'Prices bookmaker by bookmaker alongside the consensus line, so you can see where a market actually moved.',
   },
 ];
 
 const PRO_FAQS = [
   {
-    q: 'How does cryptocurrency payment work?',
-    a: 'We integrate with Cryptomus for seamless crypto payments (USDT on TRC20/ERC20/Polygon, BTC, ETH, SOL, BNB). Once your transaction is confirmed on-chain (typically under 60 seconds), your Pro status is instantly activated via automated webhooks.',
+    q: 'How does paying with crypto work?',
+    a: 'Crypto payments go through Cryptomus and cover USDT (TRC20, ERC20 and Polygon), BTC, ETH, SOL and BNB. Your plan activates automatically once the transaction confirms on-chain, which is usually under a minute.',
   },
   {
-    q: 'Can I cancel my subscription at any time?',
-    a: 'Yes, absolutely. There are no lock-ins or contracts. You can manage or cancel your subscription anytime with a single click, and retain Pro access until the end of your billing cycle.',
+    q: 'Can I cancel at any time?',
+    a: 'Yes. There are no contracts or lock-ins. Cancel from your account page in one click and keep your paid access until the end of the cycle you have already paid for.',
   },
   {
-    q: 'Does PRO work across all my devices?',
-    a: 'Yes! Your SportsHub PRO access syncs seamlessly across Desktop, Tablets, iPhone, and Android with full Picture-in-Picture and lock screen capabilities on supported browsers.',
+    q: 'Does my plan work on all my devices?',
+    a: 'Yes. Your plan follows your account across desktop, tablet and phone. The pop-out scoreboard and lock screen widget depend on browser support, and work in current versions of Chrome, Edge and Safari.',
   },
 ];
 
+/** Kept in step with the tiers advertised on /pricing. */
+const PLAN_PRICING = {
+  pro: { label: 'Pro', monthly: 9, annual: 86 },
+  elite: { label: 'Elite', monthly: 29, annual: 279 },
+} as const;
+
+type PlanId = keyof typeof PLAN_PRICING;
+
+function isPlanId(value: string | null): value is PlanId {
+  return value === 'pro' || value === 'elite';
+}
+
 export default function ProPage() {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  return (
+    <Suspense fallback={<ProPageFallback />}>
+      <ProCheckout />
+    </Suspense>
+  );
+}
+
+function ProPageFallback() {
+  return (
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+function ProCheckout() {
+  const searchParams = useSearchParams();
+
+  // /pricing deep-links here with the tier and cycle the visitor already chose.
+  const planParam = searchParams.get('plan');
+  const plan: PlanId = isPlanId(planParam) ? planParam : 'pro';
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>(
+    searchParams.get('cycle') === 'annual' ? 'annual' : 'monthly'
+  );
   const [gateway, setGateway] = useState<'cryptomus' | 'flutterwave'>('cryptomus');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const priceMonthly = 29;
-  const priceAnnual = 279; // ~23.25/mo, saves $69
+  const priceMonthly = PLAN_PRICING[plan].monthly;
+  const priceAnnual = PLAN_PRICING[plan].annual;
+  const planLabel = PLAN_PRICING[plan].label;
 
   async function handleCheckout() {
     setIsLoading(true);
@@ -94,6 +136,7 @@ export default function ProPage() {
           user_id: 'pro_subscriber_live',
           gateway,
           amount,
+          plan,
           billing_cycle: billingCycle,
         }),
       });
@@ -117,41 +160,20 @@ export default function ProPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-12">
       {/* Header */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-surface-border sticky top-0 z-40 px-4 lg:px-8 md:pl-20 xl:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-medium"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:inline">Scores Feed</span>
-          </Link>
-
-          <div className="h-4 w-px bg-surface-border" />
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-violet-600/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 flex items-center justify-center font-bold">
-              <Crown className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-bold text-foreground tracking-tight flex items-center gap-1.5">
-                SportsHub PRO
-              </h1>
-              <p className="text-[10px] text-muted-foreground hidden sm:block">
-                Ultra-low latency live data, multi-bookmaker cashout engine & odds
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <div className="flex items-center gap-2 text-[11px] font-medium text-violet-700 dark:text-violet-400 bg-violet-500/10 px-3 py-1 rounded-full border border-violet-500/20">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>PRO Tier Access</span>
-          </div>
-        </div>
-      </header>
+      <AppPageHeader
+        icon={Crown}
+        title="Checkout"
+        subtitle={`Activating the SlipRadar ${planLabel} plan`}
+        accentClassName="bg-violet-600/10 text-violet-600 dark:text-violet-400 border-violet-500/20"
+        backHref="/pricing"
+        backLabel="Plans"
+        actions={
+          <span className="hidden items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 text-[11px] font-medium text-violet-700 dark:text-violet-400 sm:flex">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>{planLabel}</span>
+          </span>
+        }
+      />
 
       {/* Main Content */}
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 md:pl-24 xl:px-6 py-8 space-y-10">
@@ -159,18 +181,25 @@ export default function ProPage() {
         <div className="text-center space-y-4 max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-gradient-to-r from-violet-500/15 via-indigo-500/15 to-blue-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30 shadow-sm">
             <Crown className="w-3.5 h-3.5 text-violet-500" />
-            <span>Next-Generation Live Sports Architecture</span>
+            <span>Secure checkout</span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground">
-            Unlock Real-Time Edge with{' '}
+            Finish setting up{' '}
             <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-500 bg-clip-text text-transparent">
-              SportsHub PRO
+              SlipRadar {planLabel}
             </span>
           </h2>
 
           <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Engineered for high-volume sports fans, sharp bettors, and live traders needing sub-millisecond WebSocket updates, multi-bookmaker ticket resolution, and 2D visual coordinate trackers.
+            Pick how you want to pay. Your plan activates the moment the payment clears, and everything you were tracking on the free plan carries straight over.
+          </p>
+
+          <p className="text-xs text-muted-foreground">
+            Not sure which tier?{' '}
+            <Link href="/pricing" className="font-semibold text-violet-600 dark:text-violet-400 underline underline-offset-4">
+              Compare all plans
+            </Link>
           </p>
 
           {/* Billing Cycle Switcher */}
@@ -195,7 +224,7 @@ export default function ProPage() {
                 }`}
               >
                 <span>Annual Billing</span>
-                <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.2 rounded-full font-extrabold uppercase">
+                <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-extrabold uppercase">
                   Save 20%
                 </span>
               </button>
@@ -210,11 +239,11 @@ export default function ProPage() {
             <div className="bg-surface border border-surface-border rounded-2xl p-6 sm:p-7 shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-surface-border pb-4">
                 <div>
-                  <h3 className="text-base font-bold text-foreground">Plan Inclusions</h3>
-                  <p className="text-xs text-muted-foreground">What you get with your PRO Membership</p>
+                  <h3 className="text-base font-bold text-foreground">What&apos;s included</h3>
+                  <p className="text-xs text-muted-foreground">Everything the {planLabel} plan unlocks</p>
                 </div>
                 <span className="text-xs font-bold font-mono text-violet-600 dark:text-violet-400 bg-violet-500/10 px-2.5 py-1 rounded-lg border border-violet-500/20">
-                  ALL-INCLUSIVE
+                  ALL PLANS
                 </span>
               </div>
 
@@ -249,19 +278,21 @@ export default function ProPage() {
 
           {/* Right: Checkout & Gateway Selector */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="bg-gradient-to-b from-surface via-surface to-surface-subtle border-2 border-violet-500/50 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-gradient-to-l from-violet-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider px-4 py-1 rounded-bl-xl shadow-md">
-                MOST POPULAR
-              </div>
+            <div className="bg-gradient-to-b from-surface via-surface to-surface-subtle border-2 border-violet-500/50 rounded-3xl p-6 sm:p-8 shadow-xl relative">
+              {/* Sits in the border rather than over the card, so it can never land
+                  on the plan name or the description beneath it. */}
+              <span className="absolute -top-3 right-6 whitespace-nowrap rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md">
+                Most popular
+              </span>
 
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <Crown className="w-5 h-5 text-violet-500" />
-                    <h3 className="text-lg font-black text-foreground">PRO VIP Pass</h3>
+                    <Crown className="w-5 h-5 text-violet-500 shrink-0" />
+                    <h3 className="text-lg font-black text-foreground">{planLabel} plan</h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Full unlocked access to all live feeds, booking code engines & sharp odds.
+                    Full access to every live feed, the booking-code engine and sharp odds.
                   </p>
                 </div>
 
@@ -335,16 +366,16 @@ export default function ProPage() {
                   <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 rounded-2xl text-center space-y-2 animate-in fade-in">
                     <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                     <h4 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                      PRO Membership Active!
+                      Plan active
                     </h4>
                     <p className="text-xs text-muted-foreground">
                       Your signed webhook confirmation has been processed. Enjoy unlimited sub-millisecond feeds.
                     </p>
                     <Link
-                      href="/"
+                      href="/live"
                       className="inline-block mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all"
                     >
-                      Return to Live Scores
+                      Back to live scores
                     </Link>
                   </div>
                 ) : (
@@ -363,7 +394,7 @@ export default function ProPage() {
                       <>
                         <Crown className="w-4 h-4" />
                         <span>
-                          Activate PRO with {gateway === 'cryptomus' ? 'Crypto' : 'Card'} &bull; $
+                          Pay with {gateway === 'cryptomus' ? 'crypto' : 'card'} &bull; $
                           {billingCycle === 'monthly' ? priceMonthly : priceAnnual}
                         </span>
                       </>
@@ -390,12 +421,12 @@ export default function ProPage() {
         <div className="bg-surface border border-surface-border rounded-2xl p-6 sm:p-8 space-y-6">
           <div className="space-y-1">
             <h3 className="text-base font-bold text-foreground">Frequently Asked Questions</h3>
-            <p className="text-xs text-muted-foreground">Everything you need to know about PRO membership & billing.</p>
+            <p className="text-xs text-muted-foreground">Billing, cancellation and payment methods.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {PRO_FAQS.map((faq, i) => (
-              <div key={i} className="bg-surface-subtle border border-surface-border rounded-xl p-4.5 space-y-2">
+              <div key={i} className="bg-surface-subtle border border-surface-border rounded-xl p-4 space-y-2">
                 <h4 className="text-xs font-bold text-foreground">{faq.q}</h4>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{faq.a}</p>
               </div>

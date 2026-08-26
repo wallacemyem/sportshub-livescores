@@ -22,7 +22,7 @@ export function useMediaSession(match: Match | null, isStreaming: boolean = true
 
     const title = `${match.home_team.name} ${match.home_score} - ${match.away_score} ${match.away_team.name}`;
     const artist = `🔴 LIVE (${match.minute}') • ${match.league.name}`;
-    const album = `SportsHub Live Match Center • ${match.venue || 'Stadium'}`;
+    const album = `SlipRadar Live Match Center • ${match.venue || 'Stadium'}`;
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: title,

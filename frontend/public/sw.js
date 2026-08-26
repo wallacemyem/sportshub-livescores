@@ -1,4 +1,4 @@
-// SportsHub Live Scores Web Push Service Worker
+// SlipRadar web push service worker
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });

@@ -1,12 +1,41 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "SportsHub Live Scores | Ultra-Fast Global Score Tracker",
-  description: "Real-time multi-sport scores, 2D pitch analytics, live odds movements, and bet accumulator cashout tracker.",
+  metadataBase: new URL("https://slipradar.app"),
+  title: {
+    default: "SlipRadar | Track every bet slip live",
+    template: "%s | SlipRadar",
+  },
+  description:
+    "Paste a booking code from SportyBet, Bet9ja, 1xBet or BetKing and watch every leg of your accumulator settle in real time, with live cash-out value and instant goal alerts.",
+  applicationName: "SlipRadar",
   manifest: "/manifest.json",
+  openGraph: {
+    type: "website",
+    siteName: "SlipRadar",
+    title: "SlipRadar | Track every bet slip live",
+    description:
+      "One booking code. Every leg of your accumulator, live, with running cash-out value.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SlipRadar | Track every bet slip live",
+    description:
+      "One booking code. Every leg of your accumulator, live, with running cash-out value.",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
+    { media: "(prefers-color-scheme: dark)", color: "#090A0F" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -22,9 +51,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground flex flex-col font-sans transition-colors duration-150">
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

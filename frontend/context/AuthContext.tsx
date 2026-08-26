@@ -36,7 +36,7 @@ const DEMO_USER_FAN: UserProfile = {
 
 const DEMO_USER_PRO: UserProfile = {
   id: 'usr_pro_01',
-  email: 'pro.trader@sportshub.vip',
+  email: 'pro.trader@slipradar.app',
   name: 'Jordan Hayes (PRO)',
   avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces',
   plan: 'pro',
@@ -44,7 +44,7 @@ const DEMO_USER_PRO: UserProfile = {
   created_at: '2026-02-10T00:00:00Z',
 };
 
-const STORAGE_KEY = 'sportshub_auth_user';
+const STORAGE_KEY = 'slipradar_auth_user';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (session?.user) {
             const sbUser: UserProfile = {
               id: session.user.id,
-              email: session.user.email || 'user@sportshub.io',
+              email: session.user.email || 'user@slipradar.app',
               name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Sports Fan',
               avatar: session.user.user_metadata?.avatar_url,
               plan: session.user.user_metadata?.plan || 'free',
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (session?.user) {
               const updatedUser: UserProfile = {
                 id: session.user.id,
-                email: session.user.email || 'user@sportshub.io',
+                email: session.user.email || 'user@slipradar.app',
                 name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Sports Fan',
                 avatar: session.user.user_metadata?.avatar_url,
                 plan: session.user.user_metadata?.plan || 'free',

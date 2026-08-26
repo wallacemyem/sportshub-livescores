@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
-  Activity,
   Mail,
   Lock,
   ArrowRight,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { Logo } from '@/components/brand/Logo';
 
 export default function LoginPage() {
   const { signIn, signInDemo } = useAuth();
@@ -42,30 +42,20 @@ export default function LoginPage() {
     if (res.error) {
       setErrorMsg(res.error);
     } else {
-      router.push('/');
+      router.push('/live');
     }
   };
 
   const handleDemoLogin = (type: 'fan' | 'pro') => {
     signInDemo(type);
-    router.push('/');
+    router.push('/live');
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* Top Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b border-surface-border">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/20">
-            <Activity className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black text-foreground tracking-tight font-mono">
-              SPORTSHUB
-            </h1>
-            <p className="text-[10px] text-muted-foreground">Live Scores & Telemetry</p>
-          </div>
-        </Link>
+        <Logo size="sm" href="/" tagline="Track every slip live" />
 
         <ThemeToggle />
       </header>
@@ -84,7 +74,7 @@ export default function LoginPage() {
             </div>
             <h2 className="text-2xl font-black tracking-tight text-foreground">Welcome Back</h2>
             <p className="text-xs text-muted-foreground">
-              Sign in to access your synchronized bet slips, custom alerts, and PRO live feeds.
+              Sign in to pick up your tracked slips, alerts and plan on any device.
             </p>
           </div>
 
@@ -150,7 +140,7 @@ export default function LoginPage() {
               disabled={isLoading || !email.trim() || !password.trim()}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <span>{isLoading ? 'Signing In...' : 'Sign In to SportsHub'}</span>
+              <span>{isLoading ? 'Signing In...' : 'Sign in to SlipRadar'}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
@@ -167,7 +157,7 @@ export default function LoginPage() {
                 className="p-2.5 bg-surface-subtle hover:bg-surface-hover border border-surface-border rounded-xl text-xs font-semibold text-foreground flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <User className="w-3.5 h-3.5 text-blue-500" />
-                <span>Fan User</span>
+                <span>Free user</span>
               </button>
 
               <button
@@ -176,7 +166,7 @@ export default function LoginPage() {
                 className="p-2.5 bg-violet-500/10 hover:bg-violet-500/15 border border-violet-500/30 rounded-xl text-xs font-bold text-violet-600 dark:text-violet-400 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <Crown className="w-3.5 h-3.5 text-violet-500" />
-                <span>PRO Member</span>
+                <span>Pro member</span>
               </button>
             </div>
           </div>

@@ -116,11 +116,11 @@ export function PitchView({ match }: PitchViewProps) {
                 <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-white/60 transform -translate-x-1/2" />
                 <div className="absolute top-1/2 left-1/2 w-16 h-16 border-2 border-white/60 rounded-full transform -translate-x-1/2 -translate-y-1/2" />
                 {/* Left 3pt & Paint */}
-                <div className="absolute left-0 top-1/6 bottom-1/6 w-28 border-r-2 border-white/60 rounded-r-full" />
+                <div className="absolute left-0 top-[16.6667%] bottom-[16.6667%] w-28 border-r-2 border-white/60 rounded-r-full" />
                 <div className="absolute left-0 top-1/3 bottom-1/3 w-16 border-r-2 border-y-2 border-white/60 bg-blue-900/30" />
                 <div className="absolute left-16 top-1/2 w-8 h-8 border-2 border-white/60 rounded-full transform -translate-y-1/2 -translate-x-1/2" />
                 {/* Right 3pt & Paint */}
-                <div className="absolute right-0 top-1/6 bottom-1/6 w-28 border-l-2 border-white/60 rounded-l-full" />
+                <div className="absolute right-0 top-[16.6667%] bottom-[16.6667%] w-28 border-l-2 border-white/60 rounded-l-full" />
                 <div className="absolute right-0 top-1/3 bottom-1/3 w-16 border-l-2 border-y-2 border-white/60 bg-red-900/30" />
                 <div className="absolute right-16 top-1/2 w-8 h-8 border-2 border-white/60 rounded-full transform -translate-y-1/2 translate-x-1/2" />
               </div>
@@ -130,7 +130,7 @@ export function PitchView({ match }: PitchViewProps) {
           {/* 3. TENNIS COURT */}
           {sport === 'tennis' && (
             <div className="relative w-full h-full bg-[#15803d] border-2 border-emerald-950 overflow-hidden flex items-center justify-center p-3">
-              <div className="relative w-full h-full bg-[#1e40af] border-2 border-white rounded-xs">
+              <div className="relative w-full h-full bg-[#1e40af] border-2 border-white rounded-sm">
                 <div className="absolute top-0 bottom-0 left-1/2 w-1 bg-white/90 shadow-md transform -translate-x-1/2 z-10" />
                 <div className="absolute left-0 right-0 top-3 border-b-2 border-white/70" />
                 <div className="absolute left-0 right-0 bottom-3 border-t-2 border-white/70" />
@@ -185,7 +185,7 @@ export function PitchView({ match }: PitchViewProps) {
             <div className="relative w-full h-full bg-gradient-to-b from-[#15803d] via-[#166534] to-[#15803d] border-2 border-emerald-950 overflow-hidden flex items-center justify-center">
               <div className="absolute inset-2 border-2 border-dashed border-white/50 rounded-full" />
               <div className="absolute inset-8 border border-white/30 rounded-full" />
-              <div className="relative w-10 h-24 bg-[#d97706]/70 border border-amber-300/60 rounded-xs flex flex-col justify-between items-center py-1">
+              <div className="relative w-10 h-24 bg-[#d97706]/70 border border-amber-300/60 rounded-sm flex flex-col justify-between items-center py-1">
                 <div className="w-6 border-b-2 border-white flex justify-center gap-0.5">
                   <span className="w-0.5 h-1 bg-white inline-block" />
                   <span className="w-0.5 h-1 bg-white inline-block" />
@@ -203,7 +203,7 @@ export function PitchView({ match }: PitchViewProps) {
           {/* 7. GOLF FAIRWAY & GREEN */}
           {sport === 'golf' && (
             <div className="relative w-full h-full bg-gradient-to-r from-[#14532d] via-[#15803d] to-[#14532d] border-2 border-emerald-950 overflow-hidden p-4">
-              <div className="absolute left-6 bottom-6 w-8 h-5 bg-emerald-400/40 border border-white/50 rounded-xs flex items-center justify-center text-[8px] font-mono font-bold text-white">
+              <div className="absolute left-6 bottom-6 w-8 h-5 bg-emerald-400/40 border border-white/50 rounded-sm flex items-center justify-center text-[8px] font-mono font-bold text-white">
                 TEE
               </div>
               <div className="absolute left-16 top-6 bottom-6 right-24 bg-emerald-600/40 rounded-full border border-emerald-400/30 transform -rotate-2" />
@@ -211,7 +211,7 @@ export function PitchView({ match }: PitchViewProps) {
               <div className="absolute right-6 top-1/2 -translate-y-1/2 w-16 h-16 bg-emerald-400/60 rounded-full border-2 border-emerald-300 shadow-md flex items-center justify-center">
                 <div className="relative flex items-center">
                   <div className="w-0.5 h-6 bg-white shadow" />
-                  <div className="w-3 h-2 bg-red-500 rounded-xs -ml-0.5 -mt-3 shadow-sm" />
+                  <div className="w-3 h-2 bg-red-500 rounded-sm -ml-0.5 -mt-3 shadow-sm" />
                 </div>
               </div>
             </div>
@@ -265,7 +265,7 @@ export function PitchView({ match }: PitchViewProps) {
 
         {/* Unavailable Overlay Screen */}
         {!isAvailable && (
-          <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center select-none">
+          <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center select-none">
             <div className="bg-surface/95 border border-surface-border rounded-2xl p-4 sm:p-5 max-w-sm shadow-elevated animate-in fade-in zoom-in-95 duration-150">
               <div className="w-10 h-10 rounded-xl bg-surface-subtle border border-surface-border flex items-center justify-center mx-auto mb-2.5 text-muted-foreground">
                 <WifiOff className="w-5 h-5" />

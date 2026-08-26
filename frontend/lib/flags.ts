@@ -1,5 +1,5 @@
 /**
- * SportsHub Global Flag & Team Crest Cache System
+ * SlipRadar global flag & team crest cache system
  * Integrates with Public Sports & Country APIs (TheSportsDB, FlagCDN, REST Countries)
  * Guarantees 0ms local resolution, official vector SVGs, and zero empty/broken flags or crests.
  */
@@ -544,7 +544,7 @@ export function getCountryFlag(countryOrCode?: string): CountryInfo {
 export async function fetchPublicTeamBadge(teamName: string): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
-  const cached = localStorage.getItem(`sportshub_badge_${teamName.toLowerCase()}`);
+  const cached = localStorage.getItem(`slipradar_badge_${teamName.toLowerCase()}`);
   if (cached) return cached;
 
   try {
@@ -553,7 +553,7 @@ export async function fetchPublicTeamBadge(teamName: string): Promise<string | n
       const data = await res.json();
       if (data.teams && data.teams.length > 0 && data.teams[0].strBadge) {
         const badgeUrl = data.teams[0].strBadge;
-        localStorage.setItem(`sportshub_badge_${teamName.toLowerCase()}`, badgeUrl);
+        localStorage.setItem(`slipradar_badge_${teamName.toLowerCase()}`, badgeUrl);
         return badgeUrl;
       }
     }
@@ -569,7 +569,7 @@ export async function fetchPublicTeamBadge(teamName: string): Promise<string | n
 export async function fetchPublicPlayerHeadshot(playerName: string): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
-  const cached = localStorage.getItem(`sportshub_headshot_${playerName.toLowerCase()}`);
+  const cached = localStorage.getItem(`slipradar_headshot_${playerName.toLowerCase()}`);
   if (cached) return cached;
 
   try {
@@ -579,7 +579,7 @@ export async function fetchPublicPlayerHeadshot(playerName: string): Promise<str
       if (data.player && data.player.length > 0) {
         const headshot = data.player[0].strCutout || data.player[0].strThumb;
         if (headshot) {
-          localStorage.setItem(`sportshub_headshot_${playerName.toLowerCase()}`, headshot);
+          localStorage.setItem(`slipradar_headshot_${playerName.toLowerCase()}`, headshot);
           return headshot;
         }
       }
@@ -617,7 +617,7 @@ export function getTeamBranding(teamName: string, shortName?: string, isGolf?: b
   // 3. Check local cache for dynamic public badge
   let dynamicCrest: string | undefined = undefined;
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(`sportshub_badge_${teamName.toLowerCase()}`);
+    const stored = localStorage.getItem(`slipradar_badge_${teamName.toLowerCase()}`);
     if (stored) dynamicCrest = stored;
   }
 

@@ -1,6 +1,10 @@
-# 🏆 SportsHub Ultra-Fast Global Live Score Tracking Platform
+# 📡 SlipRadar — track every bet slip live
 
-A production-ready, ultra-fast global multi-sport live score tracking web application, Cloudflare Kumo-style administrative management dashboard, and high-concurrency Go backend service containerized with Docker on dedicated **non-standard, uncommon ports** with full **Supabase Realtime & Storage integration**.
+SlipRadar takes a booking code from SportyBet, Bet9ja, 1xBet, BetKing, MSport or MozzartBet, resolves every leg of the accumulator to a live fixture, and streams the result — scores, clocks, settlement state and a running cash-out estimate — in real time.
+
+The stack is a Next.js web app, an admin control panel, and a high-concurrency Go backend, containerised with Docker on dedicated **non-standard ports**, with **Supabase Realtime & Storage** integration.
+
+> SlipRadar is read-only: it tracks bets that were already placed at a sportsbook. It never places, edits or settles a wager.
 
 ---
 
@@ -10,9 +14,9 @@ Every service, database, cache, and reverse proxy is strictly mapped using the f
 
 | Service | Container Internal Port | Non-Standard Host Port | Description |
 | :--- | :--- | :--- | :--- |
-| **Frontend Web App (Next.js)** | `3000` | **`17080`** | Public Web Application UI (Live Ticker, 2D Pitch, PiP, Accumulators) |
+| **Frontend Web App (Next.js)** | `3000` | **`17080`** | Landing, pricing, live tracker, blog, support, account |
 | **Backend API & WebSockets (Go)**| `8080` | **`18443`** | Ingestion Hub, REST API, WebSocket Gateway |
-| **Admin Dashboard (Kumo UI)** | `3000` | **`19080`** | Cloudflare Kumo Admin Control Panel & Ingestion Telemetry |
+| **Admin Dashboard (standalone)** | `3000` | **`19080`** | Standalone admin panel (also served in-app at `/admin`) |
 | **PostgreSQL / Supabase Database**| `5432` | **`25432`** | Core relational database with Supabase Realtime WAL replication |
 | **Redis In-Memory State** | `6379` | **`26379`** | Real-time score state hashes & Pub/Sub broker |
 
@@ -58,10 +62,28 @@ docker compose up --build
 
 ### Accessing the Services:
 - 🌐 **Client Web App**: [http://localhost:17080](http://localhost:17080)
-- ☁️ **Cloudflare Kumo Admin Control Panel**: [http://localhost:19080](http://localhost:19080)
+- ☁️ **Standalone Admin Panel**: [http://localhost:19080](http://localhost:19080)
 - 🚀 **Go Backend API & WebSocket Endpoint**: `http://localhost:18443` (`ws://localhost:18443/ws`)
 - 🐘 **PostgreSQL / Supabase**: `localhost:25432` (`postgres://postgres:postgres@localhost:25432/sportsdb`)
 - ⚡ **Redis**: `localhost:26379`
+
+---
+
+## 3b. Web App Routes
+
+| Route | Purpose |
+| :--- | :--- |
+| `/` | Marketing landing page |
+| `/pricing` | Plan comparison (Free / Pro / Elite), billing toggle, FAQs |
+| `/pro` | Checkout. Accepts `?plan=` (pro, elite) and `?cycle=` (monthly, annual) from `/pricing` |
+| `/live` | The tracker: multi-sport feed, slip tracking, match detail panel |
+| `/match/[id]` | Full match page: stats, timeline, lineups, odds, 2D pitch |
+| `/blog`, `/blog/[slug]`, `/blog/editor` | Editorial |
+| `/support` | Knowledge base, ticket submission, ticket history |
+| `/account`, `/auth/*` | Profile, plan status, sign in / register / reset |
+| `/admin` | Admin console served inside the main app |
+
+Plan prices live in two places that must stay in step: `PLANS` in `frontend/app/pricing/page.tsx` and `PLAN_PRICING` in `frontend/app/pro/page.tsx`.
 
 ---
 
@@ -86,18 +108,17 @@ docker compose up --build
 6. **Celebratory Animations**:
    - Canvas-confetti fireworks triggered on live goals and accumulator cashouts.
 
-### B. Cloudflare Kumo-Style Admin Dashboard (`http://localhost:19080`)
-1. **Real-time Ingestion Monitor**:
-   - Live telemetry showing polling intervals, ESPN vs The Odds API quota meters, ingestion latency (ms), and Redis memory stats.
-2. **Live Match Orchestrator**:
-   - Manually override scores, periods, and minutes.
-   - Trigger simulated test goals that instantly broadcast over WebSockets & Supabase Realtime to all connected client tabs.
-   - WebSocket client session inspector.
-3. **Financial & Subscription Hub**:
-   - Revenue analytics combining Flutterwave (Cards, Bank Transfer, USSD) and Cryptomus (USDT, BTC, ETH, TON, SOL).
-   - Webhook signature verification logs with replay testing sandbox.
-4. **Bet Slip Parser Health**:
-   - Booking code decode metrics and interactive sandbox.
+### B. Admin Dashboard (`/admin`, or `http://localhost:19080`)
+Six sections behind a persistent left rail:
+
+1. **Overview** — users, MRR, slips scanned, active slips; a 7-day revenue trend; plan split; scans per sportsbook; and a *Needs attention* list linking straight to failed payments, unanswered tickets and suspended accounts.
+2. **Users** — every account with plan, status, country, slips scanned, active slips, lifetime value, last seen and signup date. Click a row for a detail panel showing that account's scanned slips and payments, plus plan and suspend controls.
+3. **Slips scanned** — every resolved booking code with the account that scanned it, sportsbook, legs (won/lost), stake, odds, status and parse time.
+4. **Transactions** — payments across Flutterwave and Cryptomus with the payer attached, method, amount, status and billing cycle.
+5. **Live ops** — feed telemetry, API quota headroom, and a match orchestrator for correcting scorelines and broadcasting test events.
+6. **Support** — the ticket queue alongside the thread and a reply box.
+
+Every table shares one component: search, filters, sortable columns and pagination behave identically throughout. When the API is unreachable the console shows an explicit banner and empty tables — it never substitutes placeholder figures for real ones.
 
 ---
 
@@ -116,6 +137,11 @@ docker compose up --build
 | `POST` | `/api/v1/payments/flutterwave/webhook` | Flutterwave API v3 webhook signature handler |
 | `POST` | `/api/v1/payments/cryptomus/webhook` | Cryptomus crypto webhook signature handler |
 | `POST` | `/api/v1/payments/simulate` | Sandbox instant user upgrade |
+| `GET` | `/api/v1/admin/overview` | KPI snapshot, 7-day trend, plan split, scans per sportsbook |
+| `GET` | `/api/v1/admin/users` | Accounts with slips-scanned and lifetime-value aggregates |
+| `PATCH` | `/api/v1/admin/users/{id}` | Change an account plan and/or status (active, suspended) |
+| `GET` | `/api/v1/admin/slips` | Scanned booking codes, each attributed to its account (`?user_id=` filters) |
+| `GET` | `/api/v1/admin/transactions` | Payments with the payer resolved (`?user_id=` filters) |
 | `GET` | `/api/v1/admin/telemetry` | Live ingestion rates, latency & Redis memory |
 | `POST` | `/api/v1/admin/matches/{id}/simulate-goal` | Trigger test goal with instant Redis Pub/Sub broadcast |
 

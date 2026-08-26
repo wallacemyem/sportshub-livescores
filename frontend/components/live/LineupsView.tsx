@@ -41,11 +41,12 @@ export function LineupsView({ match }: LineupsViewProps) {
 
   return (
     <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2 font-mono">
-          <Users className="w-3.5 h-3.5 text-muted-foreground" /> Lineups & Formations
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h4 className="flex min-w-0 items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-foreground">
+          <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate">Lineups</span>
         </h4>
-        <div className="flex items-center gap-3 text-xs font-mono">
+        <div className="flex shrink-0 items-center gap-2 font-mono text-xs">
           <span className="text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-500/30">
             {homeFormation}
           </span>
@@ -59,15 +60,15 @@ export function LineupsView({ match }: LineupsViewProps) {
       <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs">
         {/* Home Lineup */}
         <div className="bg-surface-subtle rounded-xl p-3 border border-surface-border">
-          <p className="font-bold text-foreground mb-2 flex items-center justify-between border-b border-surface-border pb-1.5">
-            <span className="truncate">{match.home_team.name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono font-normal">M. Arteta</span>
+          <p className="mb-2 flex items-center justify-between gap-2 border-b border-surface-border pb-1.5 font-bold text-foreground">
+            <span className="min-w-0 truncate">{match.home_team.name}</span>
+            <span className="shrink-0 font-mono text-[10px] font-normal text-muted-foreground">M. Arteta</span>
           </p>
           <ul className="space-y-1.5">
             {homeStarters.map((p) => (
-              <li key={p.num} className="flex items-center justify-between text-muted-foreground hover:text-foreground transition-colors">
-                <span className="flex items-center gap-2 truncate">
-                  <span className="w-4 font-mono text-[10px] text-indigo-600 dark:text-indigo-400 text-right font-bold">{p.num}</span>
+              <li key={p.num} className="flex items-center justify-between gap-2 text-muted-foreground transition-colors hover:text-foreground">
+                <span className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="w-4 shrink-0 text-right font-mono text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{p.num}</span>
                   <span className="text-foreground truncate font-medium">{p.name}</span>
                 </span>
                 <span className="text-[10px] text-muted-foreground font-mono px-1 bg-surface rounded border border-surface-border shrink-0">{p.pos}</span>
@@ -78,15 +79,15 @@ export function LineupsView({ match }: LineupsViewProps) {
 
         {/* Away Lineup */}
         <div className="bg-surface-subtle rounded-xl p-3 border border-surface-border">
-          <p className="font-bold text-foreground mb-2 flex items-center justify-between border-b border-surface-border pb-1.5">
-            <span className="truncate">{match.away_team.name}</span>
-            <span className="text-[10px] text-muted-foreground font-mono font-normal">P. Guardiola</span>
+          <p className="mb-2 flex items-center justify-between gap-2 border-b border-surface-border pb-1.5 font-bold text-foreground">
+            <span className="min-w-0 truncate">{match.away_team.name}</span>
+            <span className="shrink-0 font-mono text-[10px] font-normal text-muted-foreground">P. Guardiola</span>
           </p>
           <ul className="space-y-1.5">
             {awayStarters.map((p) => (
-              <li key={p.num} className="flex items-center justify-between text-muted-foreground hover:text-foreground transition-colors">
-                <span className="flex items-center gap-2 truncate">
-                  <span className="w-4 font-mono text-[10px] text-orange-600 dark:text-orange-400 text-right font-bold">{p.num}</span>
+              <li key={p.num} className="flex items-center justify-between gap-2 text-muted-foreground transition-colors hover:text-foreground">
+                <span className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="w-4 shrink-0 text-right font-mono text-[10px] font-bold text-orange-600 dark:text-orange-400">{p.num}</span>
                   <span className="text-foreground truncate font-medium">{p.name}</span>
                 </span>
                 <span className="text-[10px] text-muted-foreground font-mono px-1 bg-surface rounded border border-surface-border shrink-0">{p.pos}</span>

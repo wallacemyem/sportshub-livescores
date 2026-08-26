@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem('sportshub_theme') as Theme | null;
+    const saved = localStorage.getItem('slipradar_theme') as Theme | null;
     if (saved) {
       setThemeState(saved);
     } else {
@@ -51,7 +51,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       root.classList.remove('dark');
     }
 
-    localStorage.setItem('sportshub_theme', theme);
+    localStorage.setItem('slipradar_theme', theme);
   }, [theme, mounted]);
 
   const setTheme = (t: Theme) => {

@@ -1,5 +1,5 @@
 /**
- * SportsHub Client-side Fast Cache Layer
+ * SlipRadar client-side fast cache layer
  * Provides instant 0ms resolution on initial load and preserves external API tokens & rate limits.
  */
 
@@ -13,7 +13,7 @@ interface CacheEnvelope<T> {
 export function getCachedData<T>(key: string, maxAgeMs: number = CACHE_TTL_MS): T | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(`sportshub_cache_${key}`);
+    const raw = localStorage.getItem(`slipradar_cache_${key}`);
     if (!raw) return null;
 
     const envelope: CacheEnvelope<T> = JSON.parse(raw);
@@ -36,7 +36,7 @@ export function setCachedData<T>(key: string, data: T): void {
       data,
       timestamp: Date.now(),
     };
-    localStorage.setItem(`sportshub_cache_${key}`, JSON.stringify(envelope));
+    localStorage.setItem(`slipradar_cache_${key}`, JSON.stringify(envelope));
   } catch (e) {
     console.warn(`[CACHE] Failed to write ${key}:`, e);
   }
@@ -46,9 +46,9 @@ export function clearCache(key?: string): void {
   if (typeof window === 'undefined') return;
   try {
     if (key) {
-      localStorage.removeItem(`sportshub_cache_${key}`);
+      localStorage.removeItem(`slipradar_cache_${key}`);
     } else {
-      const keys = Object.keys(localStorage).filter((k) => k.startsWith('sportshub_cache_'));
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith('slipradar_cache_'));
       keys.forEach((k) => localStorage.removeItem(k));
     }
   } catch (e) {

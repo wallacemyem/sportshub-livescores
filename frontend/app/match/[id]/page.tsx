@@ -111,7 +111,7 @@ export default function MatchDetailPage() {
         {/* Navigation & Status Header */}
         <div className="flex items-center justify-between">
           <Link
-            href="/"
+            href="/live"
             className="flex items-center gap-2 text-xs font-semibold text-foreground hover:text-blue-600 transition-colors bg-surface border border-surface-border hover:border-blue-300 dark:hover:border-blue-600 px-3 py-1.5 rounded-lg shadow-subtle cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" /> Scores

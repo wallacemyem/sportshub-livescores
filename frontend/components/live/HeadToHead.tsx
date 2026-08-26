@@ -116,22 +116,24 @@ export function HeadToHead({ match }: HeadToHeadProps) {
     <div className="space-y-4">
       {/* Top Head-to-Head Banner */}
       <div className="bg-surface rounded-2xl border border-surface-border p-4 sm:p-5 shadow-subtle">
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-surface-border">
-          <div className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-foreground">
-            <BarChart2 className="w-4 h-4 text-muted-foreground" />
-            <span>Full Match Statistical Analysis</span>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-surface-border pb-3">
+          <div className="flex min-w-0 items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-foreground">
+            <BarChart2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">Match statistics</span>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-            <span className="capitalize">{sport}</span>
-            <span>•</span>
-            <span className="uppercase text-blue-600 dark:text-blue-400 font-bold">{match.league.name}</span>
+          <div className="flex min-w-0 items-center gap-2 font-mono text-xs text-muted-foreground">
+            <span className="shrink-0 capitalize">{sport}</span>
+            <span className="shrink-0">•</span>
+            <span className="truncate font-bold uppercase text-blue-600 dark:text-blue-400">
+              {match.league.name}
+            </span>
           </div>
         </div>
 
         {/* Team Matchup Headers */}
-        <div className="flex items-center justify-between gap-4 mb-5 px-2">
-          <div className="flex items-center gap-3">
+        <div className="mb-5 flex items-center justify-between gap-3 px-2">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <TeamCrest
               name={match.home_team.name}
               shortName={match.home_team.short_name}
@@ -139,22 +141,26 @@ export function HeadToHead({ match }: HeadToHeadProps) {
               sport={match.sport}
               size="md"
             />
-            <div>
-              <p className="text-xs font-bold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-foreground" title={match.home_team.name}>
                 <span className="inline sm:hidden">{match.home_team.short_name || match.home_team.name.slice(0, 3)}</span>
                 <span className="hidden sm:inline">{match.home_team.name}</span>
               </p>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">{match.sport === 'golf' ? 'Golfer 1' : 'Home Side'}</span>
+              <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                {match.sport === 'golf' ? 'Golfer 1' : 'Home'}
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 text-right">
-            <div>
-              <p className="text-xs font-bold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 text-right">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-foreground" title={match.away_team.name}>
                 <span className="inline sm:hidden">{match.away_team.short_name || match.away_team.name.slice(0, 3)}</span>
                 <span className="hidden sm:inline">{match.away_team.name}</span>
               </p>
-              <span className="text-[10px] font-mono text-muted-foreground uppercase">{match.sport === 'golf' ? 'Golfer 2' : 'Away Side'}</span>
+              <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                {match.sport === 'golf' ? 'Golfer 2' : 'Away'}
+              </span>
             </div>
             <TeamCrest
               name={match.away_team.name}
@@ -174,15 +180,20 @@ export function HeadToHead({ match }: HeadToHeadProps) {
             const awayPct = 100 - homePct;
 
             return (
-              <div key={row.label} className="text-xs group">
-                <div className="flex items-center justify-between font-mono mb-1 text-xs">
-                  <span className="font-bold text-indigo-700 dark:text-indigo-300 min-w-[70px] text-left">
+              <div key={row.label} className="group text-xs">
+                {/* The values are shrink-0 and the label truncates between them, so a
+                    long stat name can never push the numbers out of the column. */}
+                <div className="mb-1 flex items-center justify-between gap-2 font-mono text-xs">
+                  <span className="shrink-0 whitespace-nowrap text-left font-bold text-indigo-700 dark:text-indigo-300">
                     {row.home}
                   </span>
-                  <span className="text-[11px] text-muted-foreground font-sans font-medium text-center px-2">
+                  <span
+                    className="min-w-0 flex-1 truncate px-1 text-center font-sans text-[11px] font-medium text-muted-foreground"
+                    title={row.label}
+                  >
                     {row.label}
                   </span>
-                  <span className="font-bold text-orange-700 dark:text-orange-300 min-w-[70px] text-right">
+                  <span className="shrink-0 whitespace-nowrap text-right font-bold text-orange-700 dark:text-orange-300">
                     {row.away}
                   </span>
                 </div>

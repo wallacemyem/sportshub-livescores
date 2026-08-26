@@ -14,7 +14,7 @@ export function EventTimeline({ events, homeTeamName, awayTeamName }: EventTimel
   if (!events || events.length === 0) {
     return (
       <div className="bg-surface rounded-xl border border-surface-border p-6 text-center text-muted-foreground text-xs">
-        No major match events logged yet. Match updates will stream in real-time.
+        No events yet. Goals, cards and substitutions appear here as they happen.
       </div>
     );
   }
@@ -25,7 +25,7 @@ export function EventTimeline({ events, homeTeamName, awayTeamName }: EventTimel
   return (
     <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
       <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2 font-mono">
-        <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Match Timeline & Key Events
+        <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" /> Match timeline
       </h4>
 
       <div className="space-y-3 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-border">
@@ -65,18 +65,20 @@ export function EventTimeline({ events, homeTeamName, awayTeamName }: EventTimel
                 )}
               </div>
 
-              {/* Event Content Box */}
-              <div className="flex-1 bg-surface-subtle border border-surface-border rounded-lg p-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-red-500">{ev.minute}&apos;</span>
-                    <span className="font-bold text-foreground">{ev.player_name}</span>
-                    <span className="text-[10px] text-muted-foreground">
+              {/* Event Content Box.
+                  min-w-0 down the left branch is what keeps a long player or team
+                  name from shoving the event badge out of the card. */}
+              <div className="min-w-0 flex-1 rounded-lg border border-surface-border bg-surface-subtle p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 font-mono font-bold text-red-500">{ev.minute}&apos;</span>
+                    <span className="truncate font-bold text-foreground">{ev.player_name}</span>
+                    <span className="hidden truncate text-[10px] text-muted-foreground sm:inline">
                       ({isHome ? homeTeamName : awayTeamName})
                     </span>
                   </div>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
+                    className={`shrink-0 whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
                       isGoal
                         ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
                         : isRedCard
