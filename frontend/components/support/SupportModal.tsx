@@ -5,6 +5,7 @@ import { SupportTicket, SupportTicketMessage } from '@/types';
 import { X, Headphones, Send, MessageSquare, AlertCircle, CheckCircle2, Clock, ShieldCheck, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getApiBaseUrl } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const DEPARTMENTS = [
 ];
 
 export function SupportModal({ isOpen, onClose }: SupportModalProps) {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -66,9 +68,9 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 'usr_fan_01',
-          user_name: 'Alex Mercer',
-          user_email: 'alex.mercer@sportsfan.io',
+          user_id: user?.id || 'usr_guest',
+          user_name: user?.name || 'Customer',
+          user_email: user?.email || 'customer@slipradar.com',
           subject,
           category,
           priority,
@@ -112,7 +114,7 @@ export function SupportModal({ isOpen, onClose }: SupportModalProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: 'user',
-          sender_name: 'Alex Mercer',
+          sender_name: user?.name || 'Customer',
           message: messageText,
         }),
       });

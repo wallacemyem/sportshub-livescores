@@ -65,8 +65,15 @@ func main() {
 	flwSvc := payments.NewFlutterwaveService(cfg.FlutterwaveSecret, cfg.FlutterwaveHash, store)
 	cryptSvc := payments.NewCryptomusService(cfg.CryptomusMerchant, cfg.CryptomusAPIKey, store)
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "slipradar_secure_jwt_secret_key_2026"
+	}
+	authHandler := handlers.NewAuthHandler(store, jwtSecret)
+
 	// 6. Handlers
 	h := &router.Handlers{
+		Auth:    authHandler,
 		Match:   handlers.NewMatchHandler(store),
 		Odds:    handlers.NewOddsHandler(store),
 		Bet:     handlers.NewBetSlipHandler(store, betParser),
@@ -76,6 +83,8 @@ func main() {
 		Admin:   handlers.NewAdminHandler(store, ingestionWorker, wsHub),
 		Health:  handlers.NewHealthHandler(db, redisSvc),
 		WS:      wsHub,
+		Store:   store,
+		Secret:  jwtSecret,
 	}
 
 	// 7. HTTP Server Setup

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/sports/livescores/internal/models"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var InitialSports = []models.SportType{
@@ -33,361 +34,225 @@ func GetInitialMatches() []models.Match {
 	now := time.Now()
 
 	return []models.Match{
-		// 1. Premier League Live Match (Arsenal vs Man City)
 		{
-			ID:    "match-epl-01",
-			Sport: models.SportSoccer,
-			League: models.League{
-				ID: "premier-league", Name: "Premier League", Sport: models.SportSoccer, Country: "England",
-			},
-			HomeTeam: models.Team{ID: "ars", Name: "Arsenal", ShortName: "ARS", Logo: "ARS", Country: "England"},
-			AwayTeam: models.Team{ID: "mci", Name: "Manchester City", ShortName: "MCI", Logo: "MCI", Country: "England"},
+			ID:        "match-epl-ars-che",
+			Sport:     models.SportSoccer,
+			League:    InitialLeagues[0], // Premier League
+			HomeTeam:  models.Team{ID: "team-ars", Name: "Arsenal", ShortName: "ARS", Logo: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=80&auto=format&fit=crop&q=60"},
+			AwayTeam:  models.Team{ID: "team-che", Name: "Chelsea", ShortName: "CHE", Logo: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=80&auto=format&fit=crop&q=60"},
 			HomeScore: 2,
 			AwayScore: 1,
 			Status:    models.StatusLive,
-			Period:    "2H",
 			Minute:    68,
+			Period:    "2nd Half",
 			StartTime: now.Add(-68 * time.Minute),
-			Venue:     "Emirates Stadium, London",
-			Referee:   "Michael Oliver",
-			HasLiveAudio: true,
 			Stats: models.MatchStats{
-				PossessionHome: 48, PossessionAway: 52,
-				ShotsHome: 12, ShotsAway: 14,
-				ShotsOnTargetHome: 6, ShotsOnTargetAway: 5,
-				CornersHome: 5, CornersAway: 7,
-				FoulsHome: 9, FoulsAway: 11,
-				YellowCardsHome: 1, YellowCardsAway: 2,
-				RedCardsHome: 0, RedCardsAway: 0,
-				XGHome: 1.84, XGAway: 1.52,
+				PossessionHome:    58,
+				PossessionAway:    42,
+				ShotsHome:         14,
+				ShotsAway:         8,
+				ShotsOnTargetHome: 6,
+				ShotsOnTargetAway: 3,
+				CornersHome:       7,
+				CornersAway:       4,
+				FoulsHome:         9,
+				FoulsAway:         12,
+				YellowCardsHome:   1,
+				YellowCardsAway:   2,
+				RedCardsHome:      0,
+				RedCardsAway:      0,
+				XGHome:            1.92,
+				XGAway:            0.85,
 				AttackingPressure: "HOME",
-				BallPositionX: 68.5,
-				BallPositionY: 44.2,
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-1", MatchID: "match-epl-01", Type: models.EventGoal, Minute: 19, TeamSide: "HOME", PlayerName: "Bukayo Saka", AssistName: "Martin Ødegaard", Detail: "Curled into top-left corner", CreatedAt: now.Add(-50 * time.Minute)},
-				{ID: "ev-2", MatchID: "match-epl-01", Type: models.EventYellowCard, Minute: 34, TeamSide: "AWAY", PlayerName: "Rodri", Detail: "Tactical foul", CreatedAt: now.Add(-35 * time.Minute)},
-				{ID: "ev-3", MatchID: "match-epl-01", Type: models.EventGoal, Minute: 42, TeamSide: "AWAY", PlayerName: "Erling Haaland", AssistName: "Kevin De Bruyne", Detail: "Header from 6 yards", CreatedAt: now.Add(-27 * time.Minute)},
-				{ID: "ev-4", MatchID: "match-epl-01", Type: models.EventGoal, Minute: 57, TeamSide: "HOME", PlayerName: "Kai Havertz", AssistName: "Declan Rice", Detail: "Low drive into bottom-right", CreatedAt: now.Add(-12 * time.Minute)},
+				BallPositionX:     72.5,
+				BallPositionY:     48.0,
 			},
 			Odds: &models.MatchOdds{
-				MatchID: "match-epl-01",
+				MatchID: "match-epl-ars-che",
 				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 1.45, Draw: 3.80, AwayWin: 5.60, Over25: 1.30, Under25: 3.20,
+					BookmakerKey:   "consensus",
+					BookmakerTitle: "Consensus Average",
+					LastUpdate:     now,
+					HomeWin:        1.45,
+					Draw:           4.20,
+					AwayWin:        7.50,
+					Over25:         1.55,
+					Under25:        2.45,
 				},
-				Bookmakers: []models.BookmakerOdds{
-					{BookmakerKey: "bet365", BookmakerTitle: "Bet365", LastUpdate: now, HomeWin: 1.44, Draw: 3.90, AwayWin: 5.75, Over25: 1.28, Under25: 3.30},
-					{BookmakerKey: "pinnacle", BookmakerTitle: "Pinnacle", LastUpdate: now, HomeWin: 1.48, Draw: 3.75, AwayWin: 5.50, Over25: 1.31, Under25: 3.15},
-					{BookmakerKey: "1xbet", BookmakerTitle: "1xBet", LastUpdate: now, HomeWin: 1.46, Draw: 3.85, AwayWin: 5.80, Over25: 1.29, Under25: 3.25},
-				},
+				LastUpdated: now,
 			},
 		},
-		// 2. Champions League Live Match (Real Madrid vs Bayern Munich)
 		{
-			ID:    "match-ucl-02",
-			Sport: models.SportSoccer,
-			League: models.League{
-				ID: "champions-league", Name: "UEFA Champions League", Sport: models.SportSoccer, Country: "Europe",
-			},
-			HomeTeam: models.Team{ID: "rma", Name: "Real Madrid", ShortName: "RMA", Logo: "RMA", Country: "Spain"},
-			AwayTeam: models.Team{ID: "bay", Name: "Bayern Munich", ShortName: "BAY", Logo: "BAY", Country: "Germany"},
+			ID:        "match-ucl-rma-bay",
+			Sport:     models.SportSoccer,
+			League:    InitialLeagues[1], // Champions League
+			HomeTeam:  models.Team{ID: "team-rma", Name: "Real Madrid", ShortName: "RMA", Logo: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?w=80&auto=format&fit=crop&q=60"},
+			AwayTeam:  models.Team{ID: "team-bay", Name: "Bayern Munich", ShortName: "BAY", Logo: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=80&auto=format&fit=crop&q=60"},
 			HomeScore: 1,
 			AwayScore: 1,
 			Status:    models.StatusLive,
-			Period:    "1H",
-			Minute:    39,
-			StartTime: now.Add(-39 * time.Minute),
-			Venue:     "Santiago Bernabéu, Madrid",
-			Referee:   "Szymon Marciniak",
-			HasLiveAudio: true,
+			Minute:    54,
+			Period:    "2nd Half",
+			StartTime: now.Add(-54 * time.Minute),
 			Stats: models.MatchStats{
-				PossessionHome: 55, PossessionAway: 45,
-				ShotsHome: 7, ShotsAway: 6,
-				ShotsOnTargetHome: 4, ShotsOnTargetAway: 3,
-				CornersHome: 4, CornersAway: 2,
-				FoulsHome: 4, FoulsAway: 6,
-				YellowCardsHome: 0, YellowCardsAway: 1,
-				RedCardsHome: 0, RedCardsAway: 0,
-				XGHome: 1.12, XGAway: 0.94,
-				AttackingPressure: "AWAY",
-				BallPositionX: 38.0,
-				BallPositionY: 56.4,
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-ucl-1", MatchID: "match-ucl-02", Type: models.EventGoal, Minute: 14, TeamSide: "HOME", PlayerName: "Vinícius Júnior", AssistName: "Jude Bellingham", Detail: "Solo run and chip", CreatedAt: now.Add(-25 * time.Minute)},
-				{ID: "ev-ucl-2", MatchID: "match-ucl-02", Type: models.EventGoal, Minute: 28, TeamSide: "AWAY", PlayerName: "Harry Kane", AssistName: "Leroy Sané", Detail: "Penalty converted", CreatedAt: now.Add(-11 * time.Minute)},
+				PossessionHome:    51,
+				PossessionAway:    49,
+				ShotsHome:         11,
+				ShotsAway:         10,
+				ShotsOnTargetHome: 5,
+				ShotsOnTargetAway: 4,
+				CornersHome:       5,
+				CornersAway:       6,
+				FoulsHome:         7,
+				FoulsAway:         8,
+				YellowCardsHome:   1,
+				YellowCardsAway:   1,
+				RedCardsHome:      0,
+				RedCardsAway:      0,
+				XGHome:            1.44,
+				XGAway:            1.38,
+				AttackingPressure: "NEUTRAL",
+				BallPositionX:     52.0,
+				BallPositionY:     50.0,
 			},
 			Odds: &models.MatchOdds{
-				MatchID: "match-ucl-02",
+				MatchID: "match-ucl-rma-bay",
 				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 2.15, Draw: 3.10, AwayWin: 3.40, Over25: 1.55, Under25: 2.35,
+					BookmakerKey:   "consensus",
+					BookmakerTitle: "Consensus Average",
+					LastUpdate:     now,
+					HomeWin:        2.10,
+					Draw:           3.10,
+					AwayWin:        3.60,
+					Over25:         1.65,
+					Under25:        2.25,
 				},
-				Bookmakers: []models.BookmakerOdds{
-					{BookmakerKey: "bet365", BookmakerTitle: "Bet365", LastUpdate: now, HomeWin: 2.10, Draw: 3.20, AwayWin: 3.45, Over25: 1.53, Under25: 2.40},
-					{BookmakerKey: "pinnacle", BookmakerTitle: "Pinnacle", LastUpdate: now, HomeWin: 2.20, Draw: 3.05, AwayWin: 3.35, Over25: 1.57, Under25: 2.30},
-				},
+				LastUpdated: now,
 			},
 		},
-		// 3. NBA Basketball Live Match (Lakers vs Celtics)
 		{
-			ID:    "match-nba-01",
-			Sport: models.SportBasketball,
-			League: models.League{
-				ID: "nba", Name: "NBA Basketball", Sport: models.SportBasketball, Country: "USA",
-			},
-			HomeTeam: models.Team{ID: "lal", Name: "Los Angeles Lakers", ShortName: "LAL", Logo: "LAL", Country: "USA"},
-			AwayTeam: models.Team{ID: "bos", Name: "Boston Celtics", ShortName: "BOS", Logo: "BOS", Country: "USA"},
+			ID:        "match-nba-lal-bos",
+			Sport:     models.SportBasketball,
+			League:    InitialLeagues[3], // NBA
+			HomeTeam:  models.Team{ID: "team-lal", Name: "LA Lakers", ShortName: "LAL", Logo: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=80&auto=format&fit=crop&q=60"},
+			AwayTeam:  models.Team{ID: "team-bos", Name: "Boston Celtics", ShortName: "BOS", Logo: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=80&auto=format&fit=crop&q=60"},
 			HomeScore: 89,
-			AwayScore: 94,
-			PeriodScores: []string{"28-26", "24-31", "27-24", "10-13"},
+			AwayScore: 84,
 			Status:    models.StatusLive,
-			Period:    "Q4",
-			Minute:    8,
-			StartTime: now.Add(-85 * time.Minute),
-			Venue:     "Crypto.com Arena, Los Angeles",
-			Referee:   "Scott Foster",
-			HasLiveAudio: true,
+			Minute:    36,
+			Period:    "Q3",
+			StartTime: now.Add(-65 * time.Minute),
 			Stats: models.MatchStats{
-				PossessionHome: 50, PossessionAway: 50,
-				ShotsHome: 68, ShotsAway: 72,
-				ShotsOnTargetHome: 32, ShotsOnTargetAway: 36,
-				FoulsHome: 16, FoulsAway: 14,
+				PossessionHome:    52,
+				PossessionAway:    48,
+				ShotsHome:         38,
+				ShotsAway:         35,
 				AttackingPressure: "HOME",
-				BallPositionX: 74.0,
-				BallPositionY: 50.0,
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-nba-1", MatchID: "match-nba-01", Type: models.EventPoint, Minute: 40, TeamSide: "HOME", PlayerName: "LeBron James", Detail: "3-pt Stepback Jumper", CreatedAt: now.Add(-4 * time.Minute)},
-				{ID: "ev-nba-2", MatchID: "match-nba-01", Type: models.EventPoint, Minute: 41, TeamSide: "AWAY", PlayerName: "Jayson Tatum", Detail: "Driving Slam Dunk + Foul", CreatedAt: now.Add(-2 * time.Minute)},
+				BallPositionX:     68.0,
+				BallPositionY:     45.0,
 			},
 			Odds: &models.MatchOdds{
-				MatchID: "match-nba-01",
+				MatchID: "match-nba-lal-bos",
 				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 2.85, AwayWin: 1.42, SpreadHome: 1.90, SpreadAway: 1.90,
+					BookmakerKey:   "consensus",
+					BookmakerTitle: "Consensus Average",
+					LastUpdate:     now,
+					HomeWin:        1.65,
+					AwayWin:        2.25,
+					SpreadHome:     -3.5,
+					SpreadAway:     3.5,
 				},
-				Bookmakers: []models.BookmakerOdds{
-					{BookmakerKey: "draftkings", BookmakerTitle: "DraftKings", LastUpdate: now, HomeWin: 2.90, AwayWin: 1.40, SpreadHome: 1.91, SpreadAway: 1.89},
-				},
+				LastUpdated: now,
 			},
 		},
-		// 4. Tennis Live Match (Alcaraz vs Sinner)
 		{
-			ID:    "match-tennis-01",
-			Sport: models.SportTennis,
-			League: models.League{
-				ID: "atp-masters", Name: "ATP Tour Masters", Sport: models.SportTennis, Country: "Global",
-			},
-			HomeTeam: models.Team{ID: "alc", Name: "Carlos Alcaraz", ShortName: "ALC", Logo: "ALC", Country: "Spain"},
-			AwayTeam: models.Team{ID: "sin", Name: "Jannik Sinner", ShortName: "SIN", Logo: "SIN", Country: "Italy"},
+			ID:        "match-atp-djo-alc",
+			Sport:     models.SportTennis,
+			League:    InitialLeagues[4], // ATP
+			HomeTeam:  models.Team{ID: "team-djo", Name: "Novak Djokovic", ShortName: "DJO", Logo: "https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=80&auto=format&fit=crop&q=60"},
+			AwayTeam:  models.Team{ID: "team-alc", Name: "Carlos Alcaraz", ShortName: "ALC", Logo: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=80&auto=format&fit=crop&q=60"},
 			HomeScore: 1,
 			AwayScore: 1,
-			PeriodScores: []string{"6-4", "3-6", "4-3 (30-15)"},
 			Status:    models.StatusLive,
-			Period:    "SET 3",
-			Minute:    115,
-			StartTime: now.Add(-115 * time.Minute),
-			Venue:     "Center Court",
-			Referee:   "Carlos Ramos",
-			HasLiveAudio: false,
+			Minute:    112,
+			Period:    "Set 3",
+			StartTime: now.Add(-112 * time.Minute),
 			Stats: models.MatchStats{
-				ShotsHome: 28, ShotsAway: 31,
-				FoulsHome: 3, FoulsAway: 2,
-				AttackingPressure: "HOME",
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-ten-1", MatchID: "match-tennis-01", Type: models.EventSetWon, Minute: 45, TeamSide: "HOME", PlayerName: "Carlos Alcaraz", Detail: "Won Set 1 (6-4)", CreatedAt: now.Add(-70 * time.Minute)},
-				{ID: "ev-ten-2", MatchID: "match-tennis-01", Type: models.EventSetWon, Minute: 90, TeamSide: "AWAY", PlayerName: "Jannik Sinner", Detail: "Won Set 2 (6-3)", CreatedAt: now.Add(-25 * time.Minute)},
+				PossessionHome:    50,
+				PossessionAway:    50,
+				AttackingPressure: "NEUTRAL",
 			},
 			Odds: &models.MatchOdds{
-				MatchID: "match-tennis-01",
+				MatchID: "match-atp-djo-alc",
 				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 1.72, AwayWin: 2.10,
+					BookmakerKey:   "consensus",
+					BookmakerTitle: "Consensus Average",
+					LastUpdate:     now,
+					HomeWin:        1.75,
+					AwayWin:        2.05,
 				},
-				Bookmakers: []models.BookmakerOdds{
-					{BookmakerKey: "bet365", BookmakerTitle: "Bet365", LastUpdate: now, HomeWin: 1.70, AwayWin: 2.15},
-				},
+				LastUpdated: now,
 			},
 		},
-		// 5. NFL Live Match (Chiefs vs 49ers)
 		{
-			ID:    "match-nfl-01",
-			Sport: models.SportNFL,
-			League: models.League{
-				ID: "nfl", Name: "NFL Football", Sport: models.SportNFL, Country: "USA",
+			ID:        "match-epl-mci-liv",
+			Sport:     models.SportSoccer,
+			League:    InitialLeagues[0], // Premier League
+			HomeTeam:  models.Team{ID: "team-mci", Name: "Manchester City", ShortName: "MCI", Logo: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=80&auto=format&fit=crop&q=60"},
+			AwayTeam:  models.Team{ID: "team-liv", Name: "Liverpool", ShortName: "LIV", Logo: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=80&auto=format&fit=crop&q=60"},
+			HomeScore: 0,
+			AwayScore: 0,
+			Status:    models.StatusScheduled,
+			StartTime: now.Add(2 * time.Hour),
+			Odds: &models.MatchOdds{
+				MatchID: "match-epl-mci-liv",
+				Consensus: models.BookmakerOdds{
+					BookmakerKey:   "consensus",
+					BookmakerTitle: "Consensus Average",
+					LastUpdate:     now,
+					HomeWin:        1.85,
+					Draw:           3.80,
+					AwayWin:        3.90,
+					Over25:         1.70,
+					Under25:        2.15,
+				},
+				LastUpdated: now,
 			},
-			HomeTeam: models.Team{ID: "kc", Name: "Kansas City Chiefs", ShortName: "KC", Logo: "KC", Country: "USA"},
-			AwayTeam: models.Team{ID: "sf", Name: "San Francisco 49ers", ShortName: "SF", Logo: "SF", Country: "USA"},
+		},
+		{
+			ID:        "match-nfl-kc-sf",
+			Sport:     models.SportNFL,
+			League:    InitialLeagues[5], // NFL
+			HomeTeam:  models.Team{ID: "team-kc", Name: "Kansas City Chiefs", ShortName: "KC", Logo: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=80&auto=format&fit=crop&q=60"},
+			AwayTeam:  models.Team{ID: "team-sf", Name: "San Francisco 49ers", ShortName: "SF", Logo: "https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=80&auto=format&fit=crop&q=60"},
 			HomeScore: 24,
 			AwayScore: 20,
-			PeriodScores: []string{"7-3", "10-7", "0-10", "7-0"},
 			Status:    models.StatusLive,
+			Minute:    48,
 			Period:    "Q4",
-			Minute:    12,
-			StartTime: now.Add(-120 * time.Minute),
-			Venue:     "Arrowhead Stadium, Kansas City",
+			StartTime: now.Add(-80 * time.Minute),
 			Stats: models.MatchStats{
-				PossessionHome: 52, PossessionAway: 48,
+				PossessionHome:    55,
+				PossessionAway:    45,
 				AttackingPressure: "HOME",
 			},
-			Events: []models.MatchEvent{
-				{ID: "ev-nfl-1", MatchID: "match-nfl-01", Type: models.EventTouchdown, Minute: 52, TeamSide: "HOME", PlayerName: "Patrick Mahomes to Travis Kelce", Detail: "18-yd pass TD", CreatedAt: now.Add(-8 * time.Minute)},
-			},
 			Odds: &models.MatchOdds{
-				MatchID: "match-nfl-01",
+				MatchID: "match-nfl-kc-sf",
 				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Consensus", LastUpdate: now,
-					HomeWin: 1.35, AwayWin: 3.25, SpreadHome: 1.90, SpreadAway: 1.90,
+					BookmakerKey:   "consensus",
+					BookmakerTitle: "Consensus Average",
+					LastUpdate:     now,
+					HomeWin:        1.62,
+					AwayWin:        2.30,
 				},
-			},
-		},
-		// 6. Cricket Live Match (CSK vs MI)
-		{
-			ID:    "match-ipl-01",
-			Sport: models.SportCricket,
-			League: models.League{
-				ID: "ipl", Name: "Indian Premier League", Sport: models.SportCricket, Country: "India",
-			},
-			HomeTeam: models.Team{ID: "csk", Name: "Chennai Super Kings", ShortName: "CSK", Logo: "CSK", Country: "India"},
-			AwayTeam: models.Team{ID: "mi", Name: "Mumbai Indians", ShortName: "MI", Logo: "MI", Country: "India"},
-			HomeScore: 178,
-			AwayScore: 162,
-			PeriodScores: []string{"CSK: 178/4 (20.0 ov)", "MI: 162/6 (18.2 ov)"},
-			Status:    models.StatusLive,
-			Period:    "2nd Innings",
-			Minute:    18,
-			StartTime: now.Add(-140 * time.Minute),
-			Venue:     "M. A. Chidambaram Stadium, Chennai",
-			Stats: models.MatchStats{
-				AttackingPressure: "AWAY",
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-crick-1", MatchID: "match-ipl-01", Type: models.EventWicket, Minute: 17, TeamSide: "AWAY", PlayerName: "Ravindra Jadeja", Detail: "Bowled Suryakumar Yadav (42 off 22)", CreatedAt: now.Add(-5 * time.Minute)},
-			},
-			Odds: &models.MatchOdds{
-				MatchID: "match-ipl-01",
-				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Consensus", LastUpdate: now,
-					HomeWin: 1.25, AwayWin: 3.90,
-				},
-			},
-		},
-		// 7. Scheduled Soccer Match (Barcelona vs PSG)
-		{
-			ID:    "match-ucl-03",
-			Sport: models.SportSoccer,
-			League: models.League{
-				ID: "champions-league", Name: "UEFA Champions League", Sport: models.SportSoccer, Country: "Europe",
-			},
-			HomeTeam: models.Team{ID: "bar", Name: "Barcelona", ShortName: "BAR", Logo: "BAR", Country: "Spain"},
-			AwayTeam: models.Team{ID: "psg", Name: "Paris Saint-Germain", ShortName: "PSG", Logo: "PSG", Country: "France"},
-			HomeScore: 0,
-			AwayScore: 0,
-			Status:    models.StatusScheduled,
-			Period:    "PRE",
-			Minute:    0,
-			StartTime: now.Add(2 * time.Hour),
-			Venue:     "Estadi Olímpic Lluís Companys",
-			Odds: &models.MatchOdds{
-				MatchID: "match-ucl-03",
-				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 2.30, Draw: 3.60, AwayWin: 2.85, Over25: 1.60, Under25: 2.25,
-				},
-			},
-		},
-		// 8. Finished Match (Liverpool vs Chelsea)
-		{
-			ID:    "match-epl-04",
-			Sport: models.SportSoccer,
-			League: models.League{
-				ID: "premier-league", Name: "Premier League", Sport: models.SportSoccer, Country: "England",
-			},
-			HomeTeam: models.Team{ID: "liv", Name: "Liverpool", ShortName: "LIV", Logo: "LIV", Country: "England"},
-			AwayTeam: models.Team{ID: "che", Name: "Chelsea", ShortName: "CHE", Logo: "CHE", Country: "England"},
-			HomeScore: 3,
-			AwayScore: 1,
-			Status:    models.StatusFinished,
-			Period:    "FT",
-			Minute:    90,
-			StartTime: now.Add(-4 * time.Hour),
-			Venue:     "Anfield, Liverpool",
-			Stats: models.MatchStats{
-				PossessionHome: 62, PossessionAway: 38,
-				ShotsHome: 19, ShotsAway: 8,
-				ShotsOnTargetHome: 9, ShotsOnTargetAway: 3,
-				CornersHome: 8, CornersAway: 3,
-				XGHome: 2.75, XGAway: 0.88,
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-fin-1", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 23, TeamSide: "HOME", PlayerName: "Mohamed Salah", Detail: "Top corner finish", CreatedAt: now.Add(-220 * time.Minute)},
-				{ID: "ev-fin-2", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 51, TeamSide: "HOME", PlayerName: "Darwin Núñez", Detail: "Header from corner", CreatedAt: now.Add(-190 * time.Minute)},
-				{ID: "ev-fin-3", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 72, TeamSide: "AWAY", PlayerName: "Cole Palmer", Detail: "Penalty", CreatedAt: now.Add(-170 * time.Minute)},
-				{ID: "ev-fin-4", MatchID: "match-epl-04", Type: models.EventGoal, Minute: 88, TeamSide: "HOME", PlayerName: "Luis Díaz", Detail: "Counter attack volley", CreatedAt: now.Add(-150 * time.Minute)},
-			},
-		},
-		// 9. Live PGA Tour Golf Match (Scottie Scheffler vs Rory McIlroy)
-		{
-			ID:    "match-pga-01",
-			Sport: models.SportGolf,
-			League: models.League{
-				ID: "pga-tour", Name: "PGA Tour Championship", Sport: models.SportGolf, Country: "USA",
-			},
-			HomeTeam: models.Team{ID: "sch", Name: "Scottie Scheffler", ShortName: "SCH", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/9478.png&w=350&h=254", Country: "USA"},
-			AwayTeam: models.Team{ID: "mci-golf", Name: "Rory McIlroy", ShortName: "RORY", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/3470.png&w=350&h=254", Country: "NIR"},
-			HomeScore: 16,
-			AwayScore: 14,
-			PeriodScores: []string{"SCH: -16 (Thru 16)", "RORY: -14 (Thru 15)"},
-			Status:    models.StatusLive,
-			Period:    "Final Round",
-			Minute:    16,
-			StartTime: now.Add(-180 * time.Minute),
-			Venue:     "East Lake Golf Club, Atlanta, GA",
-			HasLiveAudio: true,
-			Stats: models.MatchStats{
-				PossessionHome: 52, PossessionAway: 48,
-				AttackingPressure: "HOME",
-			},
-			Events: []models.MatchEvent{
-				{ID: "ev-golf-1", MatchID: "match-pga-01", Type: models.EventPoint, Minute: 14, TeamSide: "HOME", PlayerName: "Scottie Scheffler", Detail: "Birdie on Hole 14 (Par 4, 12ft putt)", CreatedAt: now.Add(-25 * time.Minute)},
-				{ID: "ev-golf-2", MatchID: "match-pga-01", Type: models.EventPoint, Minute: 15, TeamSide: "AWAY", PlayerName: "Rory McIlroy", Detail: "Eagle on Hole 15 (Par 5, 28ft putt)", CreatedAt: now.Add(-10 * time.Minute)},
-			},
-			Odds: &models.MatchOdds{
-				MatchID: "match-pga-01",
-				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 1.40, AwayWin: 2.95,
-				},
-			},
-		},
-		// 10. Scheduled The Masters Golf Matchup (Jon Rahm vs Xander Schauffele)
-		{
-			ID:    "match-pga-02",
-			Sport: models.SportGolf,
-			League: models.League{
-				ID: "pga-tour", Name: "The Masters Tournament", Sport: models.SportGolf, Country: "USA",
-			},
-			HomeTeam: models.Team{ID: "rahm", Name: "Jon Rahm", ShortName: "RAHM", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/9780.png&w=350&h=254", Country: "ESP"},
-			AwayTeam: models.Team{ID: "scha", Name: "Xander Schauffele", ShortName: "XAN", Logo: "https://a.espncdn.com/combiner/i?img=/i/headshots/golf/players/full/10140.png&w=350&h=254", Country: "USA"},
-			HomeScore: 0,
-			AwayScore: 0,
-			Status:    models.StatusScheduled,
-			Period:    "Round 1",
-			Minute:    0,
-			StartTime: now.Add(4 * time.Hour),
-			Venue:     "Augusta National Golf Club, GA",
-			Odds: &models.MatchOdds{
-				MatchID: "match-pga-02",
-				Consensus: models.BookmakerOdds{
-					BookmakerKey: "consensus", BookmakerTitle: "Market Consensus", LastUpdate: now,
-					HomeWin: 1.95, AwayWin: 1.85,
-				},
+				LastUpdated: now,
 			},
 		},
 	}
+}
+
+func GetInitialBetSlips() []models.BetSlip {
+	return []models.BetSlip{}
 }
 
 func GetInitialBlogPosts() []models.BlogPost {
@@ -405,7 +270,7 @@ func GetInitialBlogPosts() []models.BlogPost {
 			Tags:        []string{"Premier League", "Arsenal", "Man City", "Tactics", "xG Analysis"},
 			AuthorName:  "Marcus Sterling",
 			AuthorRole:  "Senior Tactical Analyst",
-			AuthorAvatar:"https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+			AuthorAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
 			MatchID:     "match-epl-01",
 			ReadTimeMin: 5,
 			Views:       1420,
@@ -426,7 +291,7 @@ func GetInitialBlogPosts() []models.BlogPost {
 			Tags:        []string{"Champions League", "Real Madrid", "Bayern Munich", "Odds Preview"},
 			AuthorName:  "Elena Rostova",
 			AuthorRole:  "European Football Editor",
-			AuthorAvatar:"https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80",
+			AuthorAvatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&auto=format&fit=crop&q=80",
 			MatchID:     "match-ucl-02",
 			ReadTimeMin: 4,
 			Views:       2180,
@@ -447,7 +312,7 @@ func GetInitialBlogPosts() []models.BlogPost {
 			Tags:        []string{"NBA", "Basketball", "Analytics", "Shot Quality"},
 			AuthorName:  "David 'Coach D' Miller",
 			AuthorRole:  "Lead Basketball Strategist",
-			AuthorAvatar:"https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
+			AuthorAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
 			MatchID:     "match-nba-01",
 			ReadTimeMin: 6,
 			Views:       980,
@@ -475,6 +340,17 @@ func (db *DB) SeedInitialData(ctx context.Context) error {
 		_, _ = db.Pool.Exec(ctx, `INSERT INTO leagues (id, name, sport_id, country, logo) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
 			l.ID, l.Name, string(l.Sport), l.Country, l.Logo)
 	}
+
+	// Seed system administrator
+	adminHash, _ := bcrypt.GenerateFromPassword([]byte("AdminSecure2026!SlipRadar"), bcrypt.DefaultCost)
+	_, _ = db.Pool.Exec(ctx, `
+		INSERT INTO users (id, email, name, password_hash, role, is_admin, plan, status, country, signup_source, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+		ON CONFLICT (id) DO UPDATE SET
+			role = 'admin',
+			is_admin = TRUE,
+			password_hash = EXCLUDED.password_hash;
+	`, "usr_admin_01", "admin@slipradar.com", "System Administrator", string(adminHash), "admin", true, "elite", "active", "US", "system_init")
 
 	return nil
 }

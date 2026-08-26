@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import Link from 'next/link';
-import { Check, Minus, ArrowRight, Crown, Sparkles, CreditCard, Coins } from 'lucide-react';
+import { Check, Minus, ArrowRight, Crown, Sparkles, CreditCard, Coins, ShieldCheck, Zap } from 'lucide-react';
 import { MarketingHeader } from '@/components/brand/MarketingHeader';
 import { MarketingFooter } from '@/components/brand/MarketingFooter';
 
@@ -24,22 +24,23 @@ const PLANS: Plan[] = [
   {
     id: 'free',
     name: 'Free',
-    tagline: 'For following one slip on a match night.',
+    tagline: 'For tracking single slips on match day.',
     monthly: 0,
     annual: 0,
-    cta: 'Start tracking',
+    cta: 'Start tracking free',
     href: '/live',
     highlights: [
       '1 tracked slip at a time',
       'Live scores across all 7 sports',
-      'Goal and card alerts',
-      'Consensus odds',
+      'Goal and red card alerts',
+      'Consensus odds view',
+      'Standard support',
     ],
   },
   {
     id: 'pro',
     name: 'Pro',
-    tagline: 'For anyone with more than one slip running.',
+    tagline: 'For active bettors with multiple running slips.',
     monthly: 9,
     annual: 86,
     cta: 'Upgrade to Pro',
@@ -47,26 +48,26 @@ const PLANS: Plan[] = [
     featured: true,
     highlights: [
       'Unlimited tracked slips',
-      'Live cash-out valuation',
-      'Pop-out and lock screen scoreboards',
+      'Real-time cashout valuation',
+      'Pop-out floating scoreboard',
+      'Lock screen live widget',
       'Full bookmaker odds comparison',
-      'Priority support',
     ],
   },
   {
     id: 'elite',
     name: 'Elite',
-    tagline: 'For traders who need the raw feed.',
+    tagline: 'For power users and betting syndicates.',
     monthly: 29,
     annual: 279,
     cta: 'Go Elite',
     href: '/pro',
     highlights: [
-      'Everything in Pro',
-      'Raw WebSocket delta feed',
-      'REST API access and webhooks',
-      'Slip history export',
-      'Same-day engineering support',
+      'Everything included in Pro',
+      'Raw sub-second WebSocket feed',
+      'REST API access & webhooks',
+      'Full slip history & CSV export',
+      'Dedicated VIP support desk',
     ],
   },
 ];
@@ -75,40 +76,40 @@ type Availability = true | false | string;
 
 const COMPARISON: { section: string; rows: { label: string; free: Availability; pro: Availability; elite: Availability }[] }[] = [
   {
-    section: 'Slip tracking',
+    section: 'Slip Tracking & Parser',
     rows: [
       { label: 'Concurrent tracked slips', free: '1', pro: 'Unlimited', elite: 'Unlimited' },
-      { label: 'Supported sportsbooks', free: '6', pro: '6', elite: '6' },
-      { label: 'Automatic booking-code detection', free: true, pro: true, elite: true },
-      { label: 'Live cash-out valuation', free: false, pro: true, elite: true },
+      { label: 'Supported sportsbooks', free: '6 Sportsbooks', pro: '6 Sportsbooks', elite: '6 Sportsbooks' },
+      { label: 'Automatic booking code detection', free: true, pro: true, elite: true },
+      { label: 'Real-time live cashout estimator', free: false, pro: true, elite: true },
       { label: 'Slip history and export', free: false, pro: '90 days', elite: 'Unlimited' },
     ],
   },
   {
-    section: 'Live data',
+    section: 'Live Match Engine',
     rows: [
-      { label: 'Sports covered', free: '7', pro: '7', elite: '7' },
-      { label: 'Score update method', free: 'Polled', pro: 'Live socket', elite: 'Live socket' },
+      { label: 'Sports covered', free: '7 Sports', pro: '7 Sports', elite: '7 Sports' },
+      { label: 'Score delivery speed', free: 'Polled', pro: 'Sub-second WebSocket', elite: 'Sub-second WebSocket' },
       { label: '2D pitch and court view', free: true, pro: true, elite: true },
       { label: 'Bookmaker odds comparison', free: 'Consensus only', pro: true, elite: true },
-      { label: 'Raw delta feed access', free: false, pro: false, elite: true },
+      { label: 'Raw delta WebSocket feed', free: false, pro: false, elite: true },
     ],
   },
   {
-    section: 'Alerts and displays',
+    section: 'Alerts & Displays',
     rows: [
-      { label: 'Goal and red-card alerts', free: true, pro: true, elite: true },
-      { label: 'Cash-out swing alerts', free: false, pro: true, elite: true },
-      { label: 'Pop-out floating scoreboard', free: false, pro: true, elite: true },
-      { label: 'Lock screen live widget', free: false, pro: true, elite: true },
+      { label: 'Instant goal and card alerts', free: true, pro: true, elite: true },
+      { label: 'Cashout swing notifications', free: false, pro: true, elite: true },
+      { label: 'Pop-out floating scoreboard (PiP)', free: false, pro: true, elite: true },
+      { label: 'Phone lock screen widget', free: false, pro: true, elite: true },
     ],
   },
   {
-    section: 'Support',
+    section: 'Support & Integration',
     rows: [
-      { label: 'Knowledge base', free: true, pro: true, elite: true },
-      { label: 'Email support', free: 'Best effort', pro: 'Priority', elite: 'Same day' },
-      { label: 'API and webhooks', free: false, pro: false, elite: true },
+      { label: 'Knowledge base & guides', free: true, pro: true, elite: true },
+      { label: 'Support queue response', free: 'Standard', pro: 'Priority desk', elite: 'Same-day VIP' },
+      { label: 'REST API & Webhook dispatch', free: false, pro: false, elite: true },
     ],
   },
 ];
@@ -116,55 +117,55 @@ const COMPARISON: { section: string; rows: { label: string; free: Availability; 
 const FAQS = [
   {
     q: 'Does SlipRadar place bets for me?',
-    a: 'No. SlipRadar is read-only. It decodes a booking code you already created at your sportsbook and follows the fixtures on that slip. It never places, edits or cashes out a bet, and it never asks for your betting account password.',
+    a: 'No. SlipRadar is read-only. It parses and monitors booking codes you generate at your bookmaker and tracks fixtures in real-time. It never touches your sportsbook account.',
   },
   {
-    q: 'What happens when I hit the free plan limit?',
-    a: 'Nothing breaks. Your tracked slip keeps running. Adding a second one prompts you to upgrade, and you can swap which slip is active as often as you like on the free plan.',
+    q: 'What happens when I reach the free limit?',
+    a: 'Your active slip keeps running uninterrupted. When you import a second slip, you are invited to upgrade to Pro, or you can replace your existing tracked slip.',
   },
   {
     q: 'How does annual billing work?',
-    a: 'Annual plans are charged once for twelve months and work out around 20 percent cheaper than paying monthly. Switching between cycles takes effect at your next renewal.',
+    a: 'Annual plans are billed once per year with a 20% discount compared to monthly billing. You can switch between monthly and annual plans at any time.',
   },
   {
-    q: 'Which payment methods are supported?',
-    a: 'Cards and bank transfer through Flutterwave, and USDT, BTC, ETH, SOL or TON through Cryptomus. Crypto payments activate as soon as the transaction confirms on-chain, usually inside a minute.',
+    q: 'Which payment methods do you accept?',
+    a: 'We support cards and bank transfers through Flutterwave, plus instant cryptocurrency payments (USDT, BTC, ETH, SOL, TON) via Cryptomus with automatic on-chain confirmation.',
   },
   {
-    q: 'Can I cancel at any time?',
-    a: 'Yes, from your account page, with no cancellation step to talk anyone out of. You keep paid access until the end of the cycle you have already paid for.',
+    q: 'Can I cancel my subscription anytime?',
+    a: 'Yes. You can cancel with 1-click directly from your Account page. You retain full paid access until the end of your prepaid billing period.',
   },
   {
-    q: 'Is the cash-out figure the same as my bookmaker offers?',
-    a: 'No, and it should not be treated as one. It is SlipRadar’s own estimate from live match state, shown so you can see which way your slip is moving. The binding number is always the one in your sportsbook.',
+    q: 'Is the cashout calculation official?',
+    a: 'SlipRadar calculates a real-time statistical cashout valuation based on live match clocks, scorelines, xG, and bookmaker odds. The final settlement is determined by your sportsbook.',
   },
 ];
 
 function Cell({ value }: { value: Availability }) {
   if (value === true) {
     return (
-      <span className="inline-flex items-center justify-center" title="Included">
-        <Check className="h-4 w-4 text-emerald-500" />
-        <span className="sr-only">Included</span>
-      </span>
+      <div className="flex items-center justify-center">
+        <span className="w-6 h-6 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+          <Check className="h-3.5 w-3.5" />
+        </span>
+      </div>
     );
   }
   if (value === false) {
     return (
-      <span className="inline-flex items-center justify-center" title="Not included">
-        <Minus className="h-4 w-4 text-muted-foreground/50" />
-        <span className="sr-only">Not included</span>
-      </span>
+      <div className="flex items-center justify-center">
+        <Minus className="h-4 w-4 text-muted-foreground/40" />
+      </div>
     );
   }
-  return <span className="text-xs font-semibold text-foreground">{value}</span>;
+  return <span className="text-xs font-bold text-foreground">{value}</span>;
 }
 
 export default function PricingPage() {
   const [cycle, setCycle] = useState<Cycle>('monthly');
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground font-sans">
       <MarketingHeader />
 
       <main className="flex-1">
@@ -173,70 +174,75 @@ export default function PricingPage() {
         {/* ================================================================= */}
         <section className="relative overflow-hidden border-b border-surface-border">
           <div className="bg-grid pointer-events-none absolute inset-0 opacity-70" aria-hidden="true" />
+          <div
+            className="pointer-events-none absolute left-1/2 top-[-10rem] h-[22rem] w-[40rem] -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+            style={{ background: 'radial-gradient(circle, var(--brand) 0%, transparent 70%)' }}
+            aria-hidden="true"
+          />
 
           <div className="relative mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
             <div className="mx-auto max-w-2xl text-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-surface-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-[color:var(--brand)]" />
-                <span>Simple plans, no per-slip fees</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 shadow-sm">
+                <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                <span>Simple Transparent Plans</span>
               </span>
 
-              <h1 className="mt-6 text-4xl font-black tracking-tight sm:text-5xl">
-                Pricing that scales with your slips
+              <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">
+                Choose the plan that fits your bets
               </h1>
-              <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
-                Start free and stay free for a single slip. Upgrade when you want several running at
-                once, live cash-out value, and the pop-out scoreboard.
+              <p className="mx-auto mt-4 max-w-xl text-sm sm:text-base leading-relaxed text-muted-foreground">
+                Start completely free for a single slip. Upgrade to Pro or Elite when you want
+                unlimited tracked tickets, real-time cashout, and pop-out scoreboards.
               </p>
             </div>
 
             {/* Billing cycle toggle */}
-            <div className="mt-10 flex justify-center">
+            <div className="mt-8 flex justify-center">
               <div
                 role="radiogroup"
                 aria-label="Billing cycle"
-                className="inline-flex items-center gap-1 rounded-2xl border border-surface-border bg-surface p-1 shadow-sm"
+                className="inline-flex items-center gap-1 rounded-2xl border border-surface-border bg-surface p-1.5 shadow-sm"
               >
                 <button
                   type="button"
                   role="radio"
                   aria-checked={cycle === 'monthly'}
                   onClick={() => setCycle('monthly')}
-                  className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                  className={`cursor-pointer rounded-xl px-5 py-2 text-xs font-bold transition-all ${
                     cycle === 'monthly'
-                      ? 'bg-brand-gradient text-white shadow-sm'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Monthly
+                  Monthly Billing
                 </button>
                 <button
                   type="button"
                   role="radio"
                   aria-checked={cycle === 'annual'}
                   onClick={() => setCycle('annual')}
-                  className={`flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl px-5 py-2 text-xs font-bold transition-all ${
                     cycle === 'annual'
-                      ? 'bg-brand-gradient text-white shadow-sm'
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  <span>Annual</span>
+                  <span>Annual Billing</span>
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold uppercase ${
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
                       cycle === 'annual'
                         ? 'bg-white/20 text-white'
                         : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                     }`}
                   >
-                    -20%
+                    Save 20%
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* Plan cards */}
-            <div className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-start">
+            {/* Plan cards Grid - Perfectly Aligned */}
+            <div className="mt-12 grid gap-8 lg:grid-cols-3 items-stretch">
               {PLANS.map((plan) => {
                 const price = cycle === 'monthly' ? plan.monthly : plan.annual;
                 const isFree = plan.monthly === 0;
@@ -244,81 +250,104 @@ export default function PricingPage() {
                 return (
                   <div
                     key={plan.id}
-                    className={`relative flex flex-col rounded-3xl border bg-surface p-6 shadow-sm sm:p-7 ${
+                    className={`relative flex flex-col justify-between rounded-3xl border bg-surface p-7 shadow-sm transition-all hover:shadow-elevated ${
                       plan.featured
-                        ? 'border-[var(--brand)] shadow-elevated lg:-mt-3 lg:pt-9'
+                        ? 'border-violet-500 ring-2 ring-violet-500/30 dark:ring-violet-500/40 shadow-lg'
                         : 'border-surface-border'
                     }`}
                   >
-                    {/* The badge sits in the border, centred, so it cannot land on the plan name */}
                     {plan.featured && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand-gradient px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md">
-                        Most popular
+                      <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-md">
+                        Most Popular
                       </span>
                     )}
 
-                    <div>
-                      <h2 className="text-lg font-black tracking-tight">{plan.name}</h2>
-                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                        {plan.tagline}
-                      </p>
-                    </div>
+                    <div className="space-y-5">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <h2 className="text-xl font-black text-foreground">{plan.name}</h2>
+                          {plan.featured && (
+                            <span className="w-7 h-7 rounded-lg bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                              <Crown className="w-4 h-4" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed min-h-[32px]">
+                          {plan.tagline}
+                        </p>
+                      </div>
 
-                    <div className="mt-6 flex items-baseline gap-1.5">
-                      <span className="font-mono text-4xl font-black tracking-tight">
-                        {isFree ? 'Free' : `$${price}`}
-                      </span>
-                      {!isFree && (
-                        <span className="text-sm font-medium text-muted-foreground">
-                          /{cycle === 'monthly' ? 'mo' : 'yr'}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1.5 min-h-[1.25rem] text-xs text-muted-foreground">
-                      {isFree
-                        ? 'Free forever, no card required'
-                        : cycle === 'annual'
-                          ? `Billed once a year — about $${(plan.annual / 12).toFixed(2)} a month`
-                          : 'Billed monthly, cancel any time'}
-                    </p>
-
-                    <Link
-                      href={
-                        isFree ? plan.href : `${plan.href}?plan=${plan.id}&cycle=${cycle}`
-                      }
-                      className={`mt-6 flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition-all ${
-                        plan.featured
-                          ? 'bg-brand-gradient text-white shadow-lg shadow-indigo-500/25 hover:opacity-90'
-                          : 'border border-surface-border bg-surface-subtle text-foreground hover:bg-surface-hover'
-                      }`}
-                    >
-                      <span>{plan.cta}</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-
-                    <ul className="mt-7 space-y-3 border-t border-surface-border pt-6">
-                      {plan.highlights.map((item) => (
-                        <li key={item} className="flex items-start gap-2.5 text-sm">
-                          <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                            <Check className="h-3.5 w-3.5" />
+                      {/* Price Section */}
+                      <div className="p-4 rounded-2xl bg-surface-subtle border border-surface-border">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-mono text-3xl sm:text-4xl font-black text-foreground">
+                            {isFree ? 'Free' : `$${price}`}
                           </span>
-                          <span className="leading-relaxed text-foreground">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                          {!isFree && (
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              /{cycle === 'monthly' ? 'month' : 'year'}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {isFree
+                            ? 'No credit card required'
+                            : cycle === 'annual'
+                            ? `Billed annually (~$${(plan.annual / 12).toFixed(2)}/mo)`
+                            : 'Billed monthly, cancel anytime'}
+                        </p>
+                      </div>
+
+                      {/* Highlights */}
+                      <div className="space-y-3 pt-2">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Included Features:
+                        </p>
+                        <ul className="space-y-2.5">
+                          {plan.highlights.map((item) => (
+                            <li key={item} className="flex items-start gap-2.5 text-xs text-foreground">
+                              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                                <Check className="h-3 w-3" />
+                              </span>
+                              <span className="leading-tight">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* CTA Button Aligned to Bottom */}
+                    <div className="mt-8 pt-4 border-t border-surface-border">
+                      <Link
+                        href={isFree ? plan.href : `${plan.href}?plan=${plan.id}&cycle=${cycle}`}
+                        className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 px-4 text-xs font-bold uppercase tracking-wider transition-all shadow-sm ${
+                          plan.featured
+                            ? 'bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 text-white shadow-violet-500/25 hover:opacity-90'
+                            : 'border border-surface-border bg-surface-subtle text-foreground hover:bg-surface-hover'
+                        }`}
+                      >
+                        <span>{plan.cta}</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <CreditCard className="h-3.5 w-3.5" />
-                Cards and bank transfer via Flutterwave
+            {/* Payment Methods Trust Bar */}
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-violet-500" />
+                <span>Credit / Debit cards & Bank Transfers via Flutterwave</span>
               </span>
-              <span className="flex items-center gap-1.5">
-                <Coins className="h-3.5 w-3.5" />
-                USDT, BTC, ETH, SOL and TON via Cryptomus
+              <span className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-emerald-500" />
+                <span>USDT, BTC, ETH, SOL, TON via Cryptomus</span>
+              </span>
+              <span className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-blue-500" />
+                <span>Instant Automatic Activation</span>
               </span>
             </div>
           </div>
@@ -330,29 +359,28 @@ export default function PricingPage() {
         <section className="border-b border-surface-border bg-surface-subtle/40">
           <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
             <div className="max-w-2xl">
-              <h2 className="text-3xl font-black tracking-tight sm:text-4xl">
-                Everything, side by side
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Full Plan Feature Comparison
               </h2>
-              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                The full breakdown, so you can see exactly where the paid line sits.
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Detailed side-by-side view of all features, limits, and capabilities.
               </p>
             </div>
 
-            {/* Scrolls inside itself on narrow screens rather than pushing the page sideways */}
-            <div className="mt-10 overflow-x-auto rounded-2xl border border-surface-border bg-surface shadow-sm">
+            <div className="mt-8 overflow-x-auto rounded-2xl border border-surface-border bg-surface shadow-sm">
               <table className="w-full min-w-[640px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-surface-border bg-surface-subtle">
-                    <th scope="col" className="px-5 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <th scope="col" className="w-2/5 px-6 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       Feature
                     </th>
                     {PLANS.map((plan) => (
                       <th
                         key={plan.id}
                         scope="col"
-                        className="w-[140px] px-5 py-4 text-center text-xs font-bold uppercase tracking-wider"
+                        className="w-1/5 px-5 py-4 text-center text-xs font-bold uppercase tracking-wider"
                       >
-                        <span className={plan.featured ? 'text-[color:var(--brand)]' : 'text-muted-foreground'}>
+                        <span className={plan.featured ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground'}>
                           {plan.name}
                         </span>
                       </th>
@@ -360,14 +388,14 @@ export default function PricingPage() {
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-surface-border">
                   {COMPARISON.map((group) => (
                     <Fragment key={group.section}>
-                      <tr className="border-b border-surface-border bg-surface-subtle/60">
+                      <tr className="bg-surface-subtle/80">
                         <th
                           scope="colgroup"
                           colSpan={4}
-                          className="px-5 py-2.5 text-left text-[11px] font-black uppercase tracking-wider text-foreground"
+                          className="px-6 py-2.5 text-left text-xs font-black uppercase tracking-wider text-foreground"
                         >
                           {group.section}
                         </th>
@@ -376,18 +404,18 @@ export default function PricingPage() {
                       {group.rows.map((row) => (
                         <tr
                           key={`${group.section}-${row.label}`}
-                          className="border-b border-surface-border last:border-0"
+                          className="hover:bg-surface-subtle/30 transition-colors"
                         >
                           <th
                             scope="row"
-                            className="px-5 py-3.5 text-left text-sm font-medium text-foreground"
+                            className="px-6 py-3.5 text-left text-xs font-medium text-foreground font-sans"
                           >
                             {row.label}
                           </th>
                           <td className="px-5 py-3.5 text-center">
                             <Cell value={row.free} />
                           </td>
-                          <td className="bg-[var(--brand-soft)] px-5 py-3.5 text-center">
+                          <td className="bg-violet-500/5 px-5 py-3.5 text-center">
                             <Cell value={row.pro} />
                           </td>
                           <td className="px-5 py-3.5 text-center">
@@ -409,24 +437,20 @@ export default function PricingPage() {
         <section className="border-b border-surface-border">
           <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
             <div className="max-w-2xl">
-              <h2 className="text-3xl font-black tracking-tight sm:text-4xl">Questions</h2>
-              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                Anything else, the{' '}
-                <Link href="/support" className="font-semibold text-[color:var(--brand)] underline underline-offset-4">
-                  support desk
-                </Link>{' '}
-                answers in a few minutes.
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Frequently Asked Questions</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Got a question? Our support desk is always ready to help.
               </p>
             </div>
 
-            <dl className="mt-10 grid gap-5 md:grid-cols-2">
+            <dl className="mt-8 grid gap-5 md:grid-cols-2">
               {FAQS.map((faq) => (
                 <div
                   key={faq.q}
-                  className="rounded-2xl border border-surface-border bg-surface p-6 shadow-sm"
+                  className="rounded-2xl border border-surface-border bg-surface p-6 shadow-sm space-y-2"
                 >
                   <dt className="text-sm font-bold text-foreground">{faq.q}</dt>
-                  <dd className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{faq.a}</dd>
+                  <dd className="text-xs leading-relaxed text-muted-foreground">{faq.a}</dd>
                 </div>
               ))}
             </dl>
@@ -445,29 +469,28 @@ export default function PricingPage() {
                 aria-hidden="true"
               />
 
-              <div className="relative mx-auto max-w-xl">
-                <Crown className="mx-auto h-8 w-8 text-[color:var(--brand)]" />
-                <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
-                  Try it on tonight&apos;s slip
+              <div className="relative mx-auto max-w-xl space-y-4">
+                <Crown className="mx-auto h-8 w-8 text-violet-500" />
+                <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                  Ready to track tonight&apos;s matches?
                 </h2>
-                <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                  The free plan needs no card. If it earns a place on your second screen, upgrading
-                  takes about a minute.
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Get started with free tracking in seconds, or activate Pro for unlimited live slips.
                 </p>
 
-                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <div className="pt-2 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Link
                     href="/live"
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-gradient px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-opacity hover:opacity-90 sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-violet-500/25 transition-opacity hover:opacity-90 sm:w-auto"
                   >
-                    <span>Track a slip free</span>
+                    <span>Track Free</span>
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
                     href="/pro?plan=pro&cycle=monthly"
-                    className="flex w-full items-center justify-center rounded-2xl border border-surface-border bg-surface-subtle px-6 py-3.5 text-sm font-bold text-foreground transition-colors hover:bg-surface-hover sm:w-auto"
+                    className="flex w-full items-center justify-center rounded-xl border border-surface-border bg-surface-subtle px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-surface-hover sm:w-auto"
                   >
-                    Go straight to Pro
+                    Upgrade to Pro
                   </Link>
                 </div>
               </div>

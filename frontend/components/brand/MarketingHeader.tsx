@@ -7,6 +7,7 @@ import { Menu, X, Radio, ArrowRight } from 'lucide-react';
 import { Logo } from './Logo';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
+import { PlanBadge } from '@/components/brand/PlanBadge';
 
 const NAV_LINKS = [
   { href: '/live', label: 'Live Scores' },
@@ -64,12 +65,15 @@ export function MarketingHeader() {
         <div className="hidden items-center gap-2 md:flex">
           <ThemeToggle />
           {user ? (
-            <Link
-              href="/account"
-              className="rounded-xl border border-surface-border bg-surface-subtle px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover"
-            >
-              My account
-            </Link>
+            <div className="flex items-center gap-2">
+              <PlanBadge plan={user.plan} size="sm" />
+              <Link
+                href="/account"
+                className="rounded-xl border border-surface-border bg-surface-subtle px-3 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-hover"
+              >
+                My account
+              </Link>
+            </div>
           ) : (
             <Link
               href="/auth/login"

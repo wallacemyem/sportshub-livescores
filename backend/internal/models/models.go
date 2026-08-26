@@ -193,17 +193,21 @@ type BetSlip struct {
 type UserPlan string
 
 const (
-	PlanFree UserPlan = "free"
-	PlanPro  UserPlan = "pro"
+	PlanFree  UserPlan = "free"
+	PlanPro   UserPlan = "pro"
+	PlanElite UserPlan = "elite"
 )
 
 type User struct {
-	ID         string     `json:"id"`
-	Email      string     `json:"email"`
-	Name       string     `json:"name"`
-	Plan       UserPlan   `json:"plan"`
-	PlanExpiry *time.Time `json:"plan_expiry,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID           string     `json:"id"`
+	Email        string     `json:"email"`
+	Name         string     `json:"name"`
+	PasswordHash string     `json:"-"`
+	Role         string     `json:"role"` // "admin", "user"
+	IsAdmin      bool       `json:"is_admin"`
+	Plan         UserPlan   `json:"plan"`
+	PlanExpiry   *time.Time `json:"plan_expiry,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
 
 	// Operational attributes, surfaced in the admin console. Status gates
 	// sign-in; the rest are for segmenting and for support context.
@@ -211,6 +215,22 @@ type User struct {
 	Country      string     `json:"country"`
 	SignupSource string     `json:"signup_source"`
 	LastSeenAt   time.Time  `json:"last_seen_at"`
+}
+
+type RegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type AuthResponse struct {
+	Token string `json:"token"`
+	User  *User  `json:"user"`
 }
 
 type PaymentGateway string

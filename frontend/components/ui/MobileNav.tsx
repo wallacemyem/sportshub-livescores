@@ -12,10 +12,14 @@ import {
   User,
   Server,
   Home,
+  Shield,
+  Gem,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/context/AuthContext';
+import { getPlanConfig } from '@/components/brand/PlanBadge';
 
-type NavKey = 'scores' | 'live' | 'blog' | 'support' | 'pro' | 'account' | 'admin';
+type NavKey = 'scores' | 'live' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
 
 interface MobileNavProps {
   onOpenProModal?: () => void;
@@ -30,6 +34,7 @@ interface MobileNavProps {
 /** Resolve the highlighted item from the route when the page does not pin one. */
 function resolveActive(pathname: string, activeNav?: NavKey): NavKey {
   if (activeNav) return activeNav;
+  if (pathname.startsWith('/account/plan')) return 'plan';
   if (pathname.startsWith('/pro') || pathname.startsWith('/pricing')) return 'pro';
   if (pathname.startsWith('/support')) return 'support';
   if (pathname.startsWith('/account') || pathname.startsWith('/auth')) return 'account';
@@ -46,8 +51,12 @@ export function MobileNav({
   liveCount = 0,
 }: MobileNavProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const currentActive = resolveActive(pathname, activeNav);
   const isTrackerPage = pathname === '/live';
+
+  const planConfig = getPlanConfig(user?.plan);
+  const PlanIcon = planConfig.icon;
 
   // On the tracker itself these switch the feed filter in place instead of navigating.
   const handleScoresClick = (e: React.MouseEvent) => {
@@ -68,8 +77,6 @@ export function MobileNav({
     <>
       {/* ===================================================================== */}
       {/* 1. MOBILE: floating glass dock (< md)                                  */}
-      {/*    Five items only - six could not fit a 360px viewport without the    */}
-      {/*    labels colliding. Blog and Admin live in the header/side dock.      */}
       {/* ===================================================================== */}
       <nav
         aria-label="Primary"
@@ -134,18 +141,20 @@ export function MobileNav({
               </Link>
             )}
 
-            {/* Pro */}
+            {/* Plan with Dynamic Icon */}
             <Link
-              href="/pricing"
-              aria-current={currentActive === 'pro' ? 'page' : undefined}
+              href="/account/plan"
+              aria-current={currentActive === 'plan' || currentActive === 'pro' ? 'page' : undefined}
               className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-0.5 transition-colors duration-200 ${
-                currentActive === 'pro'
-                  ? 'bg-white/90 dark:bg-white/15 text-violet-600 dark:text-violet-400 shadow-sm'
-                  : 'text-violet-600 dark:text-violet-400 active:bg-white/50 dark:active:bg-white/10'
+                currentActive === 'plan' || currentActive === 'pro'
+                  ? 'bg-white/90 dark:bg-white/15 shadow-sm'
+                  : 'active:bg-white/50 dark:active:bg-white/10'
               }`}
             >
-              <Crown className="w-[18px] h-[18px] shrink-0" />
-              <span className="text-[10px] font-bold leading-none">Pro</span>
+              <PlanIcon className={`w-[18px] h-[18px] shrink-0 ${planConfig.iconClass}`} />
+              <span className={`text-[10px] font-bold leading-none capitalize ${planConfig.textClass}`}>
+                {planConfig.name}
+              </span>
             </Link>
 
             {/* Account */}
@@ -167,7 +176,6 @@ export function MobileNav({
 
       {/* ===================================================================== */}
       {/* 2. DESKTOP: floating glass side dock (>= md)                           */}
-      {/*    Pages reserve md:pl-20 of gutter so nothing slides underneath.      */}
       {/* ===================================================================== */}
       <aside
         aria-label="Primary"
@@ -211,14 +219,17 @@ export function MobileNav({
             icon={Headphones}
             isActive={currentActive === 'support'}
           />
+          
+          {/* Plan with Dynamic Icon and Current Plan Tooltip */}
           <DockLink
-            href="/pricing"
-            label="Plans and pricing"
-            icon={Crown}
-            isActive={currentActive === 'pro'}
-            activeClass="bg-violet-600 text-white shadow-md shadow-violet-500/30"
-            idleIconClass="text-violet-600 dark:text-violet-400"
+            href="/account/plan"
+            label={`Plan: ${planConfig.name} (Change)`}
+            icon={PlanIcon}
+            isActive={currentActive === 'plan' || currentActive === 'pro'}
+            activeClass="bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-500/30"
+            idleIconClass={planConfig.iconClass}
           />
+
           <DockLink
             href="/admin"
             label="Admin console"
@@ -245,8 +256,7 @@ export function MobileNav({
 }
 
 /* ------------------------------------------------------------------------- */
-/* Dock primitives. The tooltip markup lives in one place here rather than     */
-/* being repeated per item, which is what let labels drift out of sync before. */
+/* Dock primitives                                                           */
 /* ------------------------------------------------------------------------- */
 
 const DOCK_IDLE =
@@ -280,25 +290,25 @@ function DockLink({
   badge?: number;
 }) {
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      title={label}
-      aria-current={isActive ? 'page' : undefined}
-      className={`group relative flex items-center justify-center rounded-xl p-2.5 transition-all duration-200 ${
-        isActive ? activeClass : DOCK_IDLE
-      }`}
-    >
-      <span className="relative">
-        <Icon className={`h-5 w-5 ${isActive ? '' : idleIconClass}`} />
-        {badge > 0 && !isActive && (
-          <span className="absolute -right-2 -top-1.5 min-w-[15px] rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-[15px] text-white">
+    <div className="relative group flex items-center justify-center">
+      <Link
+        href={href}
+        onClick={onClick}
+        aria-label={label}
+        aria-current={isActive ? 'page' : undefined}
+        className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 active:scale-95 ${
+          isActive ? activeClass : DOCK_IDLE
+        }`}
+      >
+        <Icon className={`h-5 w-5 shrink-0 ${isActive ? '' : idleIconClass}`} />
+        {badge > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
-      </span>
+      </Link>
       <DockTooltip label={label} />
-    </Link>
+    </div>
   );
 }
 
@@ -312,14 +322,16 @@ function DockButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      className={`group relative flex cursor-pointer items-center justify-center rounded-xl p-2.5 transition-all duration-200 ${DOCK_IDLE}`}
-    >
-      <Icon className="h-5 w-5" />
+    <div className="relative group flex items-center justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-200 active:scale-95 cursor-pointer ${DOCK_IDLE}`}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+      </button>
       <DockTooltip label={label} />
-    </button>
+    </div>
   );
 }

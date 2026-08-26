@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { MarketingHeader } from '@/components/brand/MarketingHeader';
 import { MarketingFooter } from '@/components/brand/MarketingFooter';
+import { BookmakerIcon } from '@/components/brand/BookmakerLogo';
 
 export const metadata: Metadata = {
   title: 'SlipRadar | Track every bet slip live',
@@ -146,21 +147,30 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Bookmaker strip */}
+            {/* Bookmaker Brand Showcase */}
             <div className="mt-16">
               <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Booking codes decoded from
+                Instant Automatic Decoding Across Major Sportsbooks
               </p>
-              <ul className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-                {BOOKMAKERS.map((book) => (
-                  <li
-                    key={book}
-                    className="rounded-xl border border-surface-border bg-surface px-3.5 py-2 text-sm font-semibold text-muted-foreground shadow-sm"
+              <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                {[
+                  { id: 'sportybet', name: 'SportyBet', format: '6-8 Chars', badge: 'Auto-Sync' },
+                  { id: 'bet9ja', name: 'Bet9ja', format: 'Alphanumeric', badge: 'Fast Parse' },
+                  { id: '1xbet', name: '1xBet', format: 'Slip ID', badge: 'Multi-Leg' },
+                  { id: 'betking', name: 'BetKing', format: 'Code Zone', badge: 'Realtime' },
+                  { id: 'msport', name: 'MSport', format: 'Auto Format', badge: 'Live Settle' },
+                  { id: 'mozzartbet', name: 'MozzartBet', format: 'Multi-Match', badge: 'Instant' },
+                ].map((book) => (
+                  <div
+                    key={book.id}
+                    className="group relative flex flex-col items-center justify-center p-3.5 rounded-2xl border border-surface-border bg-surface hover:border-violet-500/50 hover:shadow-lg transition-all"
                   >
-                    {book}
-                  </li>
+                    <BookmakerIcon id={book.id} className="w-8 h-8 rounded-lg shadow-sm group-hover:scale-110 transition-transform" />
+                    <span className="mt-2 text-xs font-bold text-foreground">{book.name}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono">{book.format}</span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           </div>
         </section>

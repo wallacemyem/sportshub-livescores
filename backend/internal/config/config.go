@@ -36,7 +36,7 @@ func LoadConfig() *Config {
 	redisDBStr := getEnv("REDIS_DB", "0")
 	redisDB, _ := strconv.Atoi(redisDBStr)
 
-	simEnabledStr := getEnv("SIMULATION_ENABLED", "true")
+	simEnabledStr := getEnv("SIMULATION_ENABLED", "false")
 	simEnabled := simEnabledStr == "true" || simEnabledStr == "1"
 
 	return &Config{
@@ -45,12 +45,12 @@ func LoadConfig() *Config {
 		RedisAddr:             redisAddr,
 		RedisPassword:         redisPass,
 		RedisDB:               redisDB,
-		SupabaseURL:           getEnv("SUPABASE_URL", "https://sports-livescores.supabase.co"),
-		SupabaseAnonKey:       getEnv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3J0cyIsImV4cCI6MTk4MzIzODQ0M30.sports_anon_token_18443"),
-		SupabaseServiceKey:    getEnv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb3J0cyIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.sports_service_token_18443"),
+		SupabaseURL:           getEnv("SUPABASE_URL", "https://slipradar.wallacecloud.online"),
+		SupabaseAnonKey:       getEnv("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg3NzMxODMyLCJleHAiOjE5NDU0MTE4MzJ9.1hdl-Y_PDMuAfAijUMcugBqUPTlp0CyPstpl0gDGmPw"),
+		SupabaseServiceKey:    getEnv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODc3MzE4MzIsImV4cCI6MTk0NTQxMTgzMn0.JLb-XXh43TejaYqVgdEyOMpSae738CAY0E5qyw5xmpY"),
 		SupabaseStorageBucket: getEnv("SUPABASE_STORAGE_BUCKET", "sports-assets"),
 		ESPNAPIBaseURL:        getEnv("ESPN_API_BASE_URL", "https://site.api.espn.com/apis/site/v2/sports"),
-		OddsAPIKey:            getEnv("ODDS_API_KEY", "demo_pro_key_sports_18443"),
+		OddsAPIKey:            getEnv("ODDS_API_KEY", "68492c40a7eb4d001ed4899b75df648d"),
 		OddsAPIBaseURL:        getEnv("ODDS_API_BASE_URL", "https://api.the-odds-api.com/v4"),
 		FlutterwaveSecret:     getEnv("FLW_SECRET_KEY", "FLWSECK_TEST_3847291847293847"),
 		FlutterwaveHash:       getEnv("FLW_SECRET_HASH", "flw_sports_secret_hash_token_18443"),
@@ -58,7 +58,7 @@ func LoadConfig() *Config {
 		CryptomusAPIKey:       getEnv("CRYPTOMUS_PAYMENT_KEY", "cryptomus_payment_api_key_secure_18443"),
 		FrontendURL:           getEnv("FRONTEND_URL", "http://localhost:17080"),
 		AdminURL:              getEnv("ADMIN_URL", "http://localhost:19080"),
-		Environment:           getEnv("ENVIRONMENT", "development"),
+		Environment:           getEnv("ENVIRONMENT", "production"),
 		SimulationEnabled:     simEnabled,
 	}
 }

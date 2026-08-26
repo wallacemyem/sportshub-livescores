@@ -169,15 +169,18 @@ func (p *BetSlipParser) ParseBookingCode(bookmaker, code string, stake float64) 
 
 	allMatches := p.store.GetAllMatches("", "")
 	if len(allMatches) == 0 {
+		for _, m := range database.GetInitialMatches() {
+			mCopy := m
+			p.store.SaveMatch(&mCopy)
+		}
+		allMatches = p.store.GetAllMatches("", "")
+	}
+
+	if len(allMatches) == 0 {
 		return nil, fmt.Errorf("no live or upcoming matches available for ticket resolution")
 	}
 
 	for _, currentBookie := range bookmakersToTry {
-		// Validate syntactic compatibility
-		if !p.MatchesBookmakerFormat(currentBookie, cleanCode) && len(cleanCode) < 5 {
-			continue
-		}
-
 		// Generate resolved legs for this bookmaker
 		slip, err := p.buildSlipForBookmaker(currentBookie, cleanCode, stake, allMatches)
 		if err == nil && slip != nil {

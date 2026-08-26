@@ -7,22 +7,21 @@ import {
   Crown,
   ShieldCheck,
   Mail,
-  Calendar,
   LogOut,
   ArrowRight,
   ExternalLink,
-  Zap,
-  Ticket,
-  Headphones,
   Sliders,
+  Sparkles,
+  CreditCard,
 } from 'lucide-react';
 import Link from 'next/link';
 import { MobileNav } from '@/components/ui/MobileNav';
 import { AppPageHeader } from '@/components/ui/AppPageHeader';
 import { getAdminUrl } from '@/lib/api';
+import { PlanBadge, PlanIcon, getPlanConfig } from '@/components/brand/PlanBadge';
 
 export default function AccountPage() {
-  const { user, signOut, setProStatus } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
 
   const handleSignOut = async () => {
@@ -31,6 +30,8 @@ export default function AccountPage() {
   };
 
   const adminUrl = getAdminUrl();
+  const isAdmin = user?.is_admin === true || user?.role === 'admin';
+  const planConfig = getPlanConfig(user?.plan);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans pb-24 md:pb-12">
@@ -50,7 +51,7 @@ export default function AccountPage() {
             <div className="bg-surface border border-surface-border rounded-3xl p-6 sm:p-8 shadow-sm relative overflow-hidden">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-blue-500/20 shrink-0 overflow-hidden">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white flex items-center justify-center text-xl font-bold shadow-lg shadow-violet-500/20 shrink-0 overflow-hidden">
                     {user.avatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
@@ -61,16 +62,7 @@ export default function AccountPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h2 className="text-xl font-bold text-foreground">{user.name}</h2>
-                      {user.plan === 'pro' ? (
-                        <span className="text-[10px] font-bold font-mono text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-500/15 border border-violet-300 dark:border-violet-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Crown className="w-3 h-3 text-violet-500" />
-                          <span>PRO</span>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold font-mono text-muted-foreground bg-surface-subtle border border-surface-border px-2 py-0.5 rounded-full">
-                          FREE FAN TIER
-                        </span>
-                      )}
+                      <PlanBadge plan={user.plan} size="xs" />
                     </div>
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Mail className="w-3.5 h-3.5" />
@@ -91,93 +83,86 @@ export default function AccountPage() {
 
             {/* Subscription & Features Card */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Membership Status */}
-              <div className="bg-surface border border-surface-border rounded-2xl p-6 space-y-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Crown className="w-4 h-4 text-violet-500" />
-                    <h3 className="text-sm font-bold text-foreground">Membership Tier</h3>
+              {/* Membership Status & Change Plan Link */}
+              <div className="bg-surface border border-surface-border rounded-2xl p-6 space-y-4 shadow-sm flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <PlanIcon plan={user.plan} className="w-4 h-4" />
+                      <h3 className="text-sm font-bold text-foreground">Membership Tier</h3>
+                    </div>
+                    <PlanBadge plan={user.plan} size="xs" />
                   </div>
-                  <span className="text-[10px] font-mono uppercase font-bold text-muted-foreground">
-                    Status: {user.plan.toUpperCase()}
-                  </span>
+
+                  <div className="p-4 bg-surface-subtle border border-surface-border rounded-xl space-y-2.5">
+                    <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                      <span>Active {planConfig.name} Plan</span>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {planConfig.tagline}
+                    </p>
+                  </div>
                 </div>
 
-                {user.plan === 'pro' ? (
-                  <div className="p-4 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-xl space-y-2">
-                    <p className="text-xs font-bold text-violet-800 dark:text-violet-300 flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-violet-500" />
-                      <span>Pro active</span>
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Unlimited tracked slips, live cash-out value, and the pop-out and lock screen scoreboards.
-                    </p>
-                    <button
-                      onClick={() => setProStatus(false)}
-                      className="text-[10px] text-muted-foreground hover:text-red-500 underline pt-1 cursor-pointer"
-                    >
-                      (Demo) Revert to Free Plan
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-surface-subtle border border-surface-border rounded-xl space-y-3">
-                    <div>
-                      <p className="text-xs font-bold text-foreground">Upgrade to SlipRadar Pro</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Unlock bookmaker odds comparison, zero-delay live scores, and multi-bookmaker ticket loopers.
-                      </p>
-                    </div>
-                    <Link
-                      href="/pro?plan=pro&cycle=monthly"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow-sm hover:opacity-90 transition-all"
-                    >
-                      <Crown className="w-3.5 h-3.5" />
-                      <span>Upgrade to Pro ($9/mo)</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                )}
+                <div className="pt-2">
+                  <Link
+                    href="/account/plan"
+                    className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md shadow-violet-500/20 hover:opacity-95 transition-all group"
+                  >
+                    <span className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      <span>Change Plan & Subscriptions</span>
+                    </span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                </div>
               </div>
 
-              {/* Quick Launch & Admin Access */}
-              <div className="bg-surface border border-surface-border rounded-2xl p-6 space-y-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Sliders className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-sm font-bold text-foreground">Administrative & Support Hub</h3>
-                </div>
+              {/* Support & Hub */}
+              <div className="bg-surface border border-surface-border rounded-2xl p-6 space-y-4 shadow-sm flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-blue-500" />
+                    <h3 className="text-sm font-bold text-foreground">Navigation & Support</h3>
+                  </div>
 
-                <div className="space-y-2.5">
-                  <a
-                    href={adminUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-3 bg-surface-subtle hover:bg-surface-hover border border-surface-border rounded-xl flex items-center justify-between transition-all group"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-foreground group-hover:text-blue-500 transition-colors">
-                        Admin Orchestrator Dashboard
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-mono">
-                        Port 19080 &bull; Telemetry, Webhooks & Quotas
-                      </p>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
-                  </a>
+                  <div className="space-y-2.5">
+                    <Link
+                      href="/support"
+                      className="p-3 bg-surface-subtle hover:bg-surface-hover border border-surface-border rounded-xl flex items-center justify-between transition-all group"
+                    >
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-foreground group-hover:text-blue-500 transition-colors">
+                          Customer Helpdesk & Inquiries
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-mono">
+                          Submit tickets, report booking code issues & FAQs
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
+                    </Link>
 
-                  <Link
-                    href="/support"
-                    className="p-3 bg-surface-subtle hover:bg-surface-hover border border-surface-border rounded-xl flex items-center justify-between transition-all group"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-foreground group-hover:text-blue-500 transition-colors">
-                        Customer Helpdesk & Inquiries
-                      </p>
-                      <p className="text-[10px] text-muted-foreground font-mono">
-                        View active support tickets & FAQs
-                      </p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
-                  </Link>
+                    {isAdmin && (
+                      <a
+                        href={adminUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3 bg-surface-subtle hover:bg-surface-hover border border-violet-500/40 rounded-xl flex items-center justify-between transition-all group"
+                      >
+                        <div className="space-y-0.5">
+                          <p className="text-xs font-bold text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Admin Orchestrator Dashboard</span>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            Port 19080 &bull; Mission Control Telemetry
+                          </p>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-violet-500 transition-colors" />
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -195,7 +180,7 @@ export default function AccountPage() {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/auth/login"
-                className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                className="w-full sm:w-auto px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
               >
                 Sign In
               </Link>

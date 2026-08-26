@@ -28,6 +28,7 @@ import confetti from 'canvas-confetti';
 import { MobileNav } from '@/components/ui/MobileNav';
 import { AppPageHeader } from '@/components/ui/AppPageHeader';
 import { getApiBaseUrl } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 interface FAQItem {
   id: string;
@@ -114,6 +115,7 @@ const DEPARTMENTS = [
 ];
 
 export default function SupportPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'faqs' | 'ticket' | 'inquiries'>('faqs');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState('all');
@@ -179,9 +181,9 @@ export default function SupportPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: 'usr_fan_01',
-          user_name: 'Alex Mercer',
-          user_email: 'alex.mercer@sportsfan.io',
+          user_id: user?.id || 'usr_guest',
+          user_name: user?.name || 'Customer',
+          user_email: user?.email || 'customer@slipradar.com',
           subject,
           category,
           priority,
@@ -228,7 +230,7 @@ export default function SupportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender: 'user',
-          sender_name: 'Alex Mercer',
+          sender_name: user?.name || 'Customer',
           message: text,
         }),
       });

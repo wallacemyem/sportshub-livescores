@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/context/AuthContext';
+import { PlanBadge } from '@/components/brand/PlanBadge';
 
 interface AppPageHeaderProps {
   /** Page icon, rendered inside the tinted square. */
@@ -14,20 +16,16 @@ interface AppPageHeaderProps {
   accentClassName?: string;
   /** Where the back arrow goes. Defaults to the live feed. */
   backHref?: string;
+  /** Label for back button. */
   backLabel?: string;
   /** Rendered to the right of the theme toggle. */
   actions?: React.ReactNode;
   /** Set false to drop the built-in theme toggle (e.g. when `actions` supplies one). */
   showThemeToggle?: boolean;
+  /** Set false to drop the plan badge. */
+  showPlanBadge?: boolean;
 }
 
-/**
- * The shared header for the signed-in pages (account, admin, pro, support, blog).
- *
- * Each of those pages had its own hand-rolled copy of this markup, which is how
- * their spacing drifted apart. The min-w-0/truncate chain here is what keeps a
- * long title from pushing the action buttons off the right edge on narrow screens.
- */
 export function AppPageHeader({
   icon: Icon,
   title,
@@ -37,7 +35,10 @@ export function AppPageHeader({
   backLabel = 'Scores',
   actions,
   showThemeToggle = true,
+  showPlanBadge = true,
 }: AppPageHeaderProps) {
+  const { user } = useAuth();
+
   return (
     <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-surface-border bg-surface/90 px-4 py-3 backdrop-blur-md md:pl-20 lg:px-8 xl:px-8">
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -72,6 +73,9 @@ export function AppPageHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        {showPlanBadge && user && (
+          <PlanBadge plan={user.plan} size="xs" />
+        )}
         {showThemeToggle && <ThemeToggle />}
         {actions}
       </div>

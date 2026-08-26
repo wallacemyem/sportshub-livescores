@@ -540,18 +540,11 @@ export default function HomePage() {
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
-                    onClick={handleLoadSampleTicket}
-                    disabled={isImportingSample}
-                    className="flex-1 sm:flex-none px-3 py-1.5 bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 font-bold text-xs rounded-lg transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 shadow-md shadow-violet-500/20"
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    <span>{isImportingSample ? 'Loading…' : 'Try a sample'}</span>
-                  </button>
-                  <button
                     onClick={() => setIsImporterOpen(true)}
-                    className="px-2.5 py-1.5 bg-surface hover:bg-surface-hover border border-surface-border text-foreground font-bold text-xs rounded-lg transition-colors cursor-pointer whitespace-nowrap"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 shadow-md shadow-violet-500/20"
                   >
-                    Add slip
+                    <Ticket className="w-3.5 h-3.5" />
+                    <span>Import Booking Code</span>
                   </button>
                 </div>
               </div>

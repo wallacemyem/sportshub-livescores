@@ -34,6 +34,10 @@ func (h *BetSlipHandler) ImportBetSlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Stake <= 0 {
+		req.Stake = 10.00
+	}
+
 	slip, err := h.parser.ParseBookingCode(req.Bookmaker, req.BookingCode, req.Stake)
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)

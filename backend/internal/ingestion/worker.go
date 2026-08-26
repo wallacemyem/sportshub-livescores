@@ -3,6 +3,7 @@ package ingestion
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +23,7 @@ type IngestionWorker struct {
 	activePollers     int
 	avgLatencyMs      float64
 	broadcastsCount   int
+	espnPollCount     int
 	stopChan          chan struct{}
 }
 
@@ -44,24 +46,29 @@ func NewIngestionWorker(
 		oddsClient:        odds,
 		simulator:         sim,
 		simulationEnabled: simEnabled,
-		activePollers:     4,
-		avgLatencyMs:      12.4,
+		activePollers:     len(ActiveESPNLeagues),
+		avgLatencyMs:      15.0,
 		stopChan:          make(chan struct{}),
 	}
 }
 
 func (w *IngestionWorker) Start(ctx context.Context) {
-	log.Printf("[INGESTION] Starting multi-tier data ingestion workers (Live: 5s, Upcoming: 60s)")
+	log.Printf("[INGESTION] Starting multi-tier data ingestion workers (Real ESPN & Odds Ingestion, Simulation: %v)", w.simulationEnabled)
 
-	// 1. Live Match Poller / Simulator (5-10s interval)
+	// Run initial ingestion immediately
+	go w.pollESPN(ctx)
+	go w.pollOdds(ctx)
+
+	// 1. Live Match Poller / ESPN Ingestion (10s interval)
 	go func() {
-		ticker := time.NewTicker(5 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 
 		for {
 			select {
 			case <-ticker.C:
 				start := time.Now()
+				w.pollESPN(ctx)
 				if w.simulationEnabled {
 					w.simulator.TickLiveMatches(ctx)
 				}
@@ -69,7 +76,7 @@ func (w *IngestionWorker) Start(ctx context.Context) {
 
 				w.mu.Lock()
 				w.avgLatencyMs = float64(elapsed)*0.1 + w.avgLatencyMs*0.9
-				w.broadcastsCount += 3
+				w.broadcastsCount += len(ActiveESPNLeagues)
 				w.mu.Unlock()
 
 			case <-w.stopChan:
@@ -80,7 +87,7 @@ func (w *IngestionWorker) Start(ctx context.Context) {
 		}
 	}()
 
-	// 2. Upcoming Fixture Poller (60s interval)
+	// 2. Upcoming Fixture & Odds API Poller (60s interval)
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -88,7 +95,7 @@ func (w *IngestionWorker) Start(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				// Poll schedule updates
+				w.pollOdds(ctx)
 			case <-w.stopChan:
 				return
 			case <-ctx.Done():
@@ -96,6 +103,79 @@ func (w *IngestionWorker) Start(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+func (w *IngestionWorker) pollESPN(ctx context.Context) {
+	for _, l := range ActiveESPNLeagues {
+		resp, err := w.espnClient.FetchScoreboard(ctx, l.SportPath, l.LeaguePath)
+		if err != nil {
+			continue
+		}
+
+		w.mu.Lock()
+		w.espnPollCount++
+		w.mu.Unlock()
+
+		for _, evt := range resp.Events {
+			match := ConvertESPNToMatch(evt, l)
+			if match != nil {
+				// Retain existing odds if already present in store
+				if existing, ok := w.store.GetMatchByID(match.ID); ok && existing.Odds != nil && match.Odds == nil {
+					match.Odds = existing.Odds
+				}
+
+				w.store.SaveMatch(match)
+				_ = w.redis.SetLiveMatchState(ctx, match)
+
+				hScore := match.HomeScore
+				aScore := match.AwayScore
+				min := match.Minute
+
+				delta := &models.LiveDelta{
+					Type:      models.DeltaScoreUpdate,
+					MatchID:   match.ID,
+					Sport:     match.Sport,
+					HomeScore: &hScore,
+					AwayScore: &aScore,
+					Minute:    &min,
+					Period:    match.Period,
+					Status:    match.Status,
+					Stats:     &match.Stats,
+					Timestamp: time.Now().UnixMilli(),
+				}
+				_ = w.redis.PublishDelta(ctx, match.ID, match.League.ID, delta)
+			}
+		}
+	}
+}
+
+func (w *IngestionWorker) pollOdds(ctx context.Context) {
+	for _, sportKey := range ActiveOddsSports {
+		oddsMatches, err := w.oddsClient.FetchOdds(ctx, sportKey)
+		if err != nil || len(oddsMatches) == 0 {
+			continue
+		}
+
+		for _, om := range oddsMatches {
+			mOdds := ConvertOddsAPIToMatchOdds(om)
+			if mOdds == nil {
+				continue
+			}
+
+			// Try to match with existing match in store by team names
+			matches := w.store.GetAllMatches("", "")
+			for _, m := range matches {
+				if strings.Contains(strings.ToLower(m.HomeTeam.Name), strings.ToLower(om.HomeTeam)) ||
+					strings.Contains(strings.ToLower(om.HomeTeam), strings.ToLower(m.HomeTeam.Name)) ||
+					strings.Contains(strings.ToLower(m.AwayTeam.Name), strings.ToLower(om.AwayTeam)) ||
+					strings.Contains(strings.ToLower(om.AwayTeam), strings.ToLower(m.AwayTeam.Name)) {
+					mOdds.MatchID = m.ID
+					w.store.UpdateOdds(m.ID, mOdds)
+					break
+				}
+			}
+		}
+	}
 }
 
 func (w *IngestionWorker) Stop() {
@@ -115,17 +195,17 @@ func (w *IngestionWorker) GetTelemetry(ctx context.Context, connectedClients int
 
 	return models.IngestionMetrics{
 		ActivePollers:         w.activePollers,
-		ESPNPollingRateSec:    5,
-		OddsAPIPollingRateSec: 10,
-		ESPNQuotaUsed:         412,
-		ESPNQuotaLimit:        10000,
+		ESPNPollingRateSec:    10,
+		OddsAPIPollingRateSec: 60,
+		ESPNQuotaUsed:         w.espnPollCount,
+		ESPNQuotaLimit:        50000,
 		OddsAPIQuotaUsed:      oddsUsed,
 		OddsAPIQuotaLimit:     oddsTotal,
 		AvgIngestionLatencyMs: w.avgLatencyMs,
 		RedisKeysCount:        keysCount,
 		RedisMemoryUsedMB:     memMB,
 		ConnectedClients:      connectedClients,
-		BroadcastsPerMinute:   w.broadcastsCount * 12,
+		BroadcastsPerMinute:   w.broadcastsCount * 6,
 		LastUpdated:           time.Now(),
 	}
 }

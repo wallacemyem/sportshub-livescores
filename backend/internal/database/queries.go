@@ -1,7 +1,9 @@
 package database
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -45,6 +47,15 @@ func NewStore(db *DB) *Store {
 		slipParseMs:    make(map[string]int),
 	}
 
+	// Seed initial matches and odds
+	for _, m := range GetInitialMatches() {
+		mCopy := m
+		store.matches[m.ID] = &mCopy
+		if m.Odds != nil {
+			store.odds[m.ID] = m.Odds
+		}
+	}
+
 	// Seed blog posts
 	for _, p := range GetInitialBlogPosts() {
 		pCopy := p
@@ -52,79 +63,7 @@ func NewStore(db *DB) *Store {
 		store.posts[p.Slug] = &pCopy
 	}
 
-	// Seed Sample Support Inquiries
-	store.supportTickets["tkt_sup_01"] = &models.SupportTicket{
-		ID:        "tkt_sup_01",
-		UserID:    "usr_pro_01",
-		UserName:  "Alex Mercer",
-		UserEmail: "alex.mercer@example.com",
-		Subject:   "Booking code not resolving on MSport",
-		Category:  "Slip tracking",
-		Priority:  "high",
-		Status:    "in_progress",
-		Messages: []models.SupportTicketMessage{
-			{
-				ID:         "msg_01",
-				Sender:     "user",
-				SenderName: "Alex Mercer",
-				Message:    "My MSport code MS-90441 only shows 3 of the 4 legs on my slip.",
-				CreatedAt:  time.Now().Add(-2 * time.Hour),
-			},
-			{
-				ID:         "msg_02",
-				Sender:     "agent",
-				SenderName: "Support",
-				Message:    "Thanks Alex - checking the parser logs for that code now.",
-				CreatedAt:  time.Now().Add(-1 * time.Hour),
-			},
-		},
-		CreatedAt: time.Now().Add(-2 * time.Hour),
-		UpdatedAt: time.Now().Add(-1 * time.Hour),
-	}
-
-	store.supportTickets["tkt_sup_02"] = &models.SupportTicket{
-		ID:        "tkt_sup_02",
-		UserID:    "usr_free_05",
-		UserName:  "Brian Otieno",
-		UserEmail: "brian.otieno@example.com",
-		Subject:   "Refund for a duplicate charge",
-		Category:  "Billing",
-		Priority:  "medium",
-		Status:    "open",
-		Messages: []models.SupportTicketMessage{
-			{
-				ID:         "msg_03",
-				Sender:     "user",
-				SenderName: "Brian Otieno",
-				Message:    "I was charged twice for the monthly plan this week.",
-				CreatedAt:  time.Now().Add(-24 * time.Hour),
-			},
-			{
-				ID:         "msg_04",
-				Sender:     "agent",
-				SenderName: "Support",
-				Message:    "Thanks for flagging - raising the refund with the gateway now.",
-				CreatedAt:  time.Now().Add(-23 * time.Hour),
-			},
-		},
-		CreatedAt: time.Now().Add(-24 * time.Hour),
-		UpdatedAt: time.Now().Add(-23 * time.Hour),
-	}
-
-	// Seed in-memory store
-	for _, m := range GetInitialMatches() {
-		matchCopy := m
-		store.matches[m.ID] = &matchCopy
-		if len(m.Events) > 0 {
-			store.events[m.ID] = append([]models.MatchEvent{}, m.Events...)
-		}
-		if m.Odds != nil {
-			store.odds[m.ID] = m.Odds
-		}
-	}
-
-	// Seed the accounts, payments and scanned slips the admin console reads.
-	// This supersedes the two-user / one-slip fixture that used to live here.
+	// Seed root system administrator account
 	store.seedAdminPopulation()
 
 	return store
@@ -245,7 +184,91 @@ func (s *Store) GetUser(id string) (*models.User, bool) {
 	defer s.mu.RUnlock()
 
 	u, ok := s.users[id]
-	return u, ok
+	if ok {
+		uCopy := *u
+		return &uCopy, true
+	}
+
+	// Fallback to PostgreSQL
+	if s.db != nil && s.db.Pool != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		var dbUser models.User
+		var plan, status string
+		err := s.db.Pool.QueryRow(ctx, `
+			SELECT id, email, name, password_hash, role, is_admin, plan, plan_expiry, status, country, signup_source, last_seen_at, created_at
+			FROM users WHERE id = $1
+		`, id).Scan(&dbUser.ID, &dbUser.Email, &dbUser.Name, &dbUser.PasswordHash, &dbUser.Role, &dbUser.IsAdmin, &plan, &dbUser.PlanExpiry, &status, &dbUser.Country, &dbUser.SignupSource, &dbUser.LastSeenAt, &dbUser.CreatedAt)
+		if err == nil {
+			dbUser.Plan = models.UserPlan(plan)
+			dbUser.Status = models.UserStatus(status)
+			return &dbUser, true
+		}
+	}
+
+	return nil, false
+}
+
+func (s *Store) GetUserByEmail(email string) (*models.User, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	cleanEmail := strings.TrimSpace(strings.ToLower(email))
+	for _, u := range s.users {
+		if strings.EqualFold(u.Email, cleanEmail) {
+			uCopy := *u
+			return &uCopy, true
+		}
+	}
+
+	// Fallback to PostgreSQL
+	if s.db != nil && s.db.Pool != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		var dbUser models.User
+		var plan, status string
+		err := s.db.Pool.QueryRow(ctx, `
+			SELECT id, email, name, password_hash, role, is_admin, plan, plan_expiry, status, country, signup_source, last_seen_at, created_at
+			FROM users WHERE LOWER(email) = LOWER($1)
+		`, cleanEmail).Scan(&dbUser.ID, &dbUser.Email, &dbUser.Name, &dbUser.PasswordHash, &dbUser.Role, &dbUser.IsAdmin, &plan, &dbUser.PlanExpiry, &status, &dbUser.Country, &dbUser.SignupSource, &dbUser.LastSeenAt, &dbUser.CreatedAt)
+		if err == nil {
+			dbUser.Plan = models.UserPlan(plan)
+			dbUser.Status = models.UserStatus(status)
+			return &dbUser, true
+		}
+	}
+
+	return nil, false
+}
+
+func (s *Store) SaveUser(user *models.User) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	userCopy := *user
+	s.users[user.ID] = &userCopy
+
+	if s.db != nil && s.db.Pool != nil {
+		go func(u models.User) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_, _ = s.db.Pool.Exec(ctx, `
+				INSERT INTO users (id, email, name, password_hash, role, is_admin, plan, plan_expiry, status, country, signup_source, last_seen_at, created_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+				ON CONFLICT (id) DO UPDATE SET
+					email = EXCLUDED.email,
+					name = EXCLUDED.name,
+					password_hash = CASE WHEN EXCLUDED.password_hash != '' THEN EXCLUDED.password_hash ELSE users.password_hash END,
+					role = EXCLUDED.role,
+					is_admin = EXCLUDED.is_admin,
+					plan = EXCLUDED.plan,
+					plan_expiry = EXCLUDED.plan_expiry,
+					status = EXCLUDED.status,
+					country = EXCLUDED.country,
+					last_seen_at = EXCLUDED.last_seen_at;
+			`, u.ID, u.Email, u.Name, u.PasswordHash, u.Role, u.IsAdmin, string(u.Plan), u.PlanExpiry, string(u.Status), u.Country, u.SignupSource, u.LastSeenAt, u.CreatedAt)
+		}(*user)
+	}
 }
 
 func (s *Store) UpgradeUserToPro(id string, durationDays int) error {
@@ -256,18 +279,29 @@ func (s *Store) UpgradeUserToPro(id string, durationDays int) error {
 	if u, ok := s.users[id]; ok {
 		u.Plan = models.PlanPro
 		u.PlanExpiry = &expiry
+		if s.db != nil && s.db.Pool != nil {
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				_, _ = s.db.Pool.Exec(ctx, `UPDATE users SET plan = $1, plan_expiry = $2 WHERE id = $3`, string(models.PlanPro), expiry, id)
+			}()
+		}
 		return nil
 	}
 
 	// Create user if not exists
-	s.users[id] = &models.User{
+	newUser := &models.User{
 		ID:         id,
 		Email:      fmt.Sprintf("%s@user.livescores.io", id),
 		Name:       fmt.Sprintf("Pro Subscriber (%s)", id),
+		Role:       "user",
+		IsAdmin:    false,
 		Plan:       models.PlanPro,
 		PlanExpiry: &expiry,
+		Status:     models.UserActive,
 		CreatedAt:  time.Now(),
 	}
+	s.users[id] = newUser
 	return nil
 }
 

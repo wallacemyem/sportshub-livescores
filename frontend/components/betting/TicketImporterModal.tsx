@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { BetSlip } from '@/types';
-import { Ticket, X, Check, Loader2, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
+import { Ticket, X, Check, Loader2, AlertCircle, Zap } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { getApiBaseUrl } from '@/lib/api';
+import { BookmakerIcon } from '@/components/brand/BookmakerLogo';
 
 interface TicketImporterModalProps {
   isOpen: boolean;
@@ -12,19 +13,9 @@ interface TicketImporterModalProps {
   onImportSuccess: (slip: BetSlip) => void;
 }
 
-const SAMPLE_CODES = [
-  { bookmaker: 'sportybet', code: 'BC99214', label: 'BC99214 (SportyBet • 6-8 Alphanumeric)' },
-  { bookmaker: 'bet9ja', code: '557877Y', label: '557877Y (Bet9ja • 6-7 Alphanumeric / B9JA)' },
-  { bookmaker: '1xbet', code: 'DPK3Q', label: 'DPK3Q (1xBet • 5-Char Bet Slip Download)' },
-  { bookmaker: 'betking', code: 'BK-10294', label: 'BK-10294 (BetKing • 5-8 Alphanumeric Code Zone)' },
-  { bookmaker: 'msport', code: 'MS-88192', label: 'MS-88192 (MSport • 6-8 Alphanumeric)' },
-  { bookmaker: 'mozzartbet', code: 'MZ-44912', label: 'MZ-44912 (MozzartBet • Alphanumeric Multi)' },
-];
-
 export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: TicketImporterModalProps) {
   const [bookmaker, setBookmaker] = useState('auto');
-  const [bookingCode, setBookingCode] = useState('BC99214');
-  const [stake, setStake] = useState('50');
+  const [bookingCode, setBookingCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [scanStep, setScanStep] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +58,6 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
         body: JSON.stringify({
           bookmaker,
           booking_code: cleanCode,
-          stake: parseFloat(stake) || 50,
         }),
       });
 
@@ -183,8 +173,11 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
                       : 'bg-surface-subtle border-surface-border text-muted-foreground hover:bg-surface-hover hover:text-foreground'
                   }`}
                 >
-                  <span className="text-[11px] font-sans">{b.name}</span>
-                  {bookmaker === b.id && <Check className="w-3 h-3 text-violet-600 dark:text-violet-400" />}
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <BookmakerIcon id={b.id} className="w-4 h-4 rounded shrink-0" />
+                    <span className="text-[11px] font-sans truncate">{b.name}</span>
+                  </span>
+                  {bookmaker === b.id && <Check className="w-3 h-3 text-violet-600 dark:text-violet-400 shrink-0" />}
                 </button>
               ))}
             </div>
@@ -205,44 +198,6 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
             />
           </div>
 
-          {/* Stake Input */}
-          <div>
-            <label className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-1.5 font-sans">
-              Stake Amount ($)
-            </label>
-            <input
-              type="number"
-              value={stake}
-              onChange={(e) => setStake(e.target.value)}
-              min="1"
-              step="any"
-              className="w-full bg-surface-subtle border border-surface-border focus:border-violet-500 rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground focus:outline-none transition-colors"
-              required
-            />
-          </div>
-
-          {/* Preset Demo Codes */}
-          <div>
-            <p className="text-[11px] text-muted-foreground font-semibold mb-1 font-sans">
-              Quick Sample Codes:
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {SAMPLE_CODES.map((s) => (
-                <button
-                  type="button"
-                  key={s.code}
-                  onClick={() => {
-                    setBookmaker(s.bookmaker);
-                    setBookingCode(s.code);
-                  }}
-                  className="text-left bg-surface-subtle hover:bg-surface-hover border border-surface-border hover:border-violet-300 dark:hover:border-violet-600 px-2 py-1.5 rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors truncate cursor-pointer font-sans"
-                >
-                  <strong className="text-violet-600 dark:text-violet-400 font-mono">{s.code}</strong> • <span className="capitalize">{s.bookmaker}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Active Scanning Status Message */}
           {isLoading && scanStep && (
             <div className="p-2.5 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/30 rounded-lg text-center text-xs font-sans text-violet-700 dark:text-violet-300 flex items-center justify-center gap-2">
@@ -260,10 +215,10 @@ export function TicketImporterModal({ isOpen, onClose, onImportSuccess }: Ticket
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
-                Finding Bet Slip...
+                <span>Finding Bet Slip...</span>
               </>
             ) : (
-              'Track Bet Slip'
+              <span>Track Bet Slip</span>
             )}
           </button>
         </form>

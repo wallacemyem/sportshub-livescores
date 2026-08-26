@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
   Users,
@@ -21,6 +23,7 @@ import {
   Loader2,
   CheckCircle2,
   ExternalLink,
+  ShieldAlert,
 } from 'lucide-react';
 import Link from 'next/link';
 import { AdminShell, type AdminSection } from '@/components/admin/AdminShell';
@@ -41,7 +44,7 @@ import {
   type Tone,
 } from '@/components/admin/primitives';
 import { UserDrawer } from '@/components/admin/UserDrawer';
-import { getApiBaseUrl } from '@/lib/api';
+import { getApiBaseUrl, getAuthHeaders } from '@/lib/api';
 import type {
   AdminOverview,
   AdminSlipRow,
@@ -55,6 +58,8 @@ type SectionId = 'overview' | 'users' | 'slips' | 'transactions' | 'live' | 'sup
 const REFRESH_MS = 15000;
 
 export default function AdminConsolePage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
   const [section, setSection] = useState<SectionId>('overview');
 
   // Console data
@@ -87,14 +92,26 @@ export default function AdminConsolePage() {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  // Admin Auth Verification Gate
+  useEffect(() => {
+    if (!isAuthLoading) {
+      if (!user) {
+        router.push('/auth/login?redirect=/admin');
+      } else if (!user.is_admin && user.role !== 'admin') {
+        router.push('/live?error=admin_access_denied');
+      }
+    }
+  }, [user, isAuthLoading, router]);
+
   /* ----------------------------- data loading ---------------------------- */
 
   const fetchAll = useCallback(async () => {
     setIsRefreshing(true);
     const apiBase = getApiBaseUrl();
+    const headers = getAuthHeaders();
 
     const getJSON = async (path: string) => {
-      const res = await fetch(`${apiBase}${path}`);
+      const res = await fetch(`${apiBase}${path}`, { headers });
       if (!res.ok) throw new Error(`${path} -> ${res.status}`);
       return res.json();
     };
@@ -158,7 +175,7 @@ export default function AdminConsolePage() {
     try {
       const res = await fetch(`${getApiBaseUrl()}/admin/users/${user.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(String(res.status));
@@ -191,7 +208,7 @@ export default function AdminConsolePage() {
     try {
       const res = await fetch(`${getApiBaseUrl()}/admin/matches/${matchId}/simulate-goal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ team_side: side }),
       });
       if (res.ok) {
@@ -207,7 +224,7 @@ export default function AdminConsolePage() {
     try {
       const res = await fetch(`${getApiBaseUrl()}/admin/matches/${match.id}/override`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           home_score: Math.max(0, match.home_score + homeDelta),
           away_score: Math.max(0, match.away_score + awayDelta),

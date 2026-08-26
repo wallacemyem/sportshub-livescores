@@ -28,7 +28,7 @@ import {
   MessageSquare,
   Search,
 } from 'lucide-react';
-import { getApiBaseUrl } from '@/lib/api';
+import { getApiBaseUrl, getAuthHeaders } from '@/lib/api';
 
 interface TelemetryData {
   active_pollers: number;
@@ -81,6 +81,75 @@ export default function AdminDashboardPage() {
   const [testBookingCode, setTestBookingCode] = useState('BC99214');
   const [testResult, setTestResult] = useState<any | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Admin Auth Gate State
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [adminUser, setAdminUser] = useState<any | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
+
+  // Check saved admin session on mount
+  useEffect(() => {
+    try {
+      const savedToken = localStorage.getItem('slipradar_admin_token') || localStorage.getItem('slipradar_auth_token');
+      const savedUser = localStorage.getItem('slipradar_admin_user') || localStorage.getItem('slipradar_auth_user');
+      if (savedToken && savedUser) {
+        const u = JSON.parse(savedUser);
+        if (u.is_admin || u.role === 'admin') {
+          setAdminToken(savedToken);
+          setAdminUser(u);
+        }
+      }
+    } catch {}
+    setIsAuthLoading(false);
+  }, []);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail.trim() || !loginPassword.trim()) return;
+
+    setIsSubmittingLogin(true);
+    setLoginError(null);
+
+    try {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setLoginError(data.error || 'Authentication failed');
+        return;
+      }
+
+      if (!data.user.is_admin && data.user.role !== 'admin') {
+        setLoginError('Access denied: User is not an authorized administrator.');
+        return;
+      }
+
+      setAdminToken(data.token);
+      setAdminUser(data.user);
+      localStorage.setItem('slipradar_admin_token', data.token);
+      localStorage.setItem('slipradar_admin_user', JSON.stringify(data.user));
+    } catch (err: any) {
+      setLoginError(err.message || 'Failed to communicate with authentication gateway');
+    } finally {
+      setIsSubmittingLogin(false);
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setAdminToken(null);
+    setAdminUser(null);
+    localStorage.removeItem('slipradar_admin_token');
+    localStorage.removeItem('slipradar_admin_user');
+  };
 
   // Pagination states across tables
   const [clientsPage, setClientsPage] = useState(1);
@@ -140,18 +209,26 @@ export default function AdminDashboardPage() {
 
   // Poll admin metrics
   useEffect(() => {
+    if (!adminToken) return;
+
     async function fetchAll() {
       try {
         const apiBase = getApiBaseUrl();
+        const headers = getAuthHeaders();
         const [telRes, finRes, parRes, matRes, cliRes, whRes, supRes] = await Promise.all([
-          fetch(`${apiBase}/admin/telemetry`),
-          fetch(`${apiBase}/admin/financials`),
-          fetch(`${apiBase}/admin/parser/metrics`),
+          fetch(`${apiBase}/admin/telemetry`, { headers }),
+          fetch(`${apiBase}/admin/financials`, { headers }),
+          fetch(`${apiBase}/admin/parser/metrics`, { headers }),
           fetch(`${apiBase}/matches`),
-          fetch(`${apiBase}/admin/clients`),
-          fetch(`${apiBase}/admin/webhooks`),
+          fetch(`${apiBase}/admin/clients`, { headers }),
+          fetch(`${apiBase}/admin/webhooks`, { headers }),
           fetch(`${apiBase}/support/tickets`),
         ]);
+
+        if (telRes.status === 401 || telRes.status === 403) {
+          handleAdminLogout();
+          return;
+        }
 
         if (telRes.ok) setTelemetry(await telRes.json());
         if (finRes.ok) setFinancials(await finRes.json());
@@ -183,7 +260,7 @@ export default function AdminDashboardPage() {
     fetchAll();
     const interval = setInterval(fetchAll, 4000);
     return () => clearInterval(interval);
-  }, [selectedTicket]);
+  }, [selectedTicket, adminToken]);
 
   // Trigger Goal Simulation
   async function triggerGoal(matchId: string, teamSide: 'HOME' | 'AWAY') {
@@ -191,7 +268,7 @@ export default function AdminDashboardPage() {
       const apiBase = getApiBaseUrl();
       const res = await fetch(`${apiBase}/admin/matches/${matchId}/simulate-goal`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ team_side: teamSide }),
       });
       if (res.ok) {
@@ -209,7 +286,7 @@ export default function AdminDashboardPage() {
       const apiBase = getApiBaseUrl();
       const res = await fetch(`${apiBase}/admin/matches/${match.id}/override`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           home_score: Math.max(0, match.home_score + homeDelta),
           away_score: Math.max(0, match.away_score + awayDelta),
@@ -280,6 +357,84 @@ export default function AdminDashboardPage() {
     }
   }
 
+  // Admin Auth Gate View
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#0B0D13] text-slate-100 flex items-center justify-center font-mono text-xs">
+        Verifying Administrative Credentials...
+      </div>
+    );
+  }
+
+  if (!adminToken || !adminUser) {
+    return (
+      <div className="min-h-screen bg-[#0B0D13] text-slate-100 flex items-center justify-center p-4 font-sans relative overflow-hidden">
+        <div className="absolute -left-20 top-1/4 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -right-20 bottom-1/4 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-full max-w-md bg-kumo-card border border-kumo-border rounded-2xl p-6 sm:p-8 shadow-2xl relative z-10 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/30">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Admin Middleware Active</span>
+            </div>
+            <h1 className="text-xl font-black tracking-wide text-white uppercase font-mono">
+              Cloudflare Kumo Console
+            </h1>
+            <p className="text-xs text-slate-400">
+              Mission Control & Ingestion Orchestrator. Administrator login required.
+            </p>
+          </div>
+
+          {loginError && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-xl flex items-center gap-2">
+              <XCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAdminLogin} className="space-y-4 font-mono text-xs">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1.5 uppercase">
+                Admin Email
+              </label>
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder="admin@slipradar.com"
+                className="w-full px-3.5 py-2.5 bg-kumo-surface border border-kumo-border focus:border-kumo-orange rounded-xl text-white focus:outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-300 mb-1.5 uppercase">
+                Password
+              </label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••••••••"
+                className="w-full px-3.5 py-2.5 bg-kumo-surface border border-kumo-border focus:border-kumo-orange rounded-xl text-white focus:outline-none"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmittingLogin || !loginEmail.trim() || !loginPassword.trim()}
+              className="w-full py-3 bg-kumo-orange hover:bg-orange-500 disabled:opacity-50 text-black font-bold uppercase rounded-xl shadow-lg shadow-orange-500/20 transition-all cursor-pointer"
+            >
+              {isSubmittingLogin ? 'Authenticating...' : 'Sign In to Mission Control'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0B0D13] text-slate-100 flex flex-col font-sans">
       {/* Kumo Header */}
@@ -332,6 +487,21 @@ export default function AdminDashboardPage() {
             <span>Open Client (17080)</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
+
+          {/* Admin User Info & Logout */}
+          <div className="flex items-center gap-2 pl-2 border-l border-kumo-border">
+            <div className="text-right hidden sm:block">
+              <div className="text-[11px] font-bold text-white leading-tight">{adminUser?.name || 'Administrator'}</div>
+              <div className="text-[9px] text-orange-400 font-mono font-bold">SUPERADMIN</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleAdminLogout}
+              className="px-2.5 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </header>
 
