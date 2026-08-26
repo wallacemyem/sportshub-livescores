@@ -44,6 +44,7 @@ import {
   Circle,
   Flag,
   Trash2,
+  X,
 } from 'lucide-react';
 
 const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -152,9 +153,10 @@ export default function HomePage() {
     },
   });
 
-  // Media Session Metadata API & Selected Match
+  // Media Session Metadata API & Selected Match (Only when explicitly clicked by user)
   const selectedMatch = useMemo(() => {
-    return matches.find((m) => m.id === selectedMatchId) || matches[0] || null;
+    if (!selectedMatchId) return null;
+    return matches.find((m) => m.id === selectedMatchId) || null;
   }, [matches, selectedMatchId]);
   useMediaSession(selectedMatch);
 
@@ -191,7 +193,6 @@ export default function HomePage() {
 
     if (cachedMatches && cachedMatches.length > 0) {
       setMatches(cachedMatches);
-      if (!selectedMatchId) setSelectedMatchId(cachedMatches[0].id);
     }
     if (cachedSlips && cachedSlips.length > 0) {
       setBetSlips(cachedSlips);
@@ -215,9 +216,6 @@ export default function HomePage() {
           if (data.matches && data.matches.length > 0) {
             setMatches(data.matches);
             setCachedData('matches', data.matches);
-            if (!selectedMatchId) {
-              setSelectedMatchId(data.matches[0].id);
-            }
           }
         }
 
@@ -514,7 +512,7 @@ export default function HomePage() {
         </div>
 
         {/* CENTER COLUMN: Match Feed & Sub-Filters */}
-        <div className="col-span-12 xl:col-span-5 flex flex-col gap-4">
+        <div className={`col-span-12 ${selectedMatch ? 'xl:col-span-5' : 'xl:col-span-9'} flex flex-col gap-4`}>
           {/* Sub-Filters: Live, All, Scheduled, Finished */}
           <div className="flex items-center justify-between bg-surface p-2 rounded-xl border border-surface-border shadow-subtle">
             <div className="flex items-center gap-1 flex-wrap">
@@ -658,7 +656,7 @@ export default function HomePage() {
                   key={m.id}
                   match={m}
                   isSelected={selectedMatch?.id === m.id}
-                  onSelect={() => setSelectedMatchId(m.id)}
+                  onSelect={() => setSelectedMatchId((prev) => (prev === m.id ? null : m.id))}
                   onRemove={handleRemoveMatch}
                 />
               ))}
@@ -666,9 +664,9 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* RIGHT COLUMN: In-Depth Live Match Center & 2D Pitch View */}
-        <div className="col-span-12 xl:col-span-4 flex flex-col gap-4">
-          {selectedMatch ? (
+        {/* RIGHT COLUMN: In-Depth Live Match Center & Match Statistics (Only shown when a live match is clicked) */}
+        {selectedMatch && (
+          <div className="col-span-12 xl:col-span-4 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="space-y-4">
               {/* Match Header Bar & Pop-out PiP Button */}
               <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
@@ -694,6 +692,14 @@ export default function HomePage() {
                       title="Pop out Floating PiP"
                     >
                       <Maximize2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedMatchId(null)}
+                      className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-surface-subtle transition-colors cursor-pointer"
+                      title="Close Match Statistics"
+                    >
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -781,19 +787,8 @@ export default function HomePage() {
               {detailTab === 'lineups' && <LineupsView match={selectedMatch} />}
               {detailTab === 'odds' && <OddsComparisonTable odds={selectedMatch.odds} />}
             </div>
-          ) : (
-            <div className="bg-surface rounded-xl border border-surface-border px-6 py-10 text-center">
-              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-surface-border bg-surface-subtle text-muted-foreground">
-                <Activity className="h-5 w-5" />
-              </span>
-              <p className="mt-4 text-sm font-bold text-foreground">No match selected</p>
-              <p className="mx-auto mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground">
-                Pick a match from the feed to see live stats, the timeline, lineups and odds
-                side by side.
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Picture-in-Picture Floating Overlay */}

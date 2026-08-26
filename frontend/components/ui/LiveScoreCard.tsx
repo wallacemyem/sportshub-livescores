@@ -38,9 +38,9 @@ export function LiveScoreCard({ match, isSelected = false, onSelect, onRemove }:
   const handleCardClick = () => {
     if (onSelect) {
       onSelect();
+    } else {
+      router.push(`/match/${match.id}`);
     }
-    // Navigate directly to dedicated match details page
-    router.push(`/match/${match.id}`);
   };
 
   return (
