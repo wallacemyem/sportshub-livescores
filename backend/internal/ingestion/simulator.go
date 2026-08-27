@@ -247,7 +247,7 @@ func (s *Simulator) TickLiveMatches(ctx context.Context) {
 		if newEvent != nil && newEvent.Type == models.EventGoal {
 			delta.Type = models.DeltaScoreUpdate
 			if s.pushService != nil {
-				s.pushService.NotifyMatchScore(&matchCopy, newEvent.TeamSide, newEvent.PlayerName)
+				delta.Notification = s.pushService.NotifyMatchScore(&matchCopy, newEvent.TeamSide, newEvent.PlayerName)
 			}
 		}
 
@@ -289,29 +289,31 @@ func (s *Simulator) TriggerSimulatedGoal(ctx context.Context, matchID, teamSide,
 	s.store.SaveMatch(match)
 	_ = s.redis.SetLiveMatchState(ctx, match)
 
+	var notifPayload *models.PushNotificationPayload
+	if s.pushService != nil {
+		notifPayload = s.pushService.NotifyMatchScore(match, teamSide, player)
+	}
+
 	min := match.Minute
 	delta := &models.LiveDelta{
-		Type:      models.DeltaScoreUpdate,
-		MatchID:   match.ID,
-		Sport:     match.Sport,
-		HomeScore: &match.HomeScore,
-		AwayScore: &match.AwayScore,
+		Type:         models.DeltaScoreUpdate,
+		MatchID:      match.ID,
+		Sport:        match.Sport,
+		HomeScore:    &match.HomeScore,
+		AwayScore:    &match.AwayScore,
 		Period:       match.Period,
 		Minute:       &min,
 		DisplayClock: match.DisplayClock,
 		PeriodNumber: &match.PeriodNumber,
 		ClockSeconds: &match.ClockSeconds,
 		Status:       match.Status,
-		Event:     &event,
-		Stats:     &match.Stats,
-		Timestamp: time.Now().UnixMilli(),
+		Event:        &event,
+		Stats:        &match.Stats,
+		Notification: notifPayload,
+		Timestamp:    time.Now().UnixMilli(),
 	}
 
 	_ = s.redis.PublishDelta(ctx, match.ID, match.League.ID, delta)
-
-	if s.pushService != nil {
-		s.pushService.NotifyMatchScore(match, teamSide, player)
-	}
 
 	return match, &event, nil
 }

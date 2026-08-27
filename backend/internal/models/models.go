@@ -511,6 +511,7 @@ const (
 	DeltaMatchFinished DeltaType = "MATCH_FINISHED"
 	DeltaStatsUpdate   DeltaType = "STATS_UPDATE"
 	DeltaPitchUpdate   DeltaType = "PITCH_UPDATE"
+	DeltaNotification  DeltaType = "NOTIFICATION"
 )
 
 type LiveDelta struct {
@@ -526,11 +527,12 @@ type LiveDelta struct {
 	DisplayClock string `json:"display_clock,omitempty"`
 	PeriodNumber *int   `json:"period_number,omitempty"`
 	ClockSeconds *int   `json:"clock_seconds,omitempty"`
-	Status    MatchStatus  `json:"status,omitempty"`
-	Event     *MatchEvent  `json:"event,omitempty"`
-	Stats     *MatchStats  `json:"stats,omitempty"`
-	Odds      *MatchOdds   `json:"odds,omitempty"`
-	Timestamp int64        `json:"timestamp"`
+	Status       MatchStatus              `json:"status,omitempty"`
+	Event        *MatchEvent              `json:"event,omitempty"`
+	Stats        *MatchStats              `json:"stats,omitempty"`
+	Odds         *MatchOdds               `json:"odds,omitempty"`
+	Notification *PushNotificationPayload `json:"notification,omitempty"`
+	Timestamp    int64                    `json:"timestamp"`
 }
 
 // Admin Telemetry & Metrics

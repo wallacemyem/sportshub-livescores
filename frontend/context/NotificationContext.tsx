@@ -13,6 +13,7 @@ import {
   isStandalonePWA,
 } from '@/lib/pushManager';
 import { useAuth } from '@/context/AuthContext';
+import { useLiveMatchSocket } from '@/hooks/useLiveMatchSocket';
 
 export interface MatchAlert {
   id: string;
@@ -61,6 +62,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
   const [devicePlatform, setDevicePlatform] = useState<'ios' | 'android' | 'desktop'>('desktop');
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
+  const { subscribe } = useLiveMatchSocket();
 
   // Detect platform and check initial push subscription state
   useEffect(() => {
@@ -79,6 +81,51 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       });
     }
   }, []);
+
+  const triggerAlert = useCallback(
+    (title: string, body: string, type: 'goal' | 'kickoff' | 'point' | 'event' = 'goal', matchId?: string) => {
+      if (!alertsEnabled) return;
+
+      const alert: MatchAlert = {
+        id: Math.random().toString(36).substring(2, 9),
+        title,
+        body,
+        matchId,
+        type,
+        timestamp: new Date(),
+      };
+
+      setActiveToast(alert);
+
+      // Trigger native notification & audio
+      sendMatchNotification(title, {
+        body,
+        type,
+        url: matchId ? `/match/${matchId}` : undefined,
+      });
+
+      // Auto dismiss in-app toast after 6 seconds
+      setTimeout(() => {
+        setActiveToast((current) => (current?.id === alert.id ? null : current));
+      }, 6000);
+    },
+    [alertsEnabled]
+  );
+
+  // Global WebSocket listener for authoritative backend-driven notifications
+  useEffect(() => {
+    return subscribe((delta) => {
+      if (delta.notification && alertsEnabled) {
+        const notif = delta.notification;
+        triggerAlert(
+          notif.title,
+          notif.body,
+          (notif.type as any) || 'goal',
+          notif.match_id || delta.match_id
+        );
+      }
+    });
+  }, [subscribe, triggerAlert, alertsEnabled]);
 
   const subscribePushHandler = useCallback(
     async (channels?: string[]) => {
@@ -119,36 +166,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const dismissToast = useCallback(() => {
     setActiveToast(null);
   }, []);
-
-  const triggerAlert = useCallback(
-    (title: string, body: string, type: 'goal' | 'kickoff' | 'point' | 'event' = 'goal', matchId?: string) => {
-      if (!alertsEnabled) return;
-
-      const alert: MatchAlert = {
-        id: Math.random().toString(36).substring(2, 9),
-        title,
-        body,
-        matchId,
-        type,
-        timestamp: new Date(),
-      };
-
-      setActiveToast(alert);
-
-      // Trigger native notification & audio
-      sendMatchNotification(title, {
-        body,
-        type,
-        url: matchId ? `/match/${matchId}` : undefined,
-      });
-
-      // Auto dismiss in-app toast after 6 seconds
-      setTimeout(() => {
-        setActiveToast((current) => (current?.id === alert.id ? null : current));
-      }, 6000);
-    },
-    [alertsEnabled]
-  );
 
   return (
     <NotificationContext.Provider

@@ -143,18 +143,30 @@ func (w *IngestionWorker) pollLiveFeeds(ctx context.Context) {
 			w.lastIngestError = ""
 			w.mu.Unlock()
 
-			// Buffer and dispatch each real API-Sports match to Redis and store
 			for _, match := range matches {
+				var notifPayload *models.PushNotificationPayload
+
 				if existing, ok := w.store.GetMatchByID(match.ID); ok {
 					if existing.Odds != nil && match.Odds == nil {
 						match.Odds = existing.Odds
 					}
-					// Trigger push notification on score change
-					if (existing.Status == models.StatusLive || existing.Status == "LIVE") && (match.Status == models.StatusLive || match.Status == "LIVE") {
+
+					// 1. Kick-off notification
+					if existing.Status == models.StatusScheduled && match.Status == models.StatusLive {
+						if w.pushService != nil {
+							notifPayload = w.pushService.NotifyMatchKickoff(match)
+						}
+					} else if (existing.Status == models.StatusLive || existing.Status == "LIVE") && (match.Status == models.StatusLive || match.Status == "LIVE") {
+						// 2. Score change notification
 						if match.HomeScore > existing.HomeScore && w.pushService != nil {
-							w.pushService.NotifyMatchScore(match, "HOME", "")
+							notifPayload = w.pushService.NotifyMatchScore(match, "HOME", "")
 						} else if match.AwayScore > existing.AwayScore && w.pushService != nil {
-							w.pushService.NotifyMatchScore(match, "AWAY", "")
+							notifPayload = w.pushService.NotifyMatchScore(match, "AWAY", "")
+						}
+					} else if (existing.Status == models.StatusLive || existing.Status == "LIVE") && match.Status == models.StatusFinished {
+						// 3. Full-time notification
+						if w.pushService != nil {
+							notifPayload = w.pushService.NotifyMatchFinished(match)
 						}
 					}
 				}
@@ -169,16 +181,17 @@ func (w *IngestionWorker) pollLiveFeeds(ctx context.Context) {
 				min := match.Minute
 
 				delta := &models.LiveDelta{
-					Type:      models.DeltaScoreUpdate,
-					MatchID:   match.ID,
-					Sport:     match.Sport,
-					HomeScore: &hScore,
-					AwayScore: &aScore,
-					Minute:    &min,
-					Period:    match.Period,
-					Status:    match.Status,
-					Stats:     &match.Stats,
-					Timestamp: time.Now().UnixMilli(),
+					Type:         models.DeltaScoreUpdate,
+					MatchID:      match.ID,
+					Sport:        match.Sport,
+					HomeScore:    &hScore,
+					AwayScore:    &aScore,
+					Minute:       &min,
+					Period:       match.Period,
+					Status:       match.Status,
+					Stats:        &match.Stats,
+					Notification: notifPayload,
+					Timestamp:    time.Now().UnixMilli(),
 				}
 				_ = w.redis.PublishDelta(ctx, match.ID, match.League.ID, delta)
 			}
@@ -213,17 +226,30 @@ func (w *IngestionWorker) pollESPN(ctx context.Context) {
 		for _, evt := range resp.Events {
 			match := ConvertESPNToMatch(evt, l)
 			if match != nil {
-				// Retain existing odds and detect score differences
+				var notifPayload *models.PushNotificationPayload
+
+				// Retain existing odds and detect score / status differences
 				if existing, ok := w.store.GetMatchByID(match.ID); ok {
 					if existing.Odds != nil && match.Odds == nil {
 						match.Odds = existing.Odds
 					}
-					// Trigger push notification on score change
-					if (existing.Status == models.StatusLive || existing.Status == "LIVE") && (match.Status == models.StatusLive || match.Status == "LIVE") {
+
+					// 1. Kick-off notification
+					if existing.Status == models.StatusScheduled && match.Status == models.StatusLive {
+						if w.pushService != nil {
+							notifPayload = w.pushService.NotifyMatchKickoff(match)
+						}
+					} else if (existing.Status == models.StatusLive || existing.Status == "LIVE") && (match.Status == models.StatusLive || match.Status == "LIVE") {
+						// 2. Score change notification
 						if match.HomeScore > existing.HomeScore && w.pushService != nil {
-							w.pushService.NotifyMatchScore(match, "HOME", "")
+							notifPayload = w.pushService.NotifyMatchScore(match, "HOME", "")
 						} else if match.AwayScore > existing.AwayScore && w.pushService != nil {
-							w.pushService.NotifyMatchScore(match, "AWAY", "")
+							notifPayload = w.pushService.NotifyMatchScore(match, "AWAY", "")
+						}
+					} else if (existing.Status == models.StatusLive || existing.Status == "LIVE") && match.Status == models.StatusFinished {
+						// 3. Full-time notification
+						if w.pushService != nil {
+							notifPayload = w.pushService.NotifyMatchFinished(match)
 						}
 					}
 				}
@@ -237,16 +263,17 @@ func (w *IngestionWorker) pollESPN(ctx context.Context) {
 				min := match.Minute
 
 				delta := &models.LiveDelta{
-					Type:      models.DeltaScoreUpdate,
-					MatchID:   match.ID,
-					Sport:     match.Sport,
-					HomeScore: &hScore,
-					AwayScore: &aScore,
-					Minute:    &min,
-					Period:    match.Period,
-					Status:    match.Status,
-					Stats:     &match.Stats,
-					Timestamp: time.Now().UnixMilli(),
+					Type:         models.DeltaScoreUpdate,
+					MatchID:      match.ID,
+					Sport:        match.Sport,
+					HomeScore:    &hScore,
+					AwayScore:    &aScore,
+					Minute:       &min,
+					Period:       match.Period,
+					Status:       match.Status,
+					Stats:        &match.Stats,
+					Notification: notifPayload,
+					Timestamp:    time.Now().UnixMilli(),
 				}
 				_ = w.redis.PublishDelta(ctx, match.ID, match.League.ID, delta)
 			}

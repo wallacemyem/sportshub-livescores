@@ -306,8 +306,25 @@ export interface BetSlip {
   updated_at: string;
 }
 
+export interface BackendNotification {
+  title: string;
+  body: string;
+  type?: 'goal' | 'kickoff' | 'point' | 'event' | 'broadcast' | 'test';
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  url?: string;
+  match_id?: string;
+  sport?: string;
+  silent?: boolean;
+  renotify?: boolean;
+  requireInteraction?: boolean;
+  vibrate?: number[];
+  data?: Record<string, any>;
+}
+
 export interface LiveDelta {
-  type: 'SCORE_UPDATE' | 'CLOCK_TICK' | 'EVENT_LOG' | 'ODDS_UPDATE' | 'MATCH_FINISHED' | 'STATS_UPDATE' | 'PITCH_UPDATE';
+  type: 'SCORE_UPDATE' | 'CLOCK_TICK' | 'EVENT_LOG' | 'ODDS_UPDATE' | 'MATCH_FINISHED' | 'STATS_UPDATE' | 'PITCH_UPDATE' | 'NOTIFICATION';
   match_id: string;
   sport: SportType;
   home_score?: number;
@@ -321,6 +338,7 @@ export interface LiveDelta {
   event?: MatchEvent;
   stats?: MatchStats;
   odds?: MatchOdds;
+  notification?: BackendNotification;
   timestamp: number;
 }
 

@@ -182,36 +182,6 @@ export default function MatchDetailPage() {
           if (!prev) return prev;
           const updated = { ...prev };
 
-          // 1. Kick-off alert
-          if (delta.status === 'LIVE' && prevScoreRef.current.status !== 'LIVE') {
-            triggerAlert(
-              `🔔 KICK-OFF: ${prev.home_team.name} vs ${prev.away_team.name}`,
-              `Match is now LIVE! (${prev.league.name})`,
-              'kickoff',
-              matchId
-            );
-          }
-
-          // 2. Goal / Point score alert
-          const newHome = delta.home_score !== undefined ? delta.home_score : prev.home_score;
-          const newAway = delta.away_score !== undefined ? delta.away_score : prev.away_score;
-
-          if (
-            (newHome > prevScoreRef.current.home || newAway > prevScoreRef.current.away) &&
-            prev.status === 'LIVE'
-          ) {
-            const isGoal = prev.sport === 'soccer';
-            const scoringTeam = newHome > prevScoreRef.current.home ? prev.home_team.name : prev.away_team.name;
-            const term = isGoal ? 'GOAL!' : `${scoreNoun(prev.sport, 1).toUpperCase()}!`;
-
-            triggerAlert(
-              `${isGoal ? '⚽' : '🏅'} ${term} ${scoringTeam}`,
-              `${prev.home_team.name} ${newHome} - ${newAway} ${prev.away_team.name} (${formatClock({ ...prev, home_score: newHome, away_score: newAway })})`,
-              isGoal ? 'goal' : 'point',
-              matchId
-            );
-          }
-
           if (delta.home_score !== undefined) updated.home_score = delta.home_score;
           if (delta.away_score !== undefined) updated.away_score = delta.away_score;
           if (delta.minute !== undefined) updated.minute = delta.minute;

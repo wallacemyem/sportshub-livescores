@@ -216,10 +216,10 @@ func (s *PushService) BroadcastToAll(payload *models.PushNotificationPayload) (i
 	return s.BroadcastToChannel("all", payload)
 }
 
-// NotifyMatchScore formats and broadcasts a live score change to relevant channels
-func (s *PushService) NotifyMatchScore(match *models.Match, scoringSide string, detail string) {
+// CreateMatchScoreNotification builds a standardized push and websocket payload for score changes
+func (s *PushService) CreateMatchScoreNotification(match *models.Match, scoringSide string, detail string) *models.PushNotificationPayload {
 	if match == nil {
-		return
+		return nil
 	}
 
 	var scorer string
@@ -240,7 +240,7 @@ func (s *PushService) NotifyMatchScore(match *models.Match, scoringSide string, 
 	case "tennis":
 		sportEmoji = "🎾"
 		scoreNoun = "POINT"
-	case "american-football", "football":
+	case "american-football", "football", "nfl":
 		sportEmoji = "🏈"
 		scoreNoun = "TOUCHDOWN"
 	case "hockey", "ice-hockey":
@@ -263,7 +263,7 @@ func (s *PushService) NotifyMatchScore(match *models.Match, scoringSide string, 
 		body += fmt.Sprintf(" (%s)", detail)
 	}
 
-	payload := &models.PushNotificationPayload{
+	return &models.PushNotificationPayload{
 		Title:              title,
 		Body:               body,
 		Icon:               match.HomeTeam.Logo,
@@ -286,24 +286,121 @@ func (s *PushService) NotifyMatchScore(match *models.Match, scoringSide string, 
 			"url":        fmt.Sprintf("/match/%s", match.ID),
 		},
 	}
+}
 
-	// Dispatch push notification ONLY to subscribers who added this match (via betslip or match channel)
-	go func() {
-		subs := s.store.GetActiveSubscriptionsForMatch(match.ID)
-		if len(subs) == 0 {
-			return
-		}
+// CreateMatchKickoffNotification builds a kickoff notification
+func (s *PushService) CreateMatchKickoffNotification(match *models.Match) *models.PushNotificationPayload {
+	if match == nil {
+		return nil
+	}
 
-		payloadBytes, err := json.Marshal(payload)
-		if err != nil {
-			return
-		}
+	leagueName := match.League.Name
+	if leagueName == "" {
+		leagueName = strings.ToUpper(string(match.Sport))
+	}
 
-		for _, subItem := range subs {
-			_ = SendWebPush(subItem.Endpoint, subItem.P256dh, subItem.Auth, payloadBytes, s.vapid, 120, "high")
-		}
-		log.Printf("[PUSH] Dispatched live match alert for match %s (%s) to %d subscriber(s) tracking this game", match.ID, match.HomeTeam.Name+" v "+match.AwayTeam.Name, len(subs))
-	}()
+	return &models.PushNotificationPayload{
+		Title:              fmt.Sprintf("🔔 KICK-OFF: %s vs %s", match.HomeTeam.Name, match.AwayTeam.Name),
+		Body:               fmt.Sprintf("Match is now LIVE! (%s)", leagueName),
+		Icon:               match.HomeTeam.Logo,
+		Badge:              "/icons/badge-72.png",
+		Tag:                fmt.Sprintf("sr-live-%s", match.ID),
+		URL:                fmt.Sprintf("/match/%s", match.ID),
+		MatchID:            match.ID,
+		Sport:              string(match.Sport),
+		Type:               "kickoff",
+		Silent:             false,
+		Renotify:           true,
+		RequireInteraction: false,
+		Vibrate:            []int{150, 100, 150},
+		Data: map[string]interface{}{
+			"match_id": match.ID,
+			"sport":    match.Sport,
+			"url":      fmt.Sprintf("/match/%s", match.ID),
+		},
+	}
+}
+
+// CreateMatchFinishedNotification builds a full time notification
+func (s *PushService) CreateMatchFinishedNotification(match *models.Match) *models.PushNotificationPayload {
+	if match == nil {
+		return nil
+	}
+
+	return &models.PushNotificationPayload{
+		Title:              fmt.Sprintf("🏁 FULL TIME: %s %d - %d %s", match.HomeTeam.Name, match.HomeScore, match.AwayScore, match.AwayTeam.Name),
+		Body:               fmt.Sprintf("Final Result · %s", match.League.Name),
+		Icon:               match.HomeTeam.Logo,
+		Badge:              "/icons/badge-72.png",
+		Tag:                fmt.Sprintf("sr-live-%s", match.ID),
+		URL:                fmt.Sprintf("/match/%s", match.ID),
+		MatchID:            match.ID,
+		Sport:              string(match.Sport),
+		Type:               "event",
+		Silent:             false,
+		Renotify:           true,
+		RequireInteraction: false,
+		Vibrate:            []int{100, 100, 100},
+		Data: map[string]interface{}{
+			"match_id": match.ID,
+			"sport":    match.Sport,
+			"url":      fmt.Sprintf("/match/%s", match.ID),
+		},
+	}
+}
+
+// NotifyMatchScore formats and broadcasts a live score change to Web Push subscribers
+func (s *PushService) NotifyMatchScore(match *models.Match, scoringSide string, detail string) *models.PushNotificationPayload {
+	payload := s.CreateMatchScoreNotification(match, scoringSide, detail)
+	if payload == nil {
+		return nil
+	}
+
+	go s.dispatchPushToSubscribers(match.ID, payload)
+	return payload
+}
+
+// NotifyMatchKickoff broadcasts a kickoff alert to Web Push subscribers
+func (s *PushService) NotifyMatchKickoff(match *models.Match) *models.PushNotificationPayload {
+	payload := s.CreateMatchKickoffNotification(match)
+	if payload == nil {
+		return nil
+	}
+
+	go s.dispatchPushToSubscribers(match.ID, payload)
+	return payload
+}
+
+// NotifyMatchFinished broadcasts a full-time alert to Web Push subscribers
+func (s *PushService) NotifyMatchFinished(match *models.Match) *models.PushNotificationPayload {
+	payload := s.CreateMatchFinishedNotification(match)
+	if payload == nil {
+		return nil
+	}
+
+	go s.dispatchPushToSubscribers(match.ID, payload)
+	return payload
+}
+
+func (s *PushService) dispatchPushToSubscribers(matchID string, payload *models.PushNotificationPayload) {
+	if s.vapid == nil || s.store == nil {
+		return
+	}
+
+	subs := s.store.GetActiveSubscriptionsForMatch(matchID)
+	if len(subs) == 0 {
+		return
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+
+	for _, subItem := range subs {
+		_ = SendWebPush(subItem.Endpoint, subItem.P256dh, subItem.Auth, payloadBytes, s.vapid, 120, "high")
+	}
+	log.Printf("[PUSH] Dispatched Web Push alert for match %s to %d subscriber(s)", matchID, len(subs))
 }
 
 // GetStats compiles current subscriber channels and telemetry
