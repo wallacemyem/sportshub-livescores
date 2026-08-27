@@ -9,84 +9,142 @@ interface HeadToHeadProps {
   match: Match;
 }
 
+interface StatRow {
+  label: string;
+  home: string;
+  away: string;
+  homeVal: number;
+  awayVal: number;
+  reverse?: boolean;
+}
+
 export function HeadToHead({ match }: HeadToHeadProps) {
   const stats = match.stats || {};
   const sport = match.sport || 'soccer';
   const h2h = match.h2h;
 
-  // Generate sport-tailored detailed statistics from API-Sports & buffer
-  const getSportStats = () => {
+  const isScheduled = match.status === 'SCHEDULED';
+  const isLive = match.status === 'LIVE';
+
+  // Generate sport-tailored detailed statistics from real live feed
+  const getSportStats = (): StatRow[] => {
+    if (isScheduled) return [];
+
     switch (sport) {
       case 'basketball': {
-        const homePts = match.home_score || 89;
-        const awayPts = match.away_score || 94;
-        return [
-          { label: 'Field Goals (FG%)', home: stats.field_goals_home || '46.2% (36/78)', away: stats.field_goals_away || '48.8% (39/80)', homeVal: 46.2, awayVal: 48.8 },
-          { label: '3-Point Field Goals (3PT%)', home: stats.three_pointers_home || '37.5% (12/32)', away: stats.three_pointers_away || '41.4% (14/34)', homeVal: 37.5, awayVal: 41.4 },
-          { label: 'Free Throws (FT%)', home: stats.free_throws_home || '83.3% (15/18)', away: stats.free_throws_away || '76.9% (10/13)', homeVal: 83.3, awayVal: 76.9 },
-          { label: 'Total Rebounds', home: `${stats.rebounds_home || 42}`, away: `${stats.rebounds_away || 46}`, homeVal: stats.rebounds_home || 42, awayVal: stats.rebounds_away || 46 },
-          { label: 'Assists', home: `${stats.assists_home || 24}`, away: `${stats.assists_away || 28}`, homeVal: stats.assists_home || 24, awayVal: stats.assists_away || 28 },
-          { label: 'Steals', home: `${stats.steals_home || 7}`, away: `${stats.steals_away || 9}`, homeVal: stats.steals_home || 7, awayVal: stats.steals_away || 9 },
-          { label: 'Blocks', home: `${stats.blocks_home || 5}`, away: `${stats.blocks_away || 4}`, homeVal: stats.blocks_home || 5, awayVal: stats.blocks_away || 4 },
-          { label: 'Turnovers', home: `${stats.turnovers_home || 12}`, away: `${stats.turnovers_away || 10}`, homeVal: stats.turnovers_home || 12, awayVal: stats.turnovers_away || 10, reverse: true },
-          { label: 'Points in the Paint', home: `${stats.points_in_paint_home || 44}`, away: `${stats.points_in_paint_away || 50}`, homeVal: stats.points_in_paint_home || 44, awayVal: stats.points_in_paint_away || 50 },
-          { label: 'Fast Break Points', home: `${stats.fast_break_home || 16}`, away: `${stats.fast_break_away || 19}`, homeVal: stats.fast_break_home || 16, awayVal: stats.fast_break_away || 19 },
-        ];
-      }
-      case 'tennis': {
-        return [
-          { label: 'Aces', home: '8', away: '11', homeVal: 8, awayVal: 11 },
-          { label: 'Double Faults', home: '2', away: '4', homeVal: 2, awayVal: 4, reverse: true },
-          { label: '1st Serve In %', home: '68%', away: '64%', homeVal: 68, awayVal: 64 },
-          { label: '1st Serve Points Won', home: '78% (39/50)', away: '74% (37/50)', homeVal: 78, awayVal: 74 },
-          { label: '2nd Serve Points Won', home: '55% (17/31)', away: '48% (15/31)', homeVal: 55, awayVal: 48 },
-          { label: 'Break Points Converted', home: '3/6 (50%)', away: '2/5 (40%)', homeVal: 50, awayVal: 40 },
-          { label: 'Winners', home: '28', away: '31', homeVal: 28, awayVal: 31 },
-          { label: 'Unforced Errors', home: '18', away: '24', homeVal: 18, awayVal: 24, reverse: true },
-          { label: 'Total Points Won', home: '88', away: '82', homeVal: 88, awayVal: 82 },
-        ];
+        const rows = [];
+        if (stats.field_goals_home || stats.field_goals_away) {
+          const hVal = parseFloat(stats.field_goals_home || '0');
+          const aVal = parseFloat(stats.field_goals_away || '0');
+          rows.push({ label: 'Field Goals (FG%)', home: stats.field_goals_home || '0%', away: stats.field_goals_away || '0%', homeVal: hVal || 50, awayVal: aVal || 50 });
+        }
+        if (stats.three_pointers_home || stats.three_pointers_away) {
+          const hVal = parseFloat(stats.three_pointers_home || '0');
+          const aVal = parseFloat(stats.three_pointers_away || '0');
+          rows.push({ label: '3-Point Field Goals (3PT%)', home: stats.three_pointers_home || '0%', away: stats.three_pointers_away || '0%', homeVal: hVal || 50, awayVal: aVal || 50 });
+        }
+        if (stats.free_throws_home || stats.free_throws_away) {
+          const hVal = parseFloat(stats.free_throws_home || '0');
+          const aVal = parseFloat(stats.free_throws_away || '0');
+          rows.push({ label: 'Free Throws (FT%)', home: stats.free_throws_home || '0%', away: stats.free_throws_away || '0%', homeVal: hVal || 50, awayVal: aVal || 50 });
+        }
+        if (stats.rebounds_home !== undefined || stats.rebounds_away !== undefined) {
+          rows.push({ label: 'Total Rebounds', home: `${stats.rebounds_home || 0}`, away: `${stats.rebounds_away || 0}`, homeVal: stats.rebounds_home || 0, awayVal: stats.rebounds_away || 0 });
+        }
+        if (stats.assists_home !== undefined || stats.assists_away !== undefined) {
+          rows.push({ label: 'Assists', home: `${stats.assists_home || 0}`, away: `${stats.assists_away || 0}`, homeVal: stats.assists_home || 0, awayVal: stats.assists_away || 0 });
+        }
+        if (stats.steals_home !== undefined || stats.steals_away !== undefined) {
+          rows.push({ label: 'Steals', home: `${stats.steals_home || 0}`, away: `${stats.steals_away || 0}`, homeVal: stats.steals_home || 0, awayVal: stats.steals_away || 0 });
+        }
+        if (stats.blocks_home !== undefined || stats.blocks_away !== undefined) {
+          rows.push({ label: 'Blocks', home: `${stats.blocks_home || 0}`, away: `${stats.blocks_away || 0}`, homeVal: stats.blocks_home || 0, awayVal: stats.blocks_away || 0 });
+        }
+        if (stats.turnovers_home !== undefined || stats.turnovers_away !== undefined) {
+          rows.push({ label: 'Turnovers', home: `${stats.turnovers_home || 0}`, away: `${stats.turnovers_away || 0}`, homeVal: stats.turnovers_home || 0, awayVal: stats.turnovers_away || 0, reverse: true });
+        }
+        if (stats.points_in_paint_home !== undefined || stats.points_in_paint_away !== undefined) {
+          rows.push({ label: 'Points in the Paint', home: `${stats.points_in_paint_home || 0}`, away: `${stats.points_in_paint_away || 0}`, homeVal: stats.points_in_paint_home || 0, awayVal: stats.points_in_paint_away || 0 });
+        }
+        return rows;
       }
       case 'nfl': {
-        return [
-          { label: 'Total Yards', home: `${stats.total_yards_home || 365}`, away: `${stats.total_yards_away || 342}`, homeVal: stats.total_yards_home || 365, awayVal: stats.total_yards_away || 342 },
-          { label: 'Passing Yards', home: stats.passing_yards_home || '245 (22/33)', away: stats.passing_yards_away || '230 (20/31)', homeVal: 245, awayVal: 230 },
-          { label: 'Rushing Yards', home: stats.rushing_yards_home || '120 (26 att)', away: stats.rushing_yards_away || '112 (24 att)', homeVal: 120, awayVal: 112 },
-          { label: '1st Downs', home: `${stats.first_downs_home || 21}`, away: `${stats.first_downs_away || 19}`, homeVal: stats.first_downs_home || 21, awayVal: stats.first_downs_away || 19 },
-          { label: 'Time of Possession', home: stats.time_of_poss_home || '31:40', away: stats.time_of_poss_away || '28:20', homeVal: 31.6, awayVal: 28.3 },
-        ];
+        const rows = [];
+        if (stats.total_yards_home !== undefined || stats.total_yards_away !== undefined) {
+          rows.push({ label: 'Total Yards', home: `${stats.total_yards_home || 0}`, away: `${stats.total_yards_away || 0}`, homeVal: stats.total_yards_home || 0, awayVal: stats.total_yards_away || 0 });
+        }
+        if (stats.passing_yards_home || stats.passing_yards_away) {
+          rows.push({ label: 'Passing Yards', home: stats.passing_yards_home || '0', away: stats.passing_yards_away || '0', homeVal: 50, awayVal: 50 });
+        }
+        if (stats.rushing_yards_home || stats.rushing_yards_away) {
+          rows.push({ label: 'Rushing Yards', home: stats.rushing_yards_home || '0', away: stats.rushing_yards_away || '0', homeVal: 50, awayVal: 50 });
+        }
+        if (stats.first_downs_home !== undefined || stats.first_downs_away !== undefined) {
+          rows.push({ label: '1st Downs', home: `${stats.first_downs_home || 0}`, away: `${stats.first_downs_away || 0}`, homeVal: stats.first_downs_home || 0, awayVal: stats.first_downs_away || 0 });
+        }
+        if (stats.time_of_poss_home || stats.time_of_poss_away) {
+          rows.push({ label: 'Time of Possession', home: stats.time_of_poss_home || '00:00', away: stats.time_of_poss_away || '00:00', homeVal: 50, awayVal: 50 });
+        }
+        return rows;
       }
       case 'baseball': {
-        return [
-          { label: 'Hits', home: `${stats.hits_home || 9}`, away: `${stats.hits_away || 7}`, homeVal: stats.hits_home || 9, awayVal: stats.hits_away || 7 },
-          { label: 'Errors', home: `${stats.errors_home || 0}`, away: `${stats.errors_away || 1}`, homeVal: stats.errors_home || 0, awayVal: stats.errors_away || 1, reverse: true },
-          { label: 'Home Runs', home: `${stats.home_runs_home || 2}`, away: `${stats.home_runs_away || 1}`, homeVal: stats.home_runs_home || 2, awayVal: stats.home_runs_away || 1 },
-          { label: 'Strikeouts', home: `${stats.strikeouts_home || 7}`, away: `${stats.strikeouts_away || 10}`, homeVal: stats.strikeouts_home || 7, awayVal: stats.strikeouts_away || 10 },
-          { label: 'Walks (BB)', home: `${stats.walks_home || 4}`, away: `${stats.walks_away || 2}`, homeVal: stats.walks_home || 4, awayVal: stats.walks_away || 2 },
-        ];
+        const rows = [];
+        if (stats.hits_home !== undefined || stats.hits_away !== undefined) {
+          rows.push({ label: 'Hits', home: `${stats.hits_home || 0}`, away: `${stats.hits_away || 0}`, homeVal: stats.hits_home || 0, awayVal: stats.hits_away || 0 });
+        }
+        if (stats.errors_home !== undefined || stats.errors_away !== undefined) {
+          rows.push({ label: 'Errors', home: `${stats.errors_home || 0}`, away: `${stats.errors_away || 0}`, homeVal: stats.errors_home || 0, awayVal: stats.errors_away || 0, reverse: true });
+        }
+        if (stats.home_runs_home !== undefined || stats.home_runs_away !== undefined) {
+          rows.push({ label: 'Home Runs', home: `${stats.home_runs_home || 0}`, away: `${stats.home_runs_away || 0}`, homeVal: stats.home_runs_home || 0, awayVal: stats.home_runs_away || 0 });
+        }
+        if (stats.strikeouts_home !== undefined || stats.strikeouts_away !== undefined) {
+          rows.push({ label: 'Strikeouts', home: `${stats.strikeouts_home || 0}`, away: `${stats.strikeouts_away || 0}`, homeVal: stats.strikeouts_home || 0, awayVal: stats.strikeouts_away || 0 });
+        }
+        if (stats.walks_home !== undefined || stats.walks_away !== undefined) {
+          rows.push({ label: 'Walks (BB)', home: `${stats.walks_home || 0}`, away: `${stats.walks_away || 0}`, homeVal: stats.walks_home || 0, awayVal: stats.walks_away || 0 });
+        }
+        return rows;
+      }
+      case 'tennis': {
+        return [];
       }
       default: {
-        // Comprehensive Soccer Statistics from API-Sports
-        const passAccH = stats.pass_accuracy_home || 88;
-        const passAccA = stats.pass_accuracy_away || 84;
-        const passTotH = stats.passes_home || 520;
-        const passTotA = stats.passes_away || 440;
+        const possH = stats.possession_home || (isLive ? 50 : 0);
+        const possA = stats.possession_away || (isLive ? 50 : 0);
+        const passAccH = stats.pass_accuracy_home || 0;
+        const passAccA = stats.pass_accuracy_away || 0;
+        const passTotH = stats.passes_home || 0;
+        const passTotA = stats.passes_away || 0;
 
-        return [
-          { label: 'Ball Possession', home: `${stats.possession_home || 50}%`, away: `${stats.possession_away || 50}%`, homeVal: stats.possession_home || 50, awayVal: stats.possession_away || 50 },
-          { label: 'Expected Goals (xG)', home: stats.xg_home ? stats.xg_home.toFixed(2) : '1.84', away: stats.xg_away ? stats.xg_away.toFixed(2) : '1.52', homeVal: stats.xg_home || 1.84, awayVal: stats.xg_away || 1.52 },
-          { label: 'Total Shots', home: `${stats.shots_home || 12}`, away: `${stats.shots_away || 14}`, homeVal: stats.shots_home || 12, awayVal: stats.shots_away || 14 },
-          { label: 'Shots On Target', home: `${stats.shots_on_target_home || 6}`, away: `${stats.shots_on_target_away || 5}`, homeVal: stats.shots_on_target_home || 6, awayVal: stats.shots_on_target_away || 5 },
-          { label: 'Shots Off Target', home: `${(stats.shots_home || 12) - (stats.shots_on_target_home || 6)}`, away: `${(stats.shots_away || 14) - (stats.shots_on_target_away || 5)}`, homeVal: 6, awayVal: 9 },
-          { label: 'Blocked Shots', home: `${stats.shots_blocked_home || 3}`, away: `${stats.shots_blocked_away || 4}`, homeVal: stats.shots_blocked_home || 3, awayVal: stats.shots_blocked_away || 4 },
-          { label: 'Big Chances Created', home: `${stats.big_chances_home || 4}`, away: `${stats.big_chances_away || 3}`, homeVal: stats.big_chances_home || 4, awayVal: stats.big_chances_away || 3 },
-          { label: 'Corner Kicks', home: `${stats.corners_home || 5}`, away: `${stats.corners_away || 7}`, homeVal: stats.corners_home || 5, awayVal: stats.corners_away || 7 },
-          { label: 'Fouls Committed', home: `${stats.fouls_home || 9}`, away: `${stats.fouls_away || 11}`, homeVal: stats.fouls_home || 9, awayVal: stats.fouls_away || 11, reverse: true },
-          { label: 'Yellow Cards', home: `${stats.yellow_cards_home || 1}`, away: `${stats.yellow_cards_away || 2}`, homeVal: stats.yellow_cards_home || 1, awayVal: stats.yellow_cards_away || 2, reverse: true },
-          { label: 'Red Cards', home: `${stats.red_cards_home || 0}`, away: `${stats.red_cards_away || 0}`, homeVal: stats.red_cards_home || 0, awayVal: stats.red_cards_away || 0, reverse: true },
-          { label: 'Pass Accuracy %', home: `${passAccH}% (${passTotH})`, away: `${passAccA}% (${passTotA})`, homeVal: passAccH, awayVal: passAccA },
-          { label: 'Tackles Won', home: `${stats.tackles_home || 16}`, away: `${stats.tackles_away || 19}`, homeVal: stats.tackles_home || 16, awayVal: stats.tackles_away || 19 },
-          { label: 'Goalkeeper Saves', home: `${stats.saves_home || 4}`, away: `${stats.saves_away || 4}`, homeVal: stats.saves_home || 4, awayVal: stats.saves_away || 4 },
+        const rows: StatRow[] = [
+          { label: 'Ball Possession', home: `${possH}%`, away: `${possA}%`, homeVal: possH, awayVal: possA },
         ];
+
+        if (stats.xg_home !== undefined || stats.xg_away !== undefined || isLive) {
+          const xgH = stats.xg_home ? stats.xg_home.toFixed(2) : '0.00';
+          const xgA = stats.xg_away ? stats.xg_away.toFixed(2) : '0.00';
+          rows.push({ label: 'Expected Goals (xG)', home: xgH, away: xgA, homeVal: stats.xg_home || 0, awayVal: stats.xg_away || 0 });
+        }
+
+        rows.push(
+          { label: 'Total Shots', home: `${stats.shots_home || 0}`, away: `${stats.shots_away || 0}`, homeVal: stats.shots_home || 0, awayVal: stats.shots_away || 0 },
+          { label: 'Shots On Target', home: `${stats.shots_on_target_home || 0}`, away: `${stats.shots_on_target_away || 0}`, homeVal: stats.shots_on_target_home || 0, awayVal: stats.shots_on_target_away || 0 },
+          { label: 'Corner Kicks', home: `${stats.corners_home || 0}`, away: `${stats.corners_away || 0}`, homeVal: stats.corners_home || 0, awayVal: stats.corners_away || 0 },
+          { label: 'Fouls Committed', home: `${stats.fouls_home || 0}`, away: `${stats.fouls_away || 0}`, homeVal: stats.fouls_home || 0, awayVal: stats.fouls_away || 0, reverse: true },
+          { label: 'Yellow Cards', home: `${stats.yellow_cards_home || 0}`, away: `${stats.yellow_cards_away || 0}`, homeVal: stats.yellow_cards_home || 0, awayVal: stats.yellow_cards_away || 0, reverse: true },
+          { label: 'Red Cards', home: `${stats.red_cards_home || 0}`, away: `${stats.red_cards_away || 0}`, homeVal: stats.red_cards_home || 0, awayVal: stats.red_cards_away || 0, reverse: true },
+        );
+
+        if (passAccH > 0 || passAccA > 0) {
+          rows.push({ label: 'Pass Accuracy %', home: `${passAccH}% (${passTotH})`, away: `${passAccA}% (${passTotA})`, homeVal: passAccH, awayVal: passAccA });
+        }
+
+        if ((stats.saves_home || 0) > 0 || (stats.saves_away || 0) > 0) {
+          rows.push({ label: 'Goalkeeper Saves', home: `${stats.saves_home || 0}`, away: `${stats.saves_away || 0}`, homeVal: stats.saves_home || 0, awayVal: stats.saves_away || 0 });
+        }
+
+        return rows;
       }
     }
   };
@@ -154,44 +212,53 @@ export function HeadToHead({ match }: HeadToHeadProps) {
         </div>
 
         {/* Metric Comparison Bars */}
-        <div className="space-y-3.5">
-          {statRows.map((row) => {
-            const total = (Number(row.homeVal) + Number(row.awayVal)) || 1;
-            const homePct = Math.round((Number(row.homeVal) / total) * 100);
-            const awayPct = 100 - homePct;
+        {statRows.length > 0 ? (
+          <div className="space-y-3.5">
+            {statRows.map((row) => {
+              const total = (Number(row.homeVal) + Number(row.awayVal)) || 1;
+              const homePct = Math.round((Number(row.homeVal) / total) * 100);
+              const awayPct = 100 - homePct;
 
-            return (
-              <div key={row.label} className="group text-xs">
-                <div className="mb-1 flex items-center justify-between gap-2 font-mono text-xs">
-                  <span className="shrink-0 whitespace-nowrap text-left font-bold text-indigo-700 dark:text-indigo-300">
-                    {row.home}
-                  </span>
-                  <span
-                    className="min-w-0 flex-1 truncate px-1 text-center font-sans text-[11px] font-medium text-muted-foreground"
-                    title={row.label}
-                  >
-                    {row.label}
-                  </span>
-                  <span className="shrink-0 whitespace-nowrap text-right font-bold text-orange-700 dark:text-orange-300">
-                    {row.away}
-                  </span>
-                </div>
+              return (
+                <div key={row.label} className="group text-xs">
+                  <div className="mb-1 flex items-center justify-between gap-2 font-mono text-xs">
+                    <span className="shrink-0 whitespace-nowrap text-left font-bold text-indigo-700 dark:text-indigo-300">
+                      {row.home}
+                    </span>
+                    <span
+                      className="min-w-0 flex-1 truncate px-1 text-center font-sans text-[11px] font-medium text-muted-foreground"
+                      title={row.label}
+                    >
+                      {row.label}
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap text-right font-bold text-orange-700 dark:text-orange-300">
+                      {row.away}
+                    </span>
+                  </div>
 
-                {/* Bi-Color Proportion Bar */}
-                <div className="w-full h-2 bg-surface-subtle rounded-full overflow-hidden flex shadow-inner">
-                  <div
-                    className="bg-indigo-600 dark:bg-indigo-500 rounded-l-full transition-all duration-500"
-                    style={{ width: `${homePct}%` }}
-                  />
-                  <div
-                    className="bg-orange-500 dark:bg-orange-400 rounded-r-full transition-all duration-500"
-                    style={{ width: `${awayPct}%` }}
-                  />
+                  {/* Bi-Color Proportion Bar */}
+                  <div className="w-full h-2 bg-surface-subtle rounded-full overflow-hidden flex shadow-inner">
+                    <div
+                      className="bg-indigo-600 dark:bg-indigo-500 rounded-l-full transition-all duration-500"
+                      style={{ width: `${homePct}%` }}
+                    />
+                    <div
+                      className="bg-orange-500 dark:bg-orange-400 rounded-r-full transition-all duration-500"
+                      style={{ width: `${awayPct}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-6 text-center text-xs font-mono text-muted-foreground bg-surface-subtle/50 rounded-xl border border-surface-border p-4">
+            <p className="font-semibold text-foreground mb-1">Live Statistics Pending Kickoff</p>
+            <p className="text-[11px] text-muted-foreground">
+              Possession, shots on target, xG, and pitch telemetry will stream live in real time once the match begins.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Head-to-Head Encounters History (API-Sports) */}

@@ -121,6 +121,106 @@ func (s *Simulator) TickLiveMatches(ctx context.Context) {
 			}
 		}
 
+		// Dynamic Stats Update based on live match progression
+		if matchCopy.Sport == models.SportSoccer {
+			if matchCopy.Stats.PossessionHome == 0 && matchCopy.Stats.PossessionAway == 0 {
+				matchCopy.Stats.PossessionHome = 50
+				matchCopy.Stats.PossessionAway = 50
+			}
+
+			// Possession smoothly fluctuates with attack pressure
+			if matchCopy.Stats.AttackingPressure == "HOME" {
+				if matchCopy.Stats.PossessionHome < 78 {
+					matchCopy.Stats.PossessionHome++
+					matchCopy.Stats.PossessionAway = 100 - matchCopy.Stats.PossessionHome
+				}
+				matchCopy.Stats.PassesHome += s.rnd.Intn(3) + 1
+			} else if matchCopy.Stats.AttackingPressure == "AWAY" {
+				if matchCopy.Stats.PossessionAway < 78 {
+					matchCopy.Stats.PossessionAway++
+					matchCopy.Stats.PossessionHome = 100 - matchCopy.Stats.PossessionAway
+				}
+				matchCopy.Stats.PassesAway += s.rnd.Intn(3) + 1
+			}
+
+			if matchCopy.Stats.PassAccuracyHome == 0 {
+				matchCopy.Stats.PassAccuracyHome = 82 + s.rnd.Intn(10)
+			}
+			if matchCopy.Stats.PassAccuracyAway == 0 {
+				matchCopy.Stats.PassAccuracyAway = 80 + s.rnd.Intn(10)
+			}
+
+			// Shots, corners, fouls rolls during attack pressure
+			if eventRoll < 12 { // Shot attempt
+				if matchCopy.Stats.AttackingPressure == "HOME" {
+					matchCopy.Stats.ShotsHome++
+					if s.rnd.Intn(2) == 0 {
+						matchCopy.Stats.ShotsOnTargetHome++
+						matchCopy.Stats.SavesAway++
+					}
+					matchCopy.Stats.XGHome = float64(int((float64(matchCopy.HomeScore)*0.65+float64(matchCopy.Stats.ShotsOnTargetHome)*0.18+float64(matchCopy.Stats.ShotsHome)*0.04)*100)) / 100.0
+				} else {
+					matchCopy.Stats.ShotsAway++
+					if s.rnd.Intn(2) == 0 {
+						matchCopy.Stats.ShotsOnTargetAway++
+						matchCopy.Stats.SavesHome++
+					}
+					matchCopy.Stats.XGAway = float64(int((float64(matchCopy.AwayScore)*0.65+float64(matchCopy.Stats.ShotsOnTargetAway)*0.18+float64(matchCopy.Stats.ShotsAway)*0.04)*100)) / 100.0
+				}
+			} else if eventRoll == 18 || eventRoll == 19 {
+				if matchCopy.Stats.AttackingPressure == "HOME" {
+					matchCopy.Stats.CornersHome++
+				} else {
+					matchCopy.Stats.CornersAway++
+				}
+			} else if eventRoll == 22 || eventRoll == 23 {
+				if s.rnd.Intn(2) == 0 {
+					matchCopy.Stats.FoulsHome++
+				} else {
+					matchCopy.Stats.FoulsAway++
+				}
+			}
+
+			// Ensure shots reflect at least scored goals
+			if matchCopy.Stats.ShotsHome < matchCopy.HomeScore {
+				matchCopy.Stats.ShotsHome = matchCopy.HomeScore
+				matchCopy.Stats.ShotsOnTargetHome = matchCopy.HomeScore
+			}
+			if matchCopy.Stats.ShotsAway < matchCopy.AwayScore {
+				matchCopy.Stats.ShotsAway = matchCopy.AwayScore
+				matchCopy.Stats.ShotsOnTargetAway = matchCopy.AwayScore
+			}
+		} else if matchCopy.Sport == models.SportBasketball {
+			hFGM := int(float64(matchCopy.HomeScore) * 0.42)
+			hFGA := int(float64(matchCopy.HomeScore) * 0.88)
+			aFGM := int(float64(matchCopy.AwayScore) * 0.42)
+			aFGA := int(float64(matchCopy.AwayScore) * 0.88)
+			if hFGA < hFGM {
+				hFGA = hFGM
+			}
+			if aFGA < aFGM {
+				aFGA = aFGM
+			}
+
+			hFGpct := 0.0
+			if hFGA > 0 {
+				hFGpct = float64(hFGM) / float64(hFGA) * 100
+			}
+			aFGpct := 0.0
+			if aFGA > 0 {
+				aFGpct = float64(aFGM) / float64(aFGA) * 100
+			}
+
+			matchCopy.Stats.FieldGoalsHome = fmt.Sprintf("%.1f%% (%d/%d)", hFGpct, hFGM, hFGA)
+			matchCopy.Stats.FieldGoalsAway = fmt.Sprintf("%.1f%% (%d/%d)", aFGpct, aFGM, aFGA)
+			matchCopy.Stats.ReboundsHome = 15 + int(float64(matchCopy.HomeScore)*0.25)
+			matchCopy.Stats.ReboundsAway = 15 + int(float64(matchCopy.AwayScore)*0.25)
+			matchCopy.Stats.AssistsHome = int(float64(hFGM) * 0.65)
+			matchCopy.Stats.AssistsAway = int(float64(aFGM) * 0.65)
+			matchCopy.Stats.PointsInPaintHome = int(float64(matchCopy.HomeScore) * 0.46)
+			matchCopy.Stats.PointsInPaintAway = int(float64(matchCopy.AwayScore) * 0.46)
+		}
+
 		// Save updated match state
 		s.store.SaveMatch(&matchCopy)
 		_ = s.redis.SetLiveMatchState(ctx, &matchCopy)

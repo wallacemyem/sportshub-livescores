@@ -107,24 +107,30 @@ func (h *MatchHandler) GetMatchByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Hydrate with rich lineups and comprehensive stats from API-Sports / fallback
+	// 3. Hydrate with rich lineups and comprehensive stats from API-Sports if available
 	if h.apiSports != nil {
-		if lineups, err := h.apiSports.FetchLineups(ctx, match.Sport, matchID); err == nil {
-			match.Lineups = lineups
-			if h.redis != nil {
-				_ = h.redis.SetMatchLineups(ctx, matchID, lineups, 15*time.Minute)
+		if lineups, err := h.apiSports.FetchLineups(ctx, match.Sport, matchID); err == nil && lineups != nil {
+			if len(lineups.Home.StartingXI) > 0 || len(lineups.Away.StartingXI) > 0 {
+				match.Lineups = lineups
+				if h.redis != nil {
+					_ = h.redis.SetMatchLineups(ctx, matchID, lineups, 15*time.Minute)
+				}
 			}
 		}
-		if stats, err := h.apiSports.FetchComprehensiveStats(ctx, match.Sport, matchID); err == nil {
-			match.Stats = *stats
-			if h.redis != nil {
-				_ = h.redis.SetMatchStats(ctx, matchID, stats, 5*time.Minute)
+		if stats, err := h.apiSports.FetchComprehensiveStats(ctx, match.Sport, matchID); err == nil && stats != nil {
+			if stats.PossessionHome > 0 || stats.ShotsHome > 0 || stats.TotalYardsHome > 0 || stats.FieldGoalsHome != "" || stats.HitsHome > 0 {
+				match.Stats = *stats
+				if h.redis != nil {
+					_ = h.redis.SetMatchStats(ctx, matchID, stats, 5*time.Minute)
+				}
 			}
 		}
-		if h2h, err := h.apiSports.FetchHeadToHead(ctx, match.Sport, match.HomeTeam.ID, match.AwayTeam.ID); err == nil {
-			match.H2H = h2h
-			if h.redis != nil {
-				_ = h.redis.SetMatchH2H(ctx, matchID, h2h, 2*time.Hour)
+		if h2h, err := h.apiSports.FetchHeadToHead(ctx, match.Sport, match.HomeTeam.ID, match.AwayTeam.ID); err == nil && h2h != nil {
+			if len(h2h.Matches) > 0 {
+				match.H2H = h2h
+				if h.redis != nil {
+					_ = h.redis.SetMatchH2H(ctx, matchID, h2h, 2*time.Hour)
+				}
 			}
 		}
 	}
@@ -162,7 +168,7 @@ func (h *MatchHandler) GetMatchLineups(w http.ResponseWriter, r *http.Request) {
 
 	if h.apiSports != nil {
 		lineups, err := h.apiSports.FetchLineups(ctx, sport, matchID)
-		if err == nil && lineups != nil {
+		if err == nil && lineups != nil && (len(lineups.Home.StartingXI) > 0 || len(lineups.Away.StartingXI) > 0) {
 			if h.redis != nil {
 				_ = h.redis.SetMatchLineups(ctx, matchID, lineups, 15*time.Minute)
 			}

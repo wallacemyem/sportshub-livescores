@@ -378,19 +378,13 @@ func (c *APISportsClient) fetchSoccerLive(ctx context.Context) ([]*models.Match,
 			Stats: models.MatchStats{
 				PossessionHome:    50,
 				PossessionAway:    50,
-				ShotsHome:         6,
-				ShotsAway:         5,
-				ShotsOnTargetHome: 3,
-				ShotsOnTargetAway: 2,
-				CornersHome:       3,
-				CornersAway:       2,
-				FoulsHome:         4,
-				FoulsAway:         5,
-				XGHome:            1.20,
-				XGAway            : 0.95,
-				AttackingPressure : "HOME",
-				BallPositionX     : 58.0,
-				BallPositionY     : 48.0,
+				ShotsHome:         homeScore,
+				ShotsAway:         awayScore,
+				ShotsOnTargetHome: homeScore,
+				ShotsOnTargetAway: awayScore,
+				AttackingPressure: "NEUTRAL",
+				BallPositionX:     50.0,
+				BallPositionY:     50.0,
 			},
 		}
 
@@ -1251,166 +1245,19 @@ func (c *APISportsClient) FetchHeadToHead(ctx context.Context, sport models.Spor
 // ---------------------------------------------------------------------------
 
 func (c *APISportsClient) generateFallbackLineups(matchID string) *models.MatchLineups {
-	return &models.MatchLineups{
-		MatchID: matchID,
-		Home: models.TeamLineup{
-			TeamID:    "team-home",
-			TeamName:  "Arsenal FC",
-			Formation: "4-3-3",
-			Coach: models.Coach{
-				Name:  "Mikel Arteta",
-				Photo: "https://media.api-sports.io/football/coachs/19.png",
-			},
-			StartingXI: []models.Player{
-				{ID: "p-1", Name: "D. Raya", Number: 1, Position: "GK", Grid: "1:1", Rating: 7.4, Photo: "https://media.api-sports.io/football/players/18847.png"},
-				{ID: "p-2", Name: "B. White", Number: 4, Position: "DF", Grid: "2:4", Rating: 7.2, Photo: "https://media.api-sports.io/football/players/19088.png"},
-				{ID: "p-3", Name: "W. Saliba", Number: 2, Position: "DF", Grid: "2:3", Rating: 7.8, Photo: "https://media.api-sports.io/football/players/127814.png"},
-				{ID: "p-4", Name: "Gabriel", Number: 6, Position: "DF", Grid: "2:2", Rating: 7.5, Photo: "https://media.api-sports.io/football/players/22224.png"},
-				{ID: "p-5", Name: "J. Timber", Number: 12, Position: "DF", Grid: "2:1", Rating: 7.1, Photo: "https://media.api-sports.io/football/players/127798.png"},
-				{ID: "p-6", Name: "D. Rice", Number: 41, Position: "MF", Grid: "3:3", Rating: 7.9, Photo: "https://media.api-sports.io/football/players/293.png"},
-				{ID: "p-7", Name: "M. Ødegaard (C)", Number: 8, Position: "MF", Grid: "3:2", Rating: 8.3, IsCaptain: true, Photo: "https://media.api-sports.io/football/players/371.png"},
-				{ID: "p-8", Name: "K. Havertz", Number: 29, Position: "MF", Grid: "3:1", Rating: 7.6, Photo: "https://media.api-sports.io/football/players/2290.png"},
-				{ID: "p-9", Name: "B. Saka", Number: 7, Position: "FW", Grid: "4:3", Rating: 8.6, Photo: "https://media.api-sports.io/football/players/1467.png"},
-				{ID: "p-10", Name: "G. Martinelli", Number: 11, Position: "FW", Grid: "4:1", Rating: 7.5, Photo: "https://media.api-sports.io/football/players/127828.png"},
-				{ID: "p-11", Name: "G. Jesus", Number: 9, Position: "FW", Grid: "4:2", Rating: 7.3, Photo: "https://media.api-sports.io/football/players/643.png"},
-			},
-			Substitutes: []models.Player{
-				{ID: "p-12", Name: "Neto", Number: 32, Position: "GK", Photo: "https://media.api-sports.io/football/players/1458.png"},
-				{ID: "p-13", Name: "J. Kiwior", Number: 15, Position: "DF", Photo: "https://media.api-sports.io/football/players/127830.png"},
-				{ID: "p-14", Name: "Jorginho", Number: 20, Position: "MF", Photo: "https://media.api-sports.io/football/players/2289.png"},
-				{ID: "p-15", Name: "L. Trossard", Number: 19, Position: "FW", Photo: "https://media.api-sports.io/football/players/1897.png"},
-				{ID: "p-16", Name: "R. Sterling", Number: 30, Position: "FW", Photo: "https://media.api-sports.io/football/players/645.png"},
-			},
-		},
-		Away: models.TeamLineup{
-			TeamID:    "team-away",
-			TeamName:  "Manchester City",
-			Formation: "4-2-3-1",
-			Coach: models.Coach{
-				Name:  "Pep Guardiola",
-				Photo: "https://media.api-sports.io/football/coachs/4.png",
-			},
-			StartingXI: []models.Player{
-				{ID: "p-21", Name: "Ederson", Number: 31, Position: "GK", Grid: "1:1", Rating: 7.2, Photo: "https://media.api-sports.io/football/players/627.png"},
-				{ID: "p-22", Name: "K. Walker (C)", Number: 2, Position: "DF", Grid: "2:4", Rating: 7.1, IsCaptain: true, Photo: "https://media.api-sports.io/football/players/629.png"},
-				{ID: "p-23", Name: "R. Dias", Number: 3, Position: "DF", Grid: "2:3", Rating: 7.6, Photo: "https://media.api-sports.io/football/players/567.png"},
-				{ID: "p-24", Name: "M. Akanji", Number: 25, Position: "DF", Grid: "2:2", Rating: 7.3, Photo: "https://media.api-sports.io/football/players/1089.png"},
-				{ID: "p-25", Name: "J. Gvardiol", Number: 24, Position: "DF", Grid: "2:1", Rating: 7.7, Photo: "https://media.api-sports.io/football/players/127800.png"},
-				{ID: "p-26", Name: "Rodri", Number: 16, Position: "MF", Grid: "3:2", Rating: 8.4, Photo: "https://media.api-sports.io/football/players/44.png"},
-				{ID: "p-27", Name: "M. Kovačić", Number: 8, Position: "MF", Grid: "3:1", Rating: 7.4, Photo: "https://media.api-sports.io/football/players/2288.png"},
-				{ID: "p-28", Name: "K. De Bruyne", Number: 17, Position: "MF", Grid: "4:2", Rating: 8.8, Photo: "https://media.api-sports.io/football/players/629.png"},
-				{ID: "p-29", Name: "B. Silva", Number: 20, Position: "FW", Grid: "4:3", Rating: 7.9, Photo: "https://media.api-sports.io/football/players/631.png"},
-				{ID: "p-30", Name: "P. Foden", Number: 47, Position: "FW", Grid: "4:1", Rating: 8.1, Photo: "https://media.api-sports.io/football/players/635.png"},
-				{ID: "p-31", Name: "E. Haaland", Number: 9, Position: "FW", Grid: "5:1", Rating: 8.9, Photo: "https://media.api-sports.io/football/players/1100.png"},
-			},
-			Substitutes: []models.Player{
-				{ID: "p-32", Name: "S. Ortega", Number: 18, Position: "GK", Photo: "https://media.api-sports.io/football/players/1099.png"},
-				{ID: "p-33", Name: "J. Stones", Number: 5, Position: "DF", Photo: "https://media.api-sports.io/football/players/630.png"},
-				{ID: "p-34", Name: "I. Gündoğan", Number: 19, Position: "MF", Photo: "https://media.api-sports.io/football/players/633.png"},
-				{ID: "p-35", Name: "J. Doku", Number: 11, Position: "FW", Photo: "https://media.api-sports.io/football/players/127815.png"},
-				{ID: "p-36", Name: "J. Grealish", Number: 10, Position: "FW", Photo: "https://media.api-sports.io/football/players/637.png"},
-			},
-		},
-	}
+	return nil
 }
 
 func (c *APISportsClient) generateFallbackStats(sport models.SportType) *models.MatchStats {
-	return &models.MatchStats{
-		PossessionHome:    54,
-		PossessionAway:    46,
-		ShotsHome:         14,
-		ShotsAway:         11,
-		ShotsOnTargetHome: 6,
-		ShotsOnTargetAway: 4,
-		CornersHome:       7,
-		CornersAway:       4,
-		FoulsHome:         9,
-		FoulsAway:         12,
-		YellowCardsHome:   1,
-		YellowCardsAway:   2,
-		RedCardsHome:      0,
-		RedCardsAway:      0,
-		XGHome:            1.85,
-		XGAway:            1.32,
-		PassesHome:        520,
-		PassesAway:        440,
-		PassAccuracyHome:  88,
-		PassAccuracyAway:  84,
-		TacklesHome:       16,
-		TacklesAway:       19,
-		SavesHome:         4,
-		SavesAway:         5,
-		AttackingPressure: "HOME",
-		BallPositionX:     62.0,
-		BallPositionY:     45.0,
-	}
+	return nil
 }
 
 func (c *APISportsClient) generateFallbackPlayerStats(matchID string) *models.MatchPlayerStats {
-	return &models.MatchPlayerStats{
-		MatchID: matchID,
-		Home: models.TeamPlayerStats{
-			TeamID:   "team-home",
-			TeamName: "Arsenal",
-			Players: []models.PlayerMatchStat{
-				{Player: models.Player{ID: "p-9", Name: "B. Saka", Number: 7, Position: "FW", Photo: "https://media.api-sports.io/football/players/1467.png", Rating: 8.6}, MinutesPlayed: 90, Rating: 8.6, Goals: 1, Assists: 1, ShotsTotal: 4, ShotsOnTarget: 3, PassesTotal: 38, PassAccuracy: 89, Tackles: 2, DuelsWon: 7},
-				{Player: models.Player{ID: "p-7", Name: "M. Ødegaard", Number: 8, Position: "MF", Photo: "https://media.api-sports.io/football/players/371.png", Rating: 8.3}, MinutesPlayed: 90, Rating: 8.3, Goals: 0, Assists: 1, ShotsTotal: 2, ShotsOnTarget: 1, PassesTotal: 65, PassAccuracy: 92, Tackles: 3, DuelsWon: 5},
-				{Player: models.Player{ID: "p-6", Name: "D. Rice", Number: 41, Position: "MF", Photo: "https://media.api-sports.io/football/players/293.png", Rating: 7.9}, MinutesPlayed: 90, Rating: 7.9, Goals: 0, Assists: 0, ShotsTotal: 1, ShotsOnTarget: 0, PassesTotal: 58, PassAccuracy: 94, Tackles: 5, DuelsWon: 8},
-			},
-		},
-		Away: models.TeamPlayerStats{
-			TeamID:   "team-away",
-			TeamName: "Manchester City",
-			Players: []models.PlayerMatchStat{
-				{Player: models.Player{ID: "p-31", Name: "E. Haaland", Number: 9, Position: "FW", Photo: "https://media.api-sports.io/football/players/1100.png", Rating: 8.9}, MinutesPlayed: 90, Rating: 8.9, Goals: 1, Assists: 0, ShotsTotal: 5, ShotsOnTarget: 4, PassesTotal: 18, PassAccuracy: 78, Tackles: 0, DuelsWon: 6},
-				{Player: models.Player{ID: "p-28", Name: "K. De Bruyne", Number: 17, Position: "MF", Photo: "https://media.api-sports.io/football/players/629.png", Rating: 8.8}, MinutesPlayed: 85, Rating: 8.8, Goals: 0, Assists: 1, ShotsTotal: 3, ShotsOnTarget: 2, PassesTotal: 54, PassAccuracy: 88, Tackles: 2, DuelsWon: 4},
-			},
-		},
-	}
+	return nil
 }
 
 func (c *APISportsClient) generateFallbackH2H(homeID, awayID string) *models.HeadToHeadSummary {
-	now := time.Now()
-	return &models.HeadToHeadSummary{
-		HomeTeamID:   homeID,
-		AwayTeamID:   awayID,
-		TotalMatches: 5,
-		HomeWins:     2,
-		AwayWins:     2,
-		Draws:        1,
-		Matches: []models.HeadToHeadItem{
-			{
-				ID:        "h2h-prev-1",
-				Date:      now.AddDate(0, -5, -12),
-				HomeTeam:  models.Team{Name: "Arsenal FC", Logo: "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png"},
-				AwayTeam:  models.Team{Name: "Manchester City", Logo: "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/382.png"},
-				HomeScore: 1,
-				AwayScore: 0,
-				Status:    models.StatusFinished,
-				League:    models.League{Name: "Premier League"},
-			},
-			{
-				ID:        "h2h-prev-2",
-				Date:      now.AddDate(0, -11, -5),
-				HomeTeam:  models.Team{Name: "Manchester City", Logo: "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/382.png"},
-				AwayTeam:  models.Team{Name: "Arsenal FC", Logo: "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png"},
-				HomeScore: 0,
-				AwayScore: 0,
-				Status:    models.StatusFinished,
-				League:    models.League{Name: "Premier League"},
-			},
-			{
-				ID:        "h2h-prev-3",
-				Date:      now.AddDate(-1, -2, -18),
-				HomeTeam:  models.Team{Name: "Manchester City", Logo: "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/382.png"},
-				AwayTeam:  models.Team{Name: "Arsenal FC", Logo: "https://a.espncdn.com/combiner/i?img=/i/teamlogos/soccer/500/359.png"},
-				HomeScore: 4,
-				AwayScore: 1,
-				Status:    models.StatusFinished,
-				League:    models.League{Name: "Premier League"},
-			},
-		},
-	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
