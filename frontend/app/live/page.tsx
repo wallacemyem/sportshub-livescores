@@ -45,7 +45,6 @@ import {
   Trash2,
   X,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 import { formatClock } from '@/lib/sportFormat';
 import { useLiveClock, stampClocks } from '@/hooks/useLiveClock';
@@ -209,49 +208,6 @@ export default function HomePage() {
       setQuickCode('');
     } catch (err: any) {
       setQuickError(err.message || 'Failed to import booking code');
-    } finally {
-      setIsQuickImporting(false);
-    }
-  };
-
-  // Instant Sample Slip Loader (Loads realistic 5-leg multi-sport accumulator)
-  const handleLoadSampleSlip = async () => {
-    setIsQuickImporting(true);
-    setQuickError(null);
-    try {
-      const apiBase = getApiBaseUrl();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch(`${apiBase}/betslip/import`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          bookmaker: 'sportybet',
-          booking_code: 'SB-SAMPLE-01',
-        }),
-      });
-
-      if (res.ok) {
-        const slip: BetSlip = await res.json();
-        setBetSlips((prev) => {
-          const next = [slip, ...prev.filter((s) => s.id !== slip.id)];
-          setCachedData(slipCacheKey, next);
-          return next;
-        });
-        if (slip.legs) {
-          const newMatches = slip.legs.map((l) => l.match).filter(Boolean);
-          setMatches((prev) => {
-            const map = new Map(prev.map((m) => [m.id, m]));
-            newMatches.forEach((m) => map.set(m.id, m));
-            const updated = Array.from(map.values());
-            setCachedData('matches', updated);
-            return updated;
-          });
-        }
-      }
-    } catch (err) {
-      console.warn('Failed to load sample slip', err);
     } finally {
       setIsQuickImporting(false);
     }
@@ -839,17 +795,16 @@ export default function HomePage() {
                 </p>
               )}
 
-              {/* Quick Sample Slip Button */}
+              {/* Slip Importer Option */}
               <div className="mt-4 pt-4 border-t border-surface-border w-full max-w-md flex items-center justify-between text-xs">
-                <span className="text-muted-foreground text-[11px]">Want to preview with live games?</span>
+                <span className="text-muted-foreground text-[11px]">Supports SportyBet, Bet9ja, 1xBet, BetKing, MSport, MozzartBet</span>
                 <button
                   type="button"
-                  onClick={handleLoadSampleSlip}
-                  disabled={isQuickImporting}
-                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 text-xs"
+                  onClick={() => setIsImporterOpen(true)}
+                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 text-xs shrink-0 ml-2"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Load Sample Slip</span>
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span>Full Importer</span>
                 </button>
               </div>
             </div>

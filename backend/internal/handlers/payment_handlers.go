@@ -98,7 +98,7 @@ func (h *PaymentHandler) SimulatePayment(w http.ResponseWriter, r *http.Request)
 	}
 
 	if req.UserID == "" {
-		req.UserID = "demo_user_17080"
+		req.UserID = "usr_guest"
 	}
 
 	_ = h.store.UpgradeUserToPro(req.UserID, 30)

@@ -147,11 +147,13 @@ Every table shares one component: search, filters, sortable columns and paginati
 
 ---
 
-## 6. Testing Booking Codes
+## 6. Real Sportsbook Booking Codes
 
-Use these sample booking codes in the **Import Bet Ticket** modal or Admin Sandbox:
+Enter real active booking codes from any supported sportsbook in the **Track Bet Slip** modal:
 
-- `BC99214` - **SportyBet**: 3-leg EPL + UCL + NBA accumulator
-- `B9JA-44912` - **Bet9ja**: 4-leg European football combo
-- `1X-88231` - **1xBet**: High-multiplier multi-sport ticket
-- `BK-10294` - **BetKing**: Over/Under goals accumulator
+- **SportyBet** (NG, GH, KE, UG)
+- **Bet9ja** (NG)
+- **1xBet** (Global)
+- **BetKing** (NG)
+- **MSport** (NG, GH)
+- **MozzartBet** (Global)
