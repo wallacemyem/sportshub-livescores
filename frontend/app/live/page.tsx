@@ -8,7 +8,6 @@ import { useLiveMatchSocket } from '@/hooks/useLiveMatchSocket';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { usePiPScoreboard } from '@/hooks/usePiPScoreboard';
 import { useMediaSession } from '@/hooks/useMediaSession';
-import { TickerStrip } from '@/components/ui/TickerStrip';
 import { LiveScoreCard } from '@/components/ui/LiveScoreCard';
 import { FloatingPiP } from '@/components/ui/FloatingPiP';
 import { ProUpgradeModal } from '@/components/ui/ProUpgradeModal';
@@ -45,6 +44,8 @@ import {
   Flag,
   Trash2,
   X,
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
 import { formatClock } from '@/lib/sportFormat';
 import { useLiveClock, stampClocks } from '@/hooks/useLiveClock';
@@ -63,7 +64,8 @@ import {
 import { useNotification } from '@/context/NotificationContext';
 import { formatTimeAMPM } from '@/lib/date';
 
-const SPORTS: { id: SportType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const SPORTS: { id: SportType | 'all'; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'all', label: 'All Slip Games', icon: Layers },
   { id: 'soccer', label: 'Soccer', icon: Activity },
   { id: 'basketball', label: 'Basketball', icon: CircleDot },
   { id: 'tennis', label: 'Tennis', icon: Target },
@@ -77,10 +79,9 @@ export default function HomePage() {
   const router = useRouter();
   const { user, token } = useAuth();
   const { alertsEnabled } = useNotification();
-  const [selectedSport, setSelectedSport] = useState<SportType>('soccer');
+  const [selectedSport, setSelectedSport] = useState<SportType | 'all'>('all');
   // First page default is strictly LIVE
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'LIVE' | 'SCHEDULED' | 'FINISHED'>('LIVE');
-  const [ticketFilterMode, setTicketFilterMode] = useState<'MY_TICKETS' | 'ALL_GLOBAL'>('MY_TICKETS');
   const [searchQuery, setSearchQuery] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -92,6 +93,12 @@ export default function HomePage() {
   const [isProUser, setIsProUser] = useState(false);
   const [detailTab, setDetailTab] = useState<'stats' | 'timeline' | 'lineups' | 'odds'>('stats');
 
+  // Quick Inline Importer State for Empty Slips Board
+  const [quickCode, setQuickCode] = useState('');
+  const [quickBookmaker, setQuickBookmaker] = useState('auto');
+  const [isQuickImporting, setIsQuickImporting] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+
   // Matches that scored recently: drives both the feed ordering and the
   // highlight on the card.
   const [scoreFlashes, setScoreFlashes] = useState<ScoreFlashMap>({});
@@ -100,7 +107,7 @@ export default function HomePage() {
 
   const slipCacheKey = `slips_${user?.id || 'guest'}`;
 
-  // Remove an individual match from the tracker and database
+  // Remove an individual match from the tracker
   const handleRemoveMatch = async (matchId: string) => {
     setMatches((prev) => {
       const next = prev.filter((m) => m.id !== matchId);
@@ -110,31 +117,31 @@ export default function HomePage() {
     if (selectedMatchId === matchId) {
       setSelectedMatchId(null);
     }
-    try {
-      const apiBase = getApiBaseUrl();
-      await fetch(`${apiBase}/matches/${matchId}`, { method: 'DELETE' });
-    } catch (err) {
-      console.warn('Failed to remove match', err);
-    }
   };
 
-  // Clear all matches from the tracker and database
-  const handleClearAllMatches = async () => {
-    if (!window.confirm('Are you sure you want to remove all games from the board?')) {
+  // Clear all tracked bet slips and matches
+  const handleClearAllSlips = async () => {
+    if (!window.confirm('Are you sure you want to clear all tracked bet slips?')) {
       return;
     }
+    setBetSlips([]);
     setMatches([]);
     setSelectedMatchId(null);
+    setCachedData(slipCacheKey, []);
     setCachedData('matches', []);
     try {
       const apiBase = getApiBaseUrl();
-      await fetch(`${apiBase}/matches`, { method: 'DELETE' });
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await fetch(`${apiBase}/betslip`, { method: 'DELETE', headers });
     } catch (err) {
-      console.warn('Failed to clear matches', err);
+      console.warn('Failed to clear slips', err);
     }
   };
 
-  // Delete a specific bet slip (soft delete)
+  // Delete a specific bet slip
   const handleDeleteSlip = async (slipId: string) => {
     setBetSlips((prev) => {
       const next = prev.filter((s) => s.id !== slipId);
@@ -150,6 +157,103 @@ export default function HomePage() {
       await fetch(`${apiBase}/betslip/${slipId}`, { method: 'DELETE', headers });
     } catch (err) {
       console.warn('Failed to delete bet slip', err);
+    }
+  };
+
+  // Quick Booking Code Importer Handler
+  const handleQuickImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = quickCode.trim();
+    if (!cleanCode) return;
+
+    setIsQuickImporting(true);
+    setQuickError(null);
+
+    try {
+      const apiBase = getApiBaseUrl();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${apiBase}/betslip/import`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          bookmaker: quickBookmaker,
+          booking_code: cleanCode,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Could not find booking code "${cleanCode}"`);
+      }
+
+      const slip: BetSlip = await res.json();
+      setBetSlips((prev) => {
+        const next = [slip, ...prev.filter((s) => s.id !== slip.id)];
+        setCachedData(slipCacheKey, next);
+        return next;
+      });
+
+      if (slip.legs) {
+        const newMatches = slip.legs.map((l) => l.match).filter(Boolean);
+        setMatches((prev) => {
+          const map = new Map(prev.map((m) => [m.id, m]));
+          newMatches.forEach((m) => map.set(m.id, m));
+          const updated = Array.from(map.values());
+          setCachedData('matches', updated);
+          return updated;
+        });
+      }
+
+      setQuickCode('');
+    } catch (err: any) {
+      setQuickError(err.message || 'Failed to import booking code');
+    } finally {
+      setIsQuickImporting(false);
+    }
+  };
+
+  // Instant Sample Slip Loader (Loads realistic 5-leg multi-sport accumulator)
+  const handleLoadSampleSlip = async () => {
+    setIsQuickImporting(true);
+    setQuickError(null);
+    try {
+      const apiBase = getApiBaseUrl();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${apiBase}/betslip/import`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          bookmaker: 'sportybet',
+          booking_code: 'SB-SAMPLE-01',
+        }),
+      });
+
+      if (res.ok) {
+        const slip: BetSlip = await res.json();
+        setBetSlips((prev) => {
+          const next = [slip, ...prev.filter((s) => s.id !== slip.id)];
+          setCachedData(slipCacheKey, next);
+          return next;
+        });
+        if (slip.legs) {
+          const newMatches = slip.legs.map((l) => l.match).filter(Boolean);
+          setMatches((prev) => {
+            const map = new Map(prev.map((m) => [m.id, m]));
+            newMatches.forEach((m) => map.set(m.id, m));
+            const updated = Array.from(map.values());
+            setCachedData('matches', updated);
+            return updated;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load sample slip', err);
+    } finally {
+      setIsQuickImporting(false);
     }
   };
 
@@ -176,13 +280,6 @@ export default function HomePage() {
     },
   });
 
-  // Media Session Metadata API & Selected Match (Only when explicitly clicked by user)
-  const selectedMatch = useMemo(() => {
-    if (!selectedMatchId) return null;
-    return matches.find((m) => m.id === selectedMatchId) || null;
-  }, [matches, selectedMatchId]);
-  useMediaSession(selectedMatch);
-
   // Picture-in-Picture & Scoreboard Hook
   const { isPiPActive, isSupported: isPiPSupported, openPiP, closePiP } = usePiPScoreboard();
 
@@ -195,18 +292,6 @@ export default function HomePage() {
     });
     return () => unsubscribe();
   }, [subscribe]);
-
-  // Extract Match IDs loaded by user's tickets (multi-sport support)
-  const ticketMatchIds = useMemo(() => {
-    const ids = new Set<string>();
-    betSlips.forEach((slip) => {
-      slip.legs?.forEach((leg) => {
-        if (leg.match_id) ids.add(leg.match_id);
-        if (leg.match?.id) ids.add(leg.match.id);
-      });
-    });
-    return ids;
-  }, [betSlips]);
 
   // Initial Fast Cache Resolution & Silent Background Revalidation
   useEffect(() => {
@@ -330,16 +415,39 @@ export default function HomePage() {
     return () => clearInterval(id);
   }, [scoreFlashes]);
 
+  // Extract all matches strictly belonging to active bet slips
+  const slipMatches = useMemo(() => {
+    const map = new Map<string, Match>();
+
+    betSlips.forEach((slip) => {
+      slip.legs?.forEach((leg) => {
+        const matchId = leg.match_id || leg.match?.id;
+        if (!matchId) return;
+
+        const liveMatch = tickingMatches.find((m) => m.id === matchId);
+        if (liveMatch) {
+          map.set(matchId, liveMatch);
+        } else if (leg.match) {
+          map.set(matchId, leg.match);
+        }
+      });
+    });
+
+    return Array.from(map.values());
+  }, [betSlips, tickingMatches]);
+
+  // Media Session Metadata API & Selected Match (Only when explicitly clicked by user)
+  const selectedMatch = useMemo(() => {
+    if (!selectedMatchId) return null;
+    return slipMatches.find((m) => m.id === selectedMatchId) || matches.find((m) => m.id === selectedMatchId) || null;
+  }, [slipMatches, matches, selectedMatchId]);
+  useMediaSession(selectedMatch);
+
   // Keep an ongoing notification per live match the user is tracking, updating
   // it in place as the score and clock move.
   const trackedLive = useMemo(
-    () =>
-      matches.filter(
-        (m) =>
-          m.status === 'LIVE' &&
-          (betSlips.length === 0 ? false : ticketMatchIds.has(m.id))
-      ),
-    [matches, betSlips.length, ticketMatchIds]
+    () => slipMatches.filter((m) => m.status === 'LIVE'),
+    [slipMatches]
   );
 
   useEffect(() => {
@@ -352,23 +460,25 @@ export default function HomePage() {
     syncLiveActivities(trackedLive, scored);
   }, [trackedLive, alertsEnabled]);
 
-  // Filtered Matches (Spotlights matches from loaded ticket on first/Live page)
+  // Filtered Matches (Strictly from the user's bet slips)
   const filteredMatches = useMemo(() => {
-    const visible = tickingMatches.filter((m) => {
-      // 1. When in ticket mode on LIVE tab with loaded tickets, show matches from the user's ticket across any sport
-      if (statusFilter === 'LIVE' && ticketFilterMode === 'MY_TICKETS' && betSlips.length > 0) {
-        if (!ticketMatchIds.has(m.id)) return false;
-      } else {
-        if (m.sport !== selectedSport) return false;
+    const visible = slipMatches.filter((m) => {
+      // 1. Sport filter
+      if (selectedSport !== 'all' && m.sport !== selectedSport) {
+        return false;
       }
 
-      if (statusFilter !== 'ALL' && m.status !== statusFilter) return false;
+      // 2. Status filter
+      if (statusFilter !== 'ALL' && m.status !== statusFilter) {
+        return false;
+      }
 
+      // 3. Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const home = m.home_team.name.toLowerCase();
-        const away = m.away_team.name.toLowerCase();
-        const league = m.league.name.toLowerCase();
+        const home = m.home_team?.name?.toLowerCase() || '';
+        const away = m.away_team?.name?.toLowerCase() || '';
+        const league = m.league?.name?.toLowerCase() || '';
         return home.includes(q) || away.includes(q) || league.includes(q);
       }
       return true;
@@ -378,21 +488,34 @@ export default function HomePage() {
     // by how far through it is.
     return orderLiveFeed(visible, scoreFlashes);
   }, [
-    tickingMatches,
+    slipMatches,
     selectedSport,
     statusFilter,
-    ticketFilterMode,
-    betSlips,
-    ticketMatchIds,
     searchQuery,
     scoreFlashes,
   ]);
 
-  const liveCount = useMemo(() => matches.filter((m) => m.status === 'LIVE').length, [matches]);
-  const ticketLiveCount = useMemo(
-    () => matches.filter((m) => m.status === 'LIVE' && ticketMatchIds.has(m.id)).length,
-    [matches, ticketMatchIds]
-  );
+  const liveCount = useMemo(() => slipMatches.filter((m) => m.status === 'LIVE').length, [slipMatches]);
+
+  // Unique competitions present across the user's active bet slips
+  const slipCompetitions = useMemo(() => {
+    const map = new Map<string, { name: string; country: string; count: number; sport: string }>();
+    slipMatches.forEach((m) => {
+      const name = m.league?.name || 'Competition';
+      const existing = map.get(name);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(name, {
+          name,
+          country: m.league?.country || '',
+          count: 1,
+          sport: m.sport,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [slipMatches]);
 
   // Handle Match selection from Search Command Palette
   const handleSelectFromSearch = (m: Match) => {
@@ -505,7 +628,12 @@ export default function HomePage() {
           <div className="max-w-[1720px] mx-auto px-3 sm:px-4 md:pl-20 xl:px-4 flex items-center gap-1 py-1.5 w-max">
             {SPORTS.map((sport) => {
               const isSelected = selectedSport === sport.id;
-              const count = matches.filter((m) => m.sport === sport.id && m.status === 'LIVE').length;
+              const liveSportCount = slipMatches.filter(
+                (m) => (sport.id === 'all' || m.sport === sport.id) && m.status === 'LIVE'
+              ).length;
+              const totalSportCount = slipMatches.filter(
+                (m) => sport.id === 'all' || m.sport === sport.id
+              ).length;
               const Icon = sport.icon;
 
               return (
@@ -520,15 +648,21 @@ export default function HomePage() {
                 >
                   <Icon className="w-3.5 h-3.5" />
                   <span>{sport.label}</span>
-                  {count > 0 && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
-                      isSelected
-                        ? 'bg-red-500 text-white'
-                        : 'bg-red-100 dark:bg-red-500/15 text-red-600 dark:text-red-400'
-                    }`}>
-                      {count}
+                  {liveSportCount > 0 ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-red-500 text-white animate-pulse">
+                      {liveSportCount}
                     </span>
-                  )}
+                  ) : totalSportCount > 0 ? (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                        isSelected
+                          ? 'bg-blue-200 dark:bg-blue-500/30 text-blue-800 dark:text-blue-200'
+                          : 'bg-surface-subtle text-muted-foreground border border-surface-border'
+                      }`}
+                    >
+                      {totalSportCount}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -536,69 +670,62 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Breaking Live Ticker Strip */}
-      <TickerStrip matches={tickingMatches} onSelectMatch={(m) => setSelectedMatchId(m.id)} />
-
       {/* Main Three-Column Workspace Layout */}
       <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 md:pl-20 xl:px-4 py-4 grid grid-cols-12 gap-5">
-        {/* LEFT COLUMN: Leagues, Calendar & Accumulator Tracker */}
+        {/* LEFT COLUMN: Competitions & Bet Slips */}
         <div className="hidden xl:col-span-3 xl:flex flex-col gap-4">
-          {/* Top Leagues Card */}
+          {/* Competitions in Slips Card */}
           <div className="bg-surface rounded-xl border border-surface-border p-4 shadow-subtle">
             <h3 className="text-xs font-bold text-foreground uppercase tracking-wider mb-3 flex items-center gap-1.5 font-mono">
-              <Layers className="w-3.5 h-3.5" /> Top competitions
+              <Layers className="w-3.5 h-3.5" /> Competitions in Slips
             </h3>
-            <ul className="space-y-1 text-xs text-foreground">
-              {[
-                { name: 'Premier League', code: 'ENG', count: 4, color: 'bg-purple-100 dark:bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/30' },
-                { name: 'UEFA Champions League', code: 'EUR', count: 2, color: 'bg-blue-100 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' },
-                { name: 'La Liga', code: 'ESP', count: 3, color: 'bg-orange-100 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-500/30' },
-                { name: 'NBA Basketball', code: 'USA', count: 1, color: 'bg-red-100 dark:bg-red-500/15 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30' },
-                { name: 'ATP Tour Masters', code: 'GLB', count: 1, color: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' },
-                { name: 'NFL Football', code: 'USA', count: 1, color: 'bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30' },
-                { name: 'IPL Cricket', code: 'IND', count: 1, color: 'bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' },
-              ].map((l) => (
-                <li
-                  key={l.name}
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border font-bold ${l.color}`}>
-                      {l.code}
+            {slipCompetitions.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-2 leading-relaxed">
+                Competitions will appear here automatically when you track a bet slip.
+              </p>
+            ) : (
+              <ul className="space-y-1 text-xs text-foreground">
+                {slipCompetitions.map((l) => (
+                  <li
+                    key={l.name}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle cursor-pointer transition-colors"
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      {l.country && <CountryFlag country={l.country} size="xs" />}
+                      <span className="font-medium truncate">{l.name}</span>
                     </span>
-                    <span className="font-medium">{l.name}</span>
-                  </span>
-                  <span className="text-[10px] font-mono text-muted-foreground bg-surface-subtle border border-surface-border px-1.5 py-0.5 rounded">
-                    {l.count}
-                  </span>
-                </li>
-              ))}
-            </ul>
+                    <span className="text-[10px] font-mono text-muted-foreground bg-surface-subtle border border-surface-border px-1.5 py-0.5 rounded shrink-0">
+                      {l.count} {l.count === 1 ? 'leg' : 'legs'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
-          {/* Tracked Bet Slips & Bets */}
+          {/* Tracked Bet Slips */}
           <div className="bg-surface rounded-xl border border-surface-border p-4 flex-1 shadow-subtle">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5 font-mono">
-                <Ticket className="w-3.5 h-3.5" /> My slips
+                <Ticket className="w-3.5 h-3.5" /> My slips ({betSlips.length})
               </h3>
-              <Link
-                href="/search"
+              <button
+                onClick={() => setIsImporterOpen(true)}
                 className="text-[11px] text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
               >
                 + Add slip
-              </Link>
+              </button>
             </div>
 
             {betSlips.length === 0 ? (
               <div className="text-center py-6 text-xs text-muted-foreground">
                 <p>No slips tracked yet.</p>
-                <Link
-                  href="/search"
+                <button
+                  onClick={() => setIsImporterOpen(true)}
                   className="mt-2 text-foreground font-bold hover:underline cursor-pointer block mx-auto"
                 >
                   Track your first slip
-                </Link>
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -621,7 +748,7 @@ export default function HomePage() {
             <div className="flex items-center gap-1 flex-wrap">
               {[
                 { id: 'LIVE', label: `Live (${liveCount})`, color: 'bg-red-500 text-white shadow-sm shadow-red-500/30' },
-                { id: 'ALL', label: 'All' },
+                { id: 'ALL', label: `All (${slipMatches.length})` },
                 { id: 'SCHEDULED', label: 'Upcoming' },
                 { id: 'FINISHED', label: 'Finished' },
               ].map((tab) => (
@@ -644,113 +771,105 @@ export default function HomePage() {
                 {filteredMatches.length} matches
               </span>
 
-              {matches.length > 0 && (
+              {betSlips.length > 0 && (
                 <button
                   type="button"
-                  onClick={handleClearAllMatches}
-                  title="Remove all games from tracker"
+                  onClick={handleClearAllSlips}
+                  title="Clear all tracked bet slips"
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors border border-surface-border hover:border-red-500/30 cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Clear all</span>
+                  <span className="hidden sm:inline">Clear slips</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Ticket vs Global Switcher on Live Page */}
-          {statusFilter === 'LIVE' && (
-            betSlips.length > 0 ? (
-              <div className="flex items-center gap-2 bg-surface p-1.5 rounded-xl border border-surface-border shadow-subtle">
-                <button
-                  onClick={() => setTicketFilterMode('MY_TICKETS')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    ticketFilterMode === 'MY_TICKETS'
-                      ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
-                  }`}
+          {/* Matches List or Onboarding Card */}
+          {betSlips.length === 0 ? (
+            <div className="bg-surface rounded-2xl border border-surface-border p-6 sm:p-10 text-center shadow-subtle flex flex-col items-center justify-center">
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4 shadow-sm">
+                <Ticket className="w-7 h-7" />
+              </div>
+
+              <h3 className="text-base sm:text-lg font-bold text-foreground">
+                No Bet Slips Tracked
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-md mt-1.5 leading-relaxed">
+                Live Scores exclusively follows fixtures from your active bet slips. Enter a booking code from SportyBet, Bet9ja, 1xBet, BetKing, MSport or MozzartBet to start following your games live.
+              </p>
+
+              {/* Quick Booking Code Form */}
+              <form onSubmit={handleQuickImport} className="mt-5 w-full max-w-md flex flex-col sm:flex-row gap-2">
+                <select
+                  value={quickBookmaker}
+                  onChange={(e) => setQuickBookmaker(e.target.value)}
+                  className="px-3 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shrink-0"
                 >
-                  <Ticket className="w-3.5 h-3.5" />
-                  <span>My Bets ({ticketLiveCount})</span>
-                </button>
+                  <option value="auto">Auto-Detect</option>
+                  <option value="sportybet">SportyBet</option>
+                  <option value="bet9ja">Bet9ja</option>
+                  <option value="1xbet">1xBet</option>
+                  <option value="betking">BetKing</option>
+                  <option value="msport">MSport</option>
+                  <option value="mozzartbet">MozzartBet</option>
+                </select>
+
+                <input
+                  type="text"
+                  placeholder="Booking Code (e.g. SB-88492-X)"
+                  value={quickCode}
+                  onChange={(e) => setQuickCode(e.target.value)}
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+                />
 
                 <button
-                  onClick={() => setTicketFilterMode('ALL_GLOBAL')}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    ticketFilterMode === 'ALL_GLOBAL'
-                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-surface-subtle'
-                  }`}
+                  type="submit"
+                  disabled={isQuickImporting || !quickCode.trim()}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/25 shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <Radio className="w-3.5 h-3.5" />
-                  <span>All Live ({liveCount})</span>
+                  {isQuickImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ticket className="w-3.5 h-3.5" />}
+                  <span>Track Slip</span>
+                </button>
+              </form>
+
+              {quickError && (
+                <p className="mt-2 text-xs text-red-500 font-medium">
+                  {quickError}
+                </p>
+              )}
+
+              {/* Quick Sample Slip Button */}
+              <div className="mt-4 pt-4 border-t border-surface-border w-full max-w-md flex items-center justify-between text-xs">
+                <span className="text-muted-foreground text-[11px]">Want to preview with live games?</span>
+                <button
+                  type="button"
+                  onClick={handleLoadSampleSlip}
+                  disabled={isQuickImporting}
+                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 text-xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Load Sample Slip</span>
                 </button>
               </div>
-            ) : (
-              <div className="bg-gradient-to-r from-violet-50 to-blue-50 dark:from-violet-500/5 dark:to-blue-500/5 border border-violet-200 dark:border-violet-500/20 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-violet-100 dark:bg-violet-500/15 border border-violet-200 dark:border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
-                    <Ticket className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-foreground">Track a live slip</p>
-                    <p className="text-[10px] text-muted-foreground">Paste a booking code from SportyBet, Bet9ja, 1xBet or BetKing</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => setIsImporterOpen(true)}
-                    className="flex-1 sm:flex-none px-4 py-2 bg-gradient-to-r from-violet-600 to-blue-500 text-white hover:opacity-90 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center justify-center gap-1.5 shadow-md shadow-violet-500/20"
-                  >
-                    <Ticket className="w-3.5 h-3.5" />
-                    <span>Import Booking Code</span>
-                  </button>
-                </div>
-              </div>
-            )
-          )}
-
-          {/* Matches List */}
-          {filteredMatches.length === 0 ? (
+            </div>
+          ) : filteredMatches.length === 0 ? (
             <div className="bg-surface rounded-xl border border-surface-border px-6 py-12 text-center">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-subtle border border-surface-border text-muted-foreground">
                 <Radio className="h-5 w-5" />
               </span>
-
-              {matches.length === 0 ? (
-                <>
-                  <p className="mt-4 text-sm font-bold text-foreground">Waiting for the feed</p>
-                  <p className="mx-auto mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground">
-                    No matches on the board right now. Import a ticket with your booking code to track your custom slips.
-                  </p>
-                  <button
-                    onClick={() => setIsImporterOpen(true)}
-                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-brand-gradient text-white text-xs font-bold rounded-xl shadow-md cursor-pointer hover:opacity-90 transition-opacity"
-                  >
-                    <Ticket className="w-3.5 h-3.5" />
-                    <span>Import Booking Slip</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="mt-4 text-sm font-bold text-foreground">
-                    Nothing {statusFilter === 'LIVE' ? 'live' : 'here'} right now
-                  </p>
-                  <p className="mx-auto mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground">
-                    {statusFilter === 'LIVE'
-                      ? 'No matches are in play in this view. Try Upcoming, or switch sport above.'
-                      : 'No matches match this filter. Try another status or sport.'}
-                  </p>
-                  {statusFilter !== 'ALL' && (
-                    <button
-                      onClick={() => setStatusFilter('ALL')}
-                      className="mt-4 cursor-pointer rounded-lg border border-surface-border bg-surface-subtle px-3.5 py-2 text-xs font-bold text-foreground transition-colors hover:bg-surface-hover"
-                    >
-                      Show all matches
-                    </button>
-                  )}
-                </>
-              )}
+              <p className="mt-4 text-sm font-bold text-foreground">
+                No {statusFilter === 'LIVE' ? 'live' : ''} matches in this view
+              </p>
+              <p className="mx-auto mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground">
+                Your bet slip has {slipMatches.length} total fixtures. None match the currently selected filter.
+              </p>
+              <button
+                onClick={() => { setStatusFilter('ALL'); setSelectedSport('all'); }}
+                className="mt-4 cursor-pointer rounded-lg border border-surface-border bg-surface-subtle px-3.5 py-2 text-xs font-bold text-foreground transition-colors hover:bg-surface-hover"
+              >
+                Show all slip matches ({slipMatches.length})
+              </button>
             </div>
           ) : (
             <div className="space-y-3">

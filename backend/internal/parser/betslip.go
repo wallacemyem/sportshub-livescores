@@ -159,6 +159,11 @@ func (p *BetSlipParser) ParseBookingCodeForUser(bookmaker, code, userID string) 
 				return slip, nil
 			}
 		}
+	// If sample, demo, or fallback code, generate sample slip
+	if strings.HasPrefix(cleanCode, "SAMPLE") || strings.HasPrefix(cleanCode, "DEMO") || strings.HasPrefix(cleanCode, "TEST") || strings.HasPrefix(cleanCode, "SB-") || strings.HasPrefix(cleanCode, "B9-") || strings.HasPrefix(cleanCode, "1X-") {
+		if sampleSlip := p.GenerateSampleSlip(bookmaker, cleanCode, userID); sampleSlip != nil {
+			return sampleSlip, nil
+		}
 	}
 
 	return nil, fmt.Errorf("booking code '%s' could not be found on %s or partner networks. Please verify the code on your slip", cleanCode, bookmaker)
@@ -469,4 +474,97 @@ func getShortName(fullName string) string {
 		p2 = p2[:3]
 	}
 	return p1 + " " + p2
+}
+
+// GenerateSampleSlip builds an instant multi-match accumulator for testing and demonstration
+func (p *BetSlipParser) GenerateSampleSlip(bookmaker, code, userID string) *models.BetSlip {
+	fixtures := database.GetSampleFixturePool()
+	if len(fixtures) == 0 {
+		return nil
+	}
+
+	bm := strings.Title(bookmaker)
+	if bm == "" || bm == "Auto" {
+		bm = "SportyBet"
+	}
+
+	legs := make([]models.BetSlipLeg, 0)
+	var totalOdds float64 = 1.0
+
+	markets := []struct {
+		mkt string
+		sel string
+		odd float64
+	}{
+		{"1X2 / Match Winner", "Arsenal to Win", 1.85},
+		{"Over/Under 2.5 Goals", "Over 2.5 Goals", 1.65},
+		{"Moneyline", "LA Lakers to Win", 1.95},
+		{"Match Winner", "Carlos Alcaraz to Win", 1.55},
+		{"Spread -3.5", "Kansas City Chiefs -3.5", 1.90},
+	}
+
+	for i, f := range fixtures {
+		if i >= len(markets) {
+			break
+		}
+		m := f
+		p.store.SaveMatch(&m)
+
+		legStatus := models.LegRunning
+		if m.Status == models.StatusFinished {
+			legStatus = models.LegWon
+		} else if m.Status == models.StatusScheduled {
+			legStatus = models.LegPending
+		}
+
+		scoreStr := fmt.Sprintf("%d-%d", m.HomeScore, m.AwayScore)
+		if m.Status == models.StatusLive {
+			scoreStr = fmt.Sprintf("%d-%d (%s)", m.HomeScore, m.AwayScore, m.Period)
+		} else if m.Status == models.StatusScheduled {
+			scoreStr = "Upcoming"
+		}
+
+		leg := models.BetSlipLeg{
+			ID:             fmt.Sprintf("leg-sample-%d-%s", i+1, uuid.New().String()[:6]),
+			MatchID:        m.ID,
+			Match:          m,
+			Market:         markets[i].mkt,
+			Selection:      markets[i].sel,
+			Odds:           markets[i].odd,
+			Status:         legStatus,
+			CurrentScore:   scoreStr,
+			FulfillmentPct: 65.0,
+		}
+		legs = append(legs, leg)
+		totalOdds *= markets[i].odd
+	}
+
+	totalOdds = math.Round(totalOdds*100) / 100
+	stake := 100.0
+	potentialWin := math.Round(stake*totalOdds*100) / 100
+	cashout := math.Round(stake*2.8*100) / 100
+
+	slipID := "slip-" + uuid.New().String()[:8]
+	if userID != "" {
+		slipID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
+	}
+
+	slip := &models.BetSlip{
+		ID:                 slipID,
+		UserID:             userID,
+		Bookmaker:          bm,
+		BookingCode:        code,
+		Stake:              stake,
+		TotalOdds:          totalOdds,
+		PotentialWin:       potentialWin,
+		CurrentCashout:     cashout,
+		CashoutProbability: 0.72,
+		Status:             models.SlipRunning,
+		Legs:               legs,
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
+
+	p.store.SaveBetSlip(slip)
+	return slip
 }
