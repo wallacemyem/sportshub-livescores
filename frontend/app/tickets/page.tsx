@@ -28,16 +28,6 @@ import { formatProperDate, formatMatchDateTime } from '@/lib/date';
 import { useNotification } from '@/context/NotificationContext';
 import { useAuth } from '@/context/AuthContext';
 
-const BOOKMAKERS = [
-  { id: 'auto', name: 'Auto-Detect', color: 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 text-violet-600' },
-  { id: 'sportybet', name: 'SportyBet', color: 'border-red-500 bg-red-50 dark:bg-red-500/10 text-red-600' },
-  { id: 'bet9ja', name: 'Bet9ja', color: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' },
-  { id: '1xbet', name: '1xBet', color: 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 text-blue-600' },
-  { id: 'betking', name: 'BetKing', color: 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-600' },
-  { id: 'msport', name: 'MSport', color: 'border-orange-500 bg-orange-50 dark:bg-orange-500/10 text-orange-600' },
-  { id: 'mozzartbet', name: 'MozzartBet', color: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600' },
-];
-
 export default function TicketsPage() {
   const router = useRouter();
   const { user, token } = useAuth();
@@ -46,7 +36,6 @@ export default function TicketsPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Importer Form State
-  const [selectedBookmaker, setSelectedBookmaker] = useState('auto');
   const [bookingCode, setBookingCode] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -115,7 +104,7 @@ export default function TicketsPage() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          bookmaker: selectedBookmaker,
+          bookmaker: 'auto',
           booking_code: cleanCode,
         }),
       });
@@ -310,50 +299,28 @@ export default function TicketsPage() {
               <span>Import Sportsbook Booking Code</span>
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Enter any booking code to pull real live match fixtures directly from the bookmaker network.
+              Enter any booking code — our background engine automatically detects the sportsbook across SportyBet, Bet9ja, 1xBet, BetKing, MSport and MozzartBet.
             </p>
           </div>
 
           <form onSubmit={handleImportSlip} className="space-y-5">
-            {/* Sportsbook Selection */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                1. Select Sportsbook
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                {BOOKMAKERS.map((bm) => {
-                  const isSelected = selectedBookmaker === bm.id;
-                  return (
-                    <button
-                      key={bm.id}
-                      type="button"
-                      onClick={() => setSelectedBookmaker(bm.id)}
-                      className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-xs font-bold transition-all ${
-                        isSelected
-                          ? `${bm.color} border-current shadow-sm scale-105`
-                          : 'border-surface-border bg-surface-subtle text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <BookmakerLogo bookmaker={bm.id} size="sm" />
-                      <span className="mt-1.5">{bm.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* Booking Code Input */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                2. Enter Booking Code
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Enter Booking Code
+                </label>
+                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5" /> Auto-Detects All Sportsbooks
+                </span>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <input
                     type="text"
                     value={bookingCode}
                     onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. KDSA0G, B9-4921, 5K9A2..."
+                    placeholder="e.g. KDSA0G, B9-4921, 5K9A2, SB-88492..."
                     className="w-full bg-surface-subtle border border-surface-border rounded-2xl px-5 py-3.5 text-base font-mono font-bold tracking-widest uppercase text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   />
                   {bookingCode && (
@@ -373,7 +340,10 @@ export default function TicketsPage() {
                   className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 flex-shrink-0"
                 >
                   {isImporting ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Scanning Sportsbooks...</span>
+                    </div>
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />

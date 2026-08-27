@@ -94,7 +94,6 @@ export default function HomePage() {
 
   // Quick Inline Importer State for Empty Slips Board
   const [quickCode, setQuickCode] = useState('');
-  const [quickBookmaker, setQuickBookmaker] = useState('auto');
   const [isQuickImporting, setIsQuickImporting] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
 
@@ -177,7 +176,7 @@ export default function HomePage() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          bookmaker: quickBookmaker,
+          bookmaker: 'auto',
           booking_code: cleanCode,
         }),
       });
@@ -773,32 +772,18 @@ export default function HomePage() {
 
               {/* Quick Booking Code Form */}
               <form onSubmit={handleQuickImport} className="mt-5 w-full max-w-md flex flex-col sm:flex-row gap-2">
-                <select
-                  value={quickBookmaker}
-                  onChange={(e) => setQuickBookmaker(e.target.value)}
-                  className="px-3 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shrink-0"
-                >
-                  <option value="auto">Auto-Detect</option>
-                  <option value="sportybet">SportyBet</option>
-                  <option value="bet9ja">Bet9ja</option>
-                  <option value="1xbet">1xBet</option>
-                  <option value="betking">BetKing</option>
-                  <option value="msport">MSport</option>
-                  <option value="mozzartbet">MozzartBet</option>
-                </select>
-
                 <input
                   type="text"
-                  placeholder="Booking Code (e.g. SB-88492-X)"
+                  placeholder="Enter Booking Code (e.g. SB-88492-X, BC99214)"
                   value={quickCode}
                   onChange={(e) => setQuickCode(e.target.value)}
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-surface-subtle border border-surface-border text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl bg-surface-subtle border border-surface-border text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
                 />
 
                 <button
                   type="submit"
                   disabled={isQuickImporting || !quickCode.trim()}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/25 shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/25 shrink-0 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   {isQuickImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ticket className="w-3.5 h-3.5" />}
                   <span>Track Slip</span>
