@@ -1,8 +1,5 @@
 import { Match } from '@/types';
-import { motion } from 'framer-motion';
 import { Radio, ChevronRight, TrendingUp, Volume2, Activity, X } from 'lucide-react';
-import confetti from 'canvas-confetti';
-import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TeamCrest } from './TeamCrest';
 import { CountryFlag } from './CountryFlag';
@@ -18,25 +15,15 @@ interface LiveScoreCardProps {
   onRemove?: (id: string) => void;
 }
 
-export function LiveScoreCard({ match, isSelected = false, justScored, onSelect, onRemove }: LiveScoreCardProps) {
+export function LiveScoreCard({
+  match,
+  isSelected = false,
+  justScored,
+  onSelect,
+  onRemove,
+}: LiveScoreCardProps) {
   const router = useRouter();
-  const prevScoreRef = useRef(`${match.home_score}-${match.away_score}`);
-
-  // Trigger celebration confetti on score update
-  useEffect(() => {
-    const currentScore = `${match.home_score}-${match.away_score}`;
-    if (prevScoreRef.current !== currentScore && match.status === 'LIVE') {
-      confetti({
-        particleCount: 40,
-        spread: 60,
-        origin: { y: 0.8 },
-        colors: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981', '#8B5CF6'],
-      });
-      prevScoreRef.current = currentScore;
-    }
-  }, [match.home_score, match.away_score, match.status]);
-
-  const isLive = match.status === 'LIVE';
+  const isLive = match.status === 'LIVE' || match.status === 'HALF_TIME';
 
   const handleCardClick = () => {
     if (onSelect) {
@@ -47,14 +34,9 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      whileHover={{ y: -1.5 }}
+    <div
       onClick={handleCardClick}
-      className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer select-none p-3.5 sm:p-4 group ${
+      className={`relative overflow-hidden rounded-xl border transition-colors cursor-pointer select-none p-3.5 sm:p-4 group ${
         justScored
           ? 'bg-surface border-emerald-500 ring-2 ring-emerald-400/40 shadow-lg shadow-emerald-500/15'
           : isSelected
@@ -81,9 +63,14 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
 
         {/* Live Status / Time Badge */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {isLive ? (
+          {match.status === 'HALF_TIME' ? (
+            <div className="flex items-center gap-1 bg-amber-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              <span>HT</span>
+            </div>
+          ) : isLive ? (
             <div className="flex items-center gap-1 bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold font-mono uppercase tracking-wider shadow-sm shadow-red-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-white" />
               <span>{formatClock(match)}</span>
             </div>
           ) : match.status === 'FINISHED' ? (
@@ -129,7 +116,9 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
             />
             <div className="min-w-0 flex-1 flex items-center gap-2">
               <p className="text-xs sm:text-sm font-bold text-foreground truncate">
-                <span className="inline sm:hidden">{match.home_team.short_name || match.home_team.name.slice(0, 3)}</span>
+                <span className="inline sm:hidden">
+                  {match.home_team.short_name || match.home_team.name.slice(0, 3)}
+                </span>
                 <span className="hidden sm:inline">{match.home_team.name}</span>
               </p>
 
@@ -153,20 +142,15 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
 
           {/* Home Score */}
           <div className="shrink-0 font-mono">
-            <div className={`w-8 h-7 sm:w-9 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border transition-all ${
-              isLive
-                ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-200'
-                : 'bg-surface-subtle border-surface-border text-foreground'
-            }`}>
+            <div
+              className={`w-8 h-7 sm:w-9 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border transition-colors ${
+                isLive
+                  ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-200'
+                  : 'bg-surface-subtle border-surface-border text-foreground'
+              }`}
+            >
               {isLive || match.status === 'FINISHED' ? (
-                <motion.span
-                  key={`h-${match.home_score}`}
-                  initial={{ scale: 1.25 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {match.home_score}
-                </motion.span>
+                <span className="tabular-nums font-bold">{match.home_score}</span>
               ) : (
                 <span className="text-muted-foreground font-normal text-xs">-</span>
               )}
@@ -186,7 +170,9 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
             />
             <div className="min-w-0 flex-1 flex items-center gap-2">
               <p className="text-xs sm:text-sm font-bold text-foreground truncate">
-                <span className="inline sm:hidden">{match.away_team.short_name || match.away_team.name.slice(0, 3)}</span>
+                <span className="inline sm:hidden">
+                  {match.away_team.short_name || match.away_team.name.slice(0, 3)}
+                </span>
                 <span className="hidden sm:inline">{match.away_team.name}</span>
               </p>
 
@@ -210,20 +196,15 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
 
           {/* Away Score */}
           <div className="shrink-0 font-mono">
-            <div className={`w-8 h-7 sm:w-9 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border transition-all ${
-              isLive
-                ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-200'
-                : 'bg-surface-subtle border-surface-border text-foreground'
-            }`}>
+            <div
+              className={`w-8 h-7 sm:w-9 sm:h-8 rounded-lg flex items-center justify-center font-black text-sm sm:text-base border transition-colors ${
+                isLive
+                  ? 'bg-indigo-50 dark:bg-indigo-500/15 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-200'
+                  : 'bg-surface-subtle border-surface-border text-foreground'
+              }`}
+            >
               {isLive || match.status === 'FINISHED' ? (
-                <motion.span
-                  key={`a-${match.away_score}`}
-                  initial={{ scale: 1.25 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {match.away_score}
-                </motion.span>
+                <span className="tabular-nums font-bold">{match.away_score}</span>
               ) : (
                 <span className="text-muted-foreground font-normal text-xs">-</span>
               )}
@@ -236,17 +217,23 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
       {isLive && (match.stats?.possession_home ?? 0) > 0 && (
         <div className="mt-3 pt-2.5 border-t border-surface-border">
           <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1 font-mono">
-            <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{match.stats.possession_home}%</span>
-            <span>xG: {match.stats.xg_home || 0} - {match.stats.xg_away || 0}</span>
-            <span className="text-orange-600 dark:text-orange-400 font-semibold">{match.stats.possession_away}%</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+              {match.stats.possession_home}%
+            </span>
+            <span>
+              xG: {match.stats.xg_home || 0} - {match.stats.xg_away || 0}
+            </span>
+            <span className="text-orange-600 dark:text-orange-400 font-semibold">
+              {match.stats.possession_away}%
+            </span>
           </div>
           <div className="w-full h-1.5 bg-surface-subtle rounded-full overflow-hidden flex">
             <div
-              className="bg-indigo-500 h-full rounded-l-full transition-all duration-500"
+              className="bg-indigo-500 h-full rounded-l-full"
               style={{ width: `${match.stats.possession_home}%` }}
             />
             <div
-              className="bg-orange-400 h-full rounded-r-full transition-all duration-500"
+              className="bg-orange-400 h-full rounded-r-full"
               style={{ width: `${match.stats.possession_away}%` }}
             />
           </div>
@@ -274,6 +261,6 @@ export function LiveScoreCard({ match, isSelected = false, justScored, onSelect,
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

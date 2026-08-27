@@ -16,8 +16,9 @@ type Config struct {
 	SupabaseServiceKey    string
 	SupabaseStorageBucket string
 	ESPNAPIBaseURL        string
-	// Paid score provider, used when a key is present (Elite deployments).
-	// Leave APIFootballKey empty to run entirely on the free ESPN feed.
+	// Multi-sport API-Sports provider (Football, Basketball, NFL, Baseball, Rugby, Hockey, etc.)
+	APISportsKey          string
+	APISportsDailyCap     int
 	APIFootballKey        string
 	APIFootballBaseURL    string
 	APIFootballDailyCap   int
@@ -55,7 +56,9 @@ func LoadConfig() *Config {
 		SupabaseServiceKey:    getEnv("SUPABASE_SERVICE_ROLE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODc3MzE4MzIsImV4cCI6MTk0NTQxMTgzMn0.JLb-XXh43TejaYqVgdEyOMpSae738CAY0E5qyw5xmpY"),
 		SupabaseStorageBucket: getEnv("SUPABASE_STORAGE_BUCKET", "sports-assets"),
 		ESPNAPIBaseURL:        getEnv("ESPN_API_BASE_URL", "https://site.web.api.espn.com/apis/site/v2/sports"),
-		APIFootballKey:        getEnv("API_FOOTBALL_KEY", ""),
+		APISportsKey:          getEnv("API_SPORTS_KEY", getEnv("API_FOOTBALL_KEY", "")),
+		APISportsDailyCap:     getEnvInt("API_SPORTS_DAILY_CAP", getEnvInt("API_FOOTBALL_DAILY_CAP", 7500)),
+		APIFootballKey:        getEnv("API_FOOTBALL_KEY", getEnv("API_SPORTS_KEY", "")),
 		APIFootballBaseURL:    getEnv("API_FOOTBALL_BASE_URL", "https://v3.football.api-sports.io"),
 		APIFootballDailyCap:   getEnvInt("API_FOOTBALL_DAILY_CAP", 7500),
 		OddsAPIKey:            getEnv("ODDS_API_KEY", "68492c40a7eb4d001ed4899b75df648d"),

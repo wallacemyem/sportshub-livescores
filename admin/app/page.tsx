@@ -27,6 +27,9 @@ import {
   Send,
   MessageSquare,
   Search,
+  Bell,
+  Smartphone,
+  Megaphone,
 } from 'lucide-react';
 import { getApiBaseUrl, getAuthHeaders } from '@/lib/api';
 
@@ -66,10 +69,17 @@ interface ParserMetricsData {
 }
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState<'ingestion' | 'orchestrator' | 'financials' | 'parser' | 'support'>('ingestion');
+  const [activeTab, setActiveTab] = useState<'ingestion' | 'orchestrator' | 'financials' | 'parser' | 'notifications' | 'support'>('ingestion');
   const [telemetry, setTelemetry] = useState<TelemetryData | null>(null);
   const [financials, setFinancials] = useState<FinancialData | null>(null);
   const [parserMetrics, setParserMetrics] = useState<ParserMetricsData | null>(null);
+  const [pushStats, setPushStats] = useState<any | null>(null);
+  const [pushSubs, setPushSubs] = useState<any[]>([]);
+  const [bcChannel, setBcChannel] = useState<string>('all');
+  const [bcTitle, setBcTitle] = useState<string>('⚽ GOAL! Arsenal 1 - 0 Chelsea (Saka 23\')');
+  const [bcBody, setBcBody] = useState<string>('Clinical finish into the top corner!');
+  const [bcUrl, setBcUrl] = useState<string>('/live');
+  const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
   const [matches, setMatches] = useState<any[]>([]);
   const [matchSearchQuery, setMatchSearchQuery] = useState('');
   const [clients, setClients] = useState<any[]>([]);
@@ -215,7 +225,7 @@ export default function AdminDashboardPage() {
       try {
         const apiBase = getApiBaseUrl();
         const headers = getAuthHeaders();
-        const [telRes, finRes, parRes, matRes, cliRes, whRes, supRes] = await Promise.all([
+        const [telRes, finRes, parRes, matRes, cliRes, whRes, supRes, pushRes] = await Promise.all([
           fetch(`${apiBase}/admin/telemetry`, { headers }),
           fetch(`${apiBase}/admin/financials`, { headers }),
           fetch(`${apiBase}/admin/parser/metrics`, { headers }),
@@ -223,6 +233,7 @@ export default function AdminDashboardPage() {
           fetch(`${apiBase}/admin/clients`, { headers }),
           fetch(`${apiBase}/admin/webhooks`, { headers }),
           fetch(`${apiBase}/support/tickets`),
+          fetch(`${apiBase}/admin/notifications/stats`, { headers }),
         ]);
 
         if (telRes.status === 401 || telRes.status === 403) {
@@ -244,6 +255,11 @@ export default function AdminDashboardPage() {
         if (whRes.ok) {
           const d = await whRes.json();
           setWebhooks(d.logs || []);
+        }
+        if (pushRes && pushRes.ok) {
+          const d = await pushRes.json();
+          setPushStats(d.stats || null);
+          setPushSubs(d.subscriptions || []);
         }
         if (supRes.ok) {
           const d = await supRes.json();
@@ -354,6 +370,36 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function handleSendBroadcast(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bcTitle.trim() || !bcBody.trim()) return;
+
+    setIsBroadcasting(true);
+    try {
+      const apiBase = getApiBaseUrl();
+      const res = await fetch(`${apiBase}/admin/notifications/broadcast`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          channel: bcChannel,
+          title: bcTitle.trim(),
+          body: bcBody.trim(),
+          url: bcUrl.trim() || '/live',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setActionSuccess(`Broadcast sent to #${bcChannel}: ${data.sent_count} delivered, ${data.failed_count} failed.`);
+        setTimeout(() => setActionSuccess(null), 4000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsBroadcasting(false);
     }
   }
 
@@ -514,12 +560,13 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="bg-kumo-surface border-b border-kumo-border px-6 flex items-center gap-2">
+      <div className="bg-kumo-surface border-b border-kumo-border px-6 flex items-center gap-2 overflow-x-auto">
         {[
           { id: 'ingestion', label: 'Real-Time Ingestion Monitor', icon: Activity },
           { id: 'orchestrator', label: 'Live Match Orchestrator', icon: Sliders },
           { id: 'financials', label: 'Financial & Subscriptions Hub', icon: DollarSign },
           { id: 'parser', label: 'Bet Slip Parser Health', icon: Ticket },
+          { id: 'notifications', label: 'Push & Broadcast Engine', icon: Bell },
           { id: 'support', label: 'Support Helpdesk Queue', icon: Headphones },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1230,6 +1277,223 @@ export default function AdminDashboardPage() {
                     <p>Select a customer support inquiry from the queue</p>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: PUSH NOTIFICATIONS & BROADCAST ENGINE */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-6 animate-in fade-in">
+            {/* Top KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-kumo-surface border border-kumo-border rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-mono font-bold uppercase">Total Push Endpoints</span>
+                  <Bell className="w-4 h-4 text-kumo-orange" />
+                </div>
+                <div className="text-2xl font-bold font-mono text-white">
+                  {pushStats?.total_subscriptions ?? 0}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 font-mono">Active device registrations</div>
+              </div>
+
+              <div className="bg-kumo-surface border border-kumo-border rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-mono font-bold uppercase">Android Subscribers</span>
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div className="text-2xl font-bold font-mono text-emerald-400">
+                  {pushStats?.active_android ?? 0}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 font-mono">Chrome / Edge / Samsung PWA</div>
+              </div>
+
+              <div className="bg-kumo-surface border border-kumo-border rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-mono font-bold uppercase">iOS PWAs</span>
+                  <Smartphone className="w-4 h-4 text-indigo-400" />
+                </div>
+                <div className="text-2xl font-bold font-mono text-indigo-400">
+                  {pushStats?.active_ios ?? 0}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 font-mono">Installed Home Screen PWAs</div>
+              </div>
+
+              <div className="bg-kumo-surface border border-kumo-border rounded-xl p-4">
+                <div className="flex items-center justify-between text-slate-400 mb-2">
+                  <span className="text-xs font-mono font-bold uppercase">Desktop Browsers</span>
+                  <Server className="w-4 h-4 text-blue-400" />
+                </div>
+                <div className="text-2xl font-bold font-mono text-blue-400">
+                  {pushStats?.active_desktop ?? 0}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 font-mono">Mac / Windows / Linux clients</div>
+              </div>
+            </div>
+
+            {/* Channel Key Registry */}
+            <div className="bg-kumo-surface border border-kumo-border rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider">
+                    Broadcast Channels & Subscriber Distribution
+                  </h3>
+                  <p className="text-xs text-slate-400">Active message routing channels mapped to subscriber keys</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {pushStats?.channels?.map((ch: any) => (
+                  <div
+                    key={ch.id}
+                    onClick={() => setBcChannel(ch.id)}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                      bcChannel === ch.id
+                        ? 'bg-kumo-orange/10 border-kumo-orange ring-1 ring-kumo-orange/40 text-white'
+                        : 'bg-kumo-card border-kumo-border hover:border-slate-600 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-bold uppercase text-kumo-orange">#{ch.id}</span>
+                      <span className="text-xs font-mono font-black bg-slate-900 px-2 py-0.5 rounded border border-slate-700 text-white">
+                        {ch.subscribers}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-xs text-white mt-1.5">{ch.name}</h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1 font-mono">{ch.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Broadcast Composer */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div className="lg:col-span-7 bg-kumo-surface border border-kumo-border rounded-xl p-5">
+                <h3 className="text-sm font-bold text-white uppercase font-mono tracking-wider mb-1">
+                  Instant Web Push Broadcast Dispatcher
+                </h3>
+                <p className="text-xs text-slate-400 mb-4">
+                  Sends RFC 8291 aes128gcm encrypted push payload across workers
+                </p>
+
+                <form onSubmit={handleSendBroadcast} className="space-y-4 font-mono text-xs">
+                  <div>
+                    <label className="block text-[11px] text-slate-300 font-bold uppercase mb-1">
+                      Target Channel
+                    </label>
+                    <select
+                      value={bcChannel}
+                      onChange={(e) => setBcChannel(e.target.value)}
+                      className="w-full bg-kumo-card border border-kumo-border focus:border-kumo-orange rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
+                    >
+                      <option value="all">All Global Subscribers (all)</option>
+                      <option value="live_matches">Live Match Trackers (live_matches)</option>
+                      <option value="goal_alerts">Instant Goal Chimes (goal_alerts)</option>
+                      <option value="breaking_news">Breaking News & Editorial (breaking_news)</option>
+                      <option value="betslip_alerts">Bet Slip Cashout Alerts (betslip_alerts)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-300 font-bold uppercase mb-1">
+                      Push Title
+                    </label>
+                    <input
+                      type="text"
+                      value={bcTitle}
+                      onChange={(e) => setBcTitle(e.target.value)}
+                      className="w-full bg-kumo-card border border-kumo-border focus:border-kumo-orange rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
+                      placeholder="e.g. ⚽ GOAL! Arsenal 1 - 0 Chelsea"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-300 font-bold uppercase mb-1">
+                      Push Message Body
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={bcBody}
+                      onChange={(e) => setBcBody(e.target.value)}
+                      className="w-full bg-kumo-card border border-kumo-border focus:border-kumo-orange rounded-xl px-3.5 py-2.5 text-white focus:outline-none resize-none"
+                      placeholder="Message content..."
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-slate-300 font-bold uppercase mb-1">
+                      Click URL Redirect
+                    </label>
+                    <input
+                      type="text"
+                      value={bcUrl}
+                      onChange={(e) => setBcUrl(e.target.value)}
+                      className="w-full bg-kumo-card border border-kumo-border focus:border-kumo-orange rounded-xl px-3.5 py-2.5 text-white focus:outline-none"
+                      placeholder="/live"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isBroadcasting || !bcTitle.trim() || !bcBody.trim()}
+                    className="w-full py-3 bg-kumo-orange hover:bg-orange-500 disabled:opacity-50 text-black font-bold uppercase rounded-xl shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Megaphone className="w-4 h-4" />
+                    <span>{isBroadcasting ? 'Broadcasting Payload...' : `Dispatch Push to #${bcChannel}`}</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Mobile Preview & Recent Logs */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-kumo-surface border border-kumo-border rounded-xl p-5">
+                  <h4 className="text-xs font-mono font-bold uppercase text-slate-300 mb-3">
+                    Mobile Shade Preview
+                  </h4>
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-white space-y-2">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                      <span>SLIPRADAR PWA</span>
+                      <span>NOW</span>
+                    </div>
+                    <div className="flex items-start gap-3 bg-white/5 border border-white/10 rounded-xl p-3">
+                      <div className="w-7 h-7 rounded-lg bg-kumo-orange flex items-center justify-center shrink-0">
+                        <Zap className="w-3.5 h-3.5 text-black font-bold" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h5 className="font-bold text-xs text-white leading-tight truncate">{bcTitle || 'Title'}</h5>
+                        <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">{bcBody || 'Message...'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-kumo-surface border border-kumo-border rounded-xl p-5">
+                  <h4 className="text-xs font-mono font-bold uppercase text-slate-300 mb-3">
+                    Recent Broadcasts ({pushStats?.recent_broadcasts?.length ?? 0})
+                  </h4>
+                  <div className="space-y-2 max-h-[220px] overflow-y-auto">
+                    {pushStats?.recent_broadcasts?.length === 0 ? (
+                      <div className="text-center py-4 text-slate-500 font-mono text-xs">No broadcast history</div>
+                    ) : (
+                      pushStats?.recent_broadcasts?.map((log: any) => (
+                        <div key={log.id} className="p-2.5 bg-kumo-card border border-kumo-border rounded-xl font-mono text-xs">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                            <span className="text-kumo-orange font-bold">#{log.channel}</span>
+                            <span>{new Date(log.sent_at).toLocaleTimeString()}</span>
+                          </div>
+                          <p className="font-bold text-white truncate">{log.title}</p>
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1">
+                            <span className="text-emerald-400 font-bold">✓ {log.sent_count} sent</span>
+                            <span className={log.failed_count > 0 ? 'text-rose-400' : 'text-slate-500'}>✗ {log.failed_count} failed</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

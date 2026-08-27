@@ -57,6 +57,7 @@ type League struct {
 	Sport   SportType `json:"sport"`
 	Country string    `json:"country"`
 	Logo    string    `json:"logo"`
+	Flag    string    `json:"flag,omitempty"`
 }
 
 type MatchStats struct {
@@ -79,6 +80,153 @@ type MatchStats struct {
 	AttackingPressure string  `json:"attacking_pressure,omitempty"` // "HOME", "AWAY", "NEUTRAL"
 	BallPositionX     float64 `json:"ball_position_x,omitempty"`    // 0 to 100 on pitch
 	BallPositionY     float64 `json:"ball_position_y,omitempty"`    // 0 to 100 on pitch
+
+	// Comprehensive Soccer Stats from API-Sports
+	PassesHome        int     `json:"passes_home,omitempty"`
+	PassesAway        int     `json:"passes_away,omitempty"`
+	PassAccuracyHome  int     `json:"pass_accuracy_home,omitempty"`
+	PassAccuracyAway  int     `json:"pass_accuracy_away,omitempty"`
+	TacklesHome       int     `json:"tackles_home,omitempty"`
+	TacklesAway       int     `json:"tackles_away,omitempty"`
+	SavesHome         int     `json:"saves_home,omitempty"`
+	SavesAway         int     `json:"saves_away,omitempty"`
+	OffsidesHome      int     `json:"offsides_home,omitempty"`
+	OffsidesAway      int     `json:"offsides_away,omitempty"`
+	ShotsBlockedHome  int     `json:"shots_blocked_home,omitempty"`
+	ShotsBlockedAway  int     `json:"shots_blocked_away,omitempty"`
+	BigChancesHome    int     `json:"big_chances_home,omitempty"`
+	BigChancesAway    int     `json:"big_chances_away,omitempty"`
+
+	// Comprehensive Basketball / NFL / Baseball / Other Sports Stats
+	FieldGoalsHome    string  `json:"field_goals_home,omitempty"`
+	FieldGoalsAway    string  `json:"field_goals_away,omitempty"`
+	ThreePointersHome string  `json:"three_pointers_home,omitempty"`
+	ThreePointersAway string  `json:"three_pointers_away,omitempty"`
+	FreeThrowsHome    string  `json:"free_throws_home,omitempty"`
+	FreeThrowsAway    string  `json:"free_throws_away,omitempty"`
+	ReboundsHome      int     `json:"rebounds_home,omitempty"`
+	ReboundsAway      int     `json:"rebounds_away,omitempty"`
+	AssistsHome       int     `json:"assists_home,omitempty"`
+	AssistsAway       int     `json:"assists_away,omitempty"`
+	StealsHome        int     `json:"steals_home,omitempty"`
+	StealsAway        int     `json:"steals_away,omitempty"`
+	BlocksHome        int     `json:"blocks_home,omitempty"`
+	BlocksAway        int     `json:"blocks_away,omitempty"`
+	TurnoversHome     int     `json:"turnovers_home,omitempty"`
+	TurnoversAway     int     `json:"turnovers_away,omitempty"`
+	PointsInPaintHome int     `json:"points_in_paint_home,omitempty"`
+	PointsInPaintAway int     `json:"points_in_paint_away,omitempty"`
+	FastBreakHome     int     `json:"fast_break_home,omitempty"`
+	FastBreakAway     int     `json:"fast_break_away,omitempty"`
+
+	// NFL / Gridiron
+	TotalYardsHome    int     `json:"total_yards_home,omitempty"`
+	TotalYardsAway    int     `json:"total_yards_away,omitempty"`
+	PassingYardsHome  string  `json:"passing_yards_home,omitempty"`
+	PassingYardsAway  string  `json:"passing_yards_away,omitempty"`
+	RushingYardsHome  string  `json:"rushing_yards_home,omitempty"`
+	RushingYardsAway  string  `json:"rushing_yards_away,omitempty"`
+	FirstDownsHome    int     `json:"first_downs_home,omitempty"`
+	FirstDownsAway    int     `json:"first_downs_away,omitempty"`
+	TimeOfPossHome    string  `json:"time_of_poss_home,omitempty"`
+	TimeOfPossAway    string  `json:"time_of_poss_away,omitempty"`
+
+	// Baseball
+	HitsHome          int     `json:"hits_home,omitempty"`
+	HitsAway          int     `json:"hits_away,omitempty"`
+	ErrorsHome        int     `json:"errors_home,omitempty"`
+	ErrorsAway        int     `json:"errors_away,omitempty"`
+	HomeRunsHome      int     `json:"home_runs_home,omitempty"`
+	HomeRunsAway      int     `json:"home_runs_away,omitempty"`
+	StrikeoutsHome    int     `json:"strikeouts_home,omitempty"`
+	StrikeoutsAway    int     `json:"strikeouts_away,omitempty"`
+	WalksHome         int     `json:"walks_home,omitempty"`
+	WalksAway         int     `json:"walks_away,omitempty"`
+}
+
+type Player struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	Number      int     `json:"number"`
+	Position    string  `json:"pos"` // "GK", "DF", "MF", "FW", "PG", "SG", "SF", "PF", "C", "QB", "RB", "WR", etc.
+	Photo       string  `json:"photo,omitempty"`
+	Grid        string  `json:"grid,omitempty"` // "1:1", "2:3", etc.
+	Rating      float64 `json:"rating,omitempty"`
+	Age         int     `json:"age,omitempty"`
+	Nationality string  `json:"nationality,omitempty"`
+	IsCaptain   bool    `json:"is_captain,omitempty"`
+}
+
+type Coach struct {
+	ID    string `json:"id,omitempty"`
+	Name  string `json:"name"`
+	Photo string `json:"photo,omitempty"`
+}
+
+type TeamLineup struct {
+	TeamID      string   `json:"team_id"`
+	TeamName    string   `json:"team_name"`
+	Formation   string   `json:"formation"`
+	Coach       Coach    `json:"coach"`
+	StartingXI  []Player `json:"starting_xi"`
+	Substitutes []Player `json:"substitutes"`
+}
+
+type MatchLineups struct {
+	MatchID string     `json:"match_id"`
+	Home    TeamLineup `json:"home"`
+	Away    TeamLineup `json:"away"`
+}
+
+type PlayerMatchStat struct {
+	Player         Player  `json:"player"`
+	MinutesPlayed  int     `json:"minutes"`
+	Rating         float64 `json:"rating"`
+	Goals          int     `json:"goals"`
+	Assists        int     `json:"assists"`
+	ShotsTotal     int     `json:"shots_total"`
+	ShotsOnTarget  int     `json:"shots_on_target"`
+	PassesTotal    int     `json:"passes_total"`
+	PassAccuracy   int     `json:"pass_accuracy"`
+	Tackles        int     `json:"tackles"`
+	DuelsWon       int     `json:"duels_won"`
+	FoulsCommitted int     `json:"fouls_committed"`
+	YellowCards    int     `json:"yellow_cards"`
+	RedCards       int     `json:"red_cards"`
+	Saves          int     `json:"saves"`
+}
+
+type TeamPlayerStats struct {
+	TeamID   string            `json:"team_id"`
+	TeamName string            `json:"team_name"`
+	Players  []PlayerMatchStat `json:"players"`
+}
+
+type MatchPlayerStats struct {
+	MatchID string          `json:"match_id"`
+	Home    TeamPlayerStats `json:"home"`
+	Away    TeamPlayerStats `json:"away"`
+}
+
+type HeadToHeadItem struct {
+	ID        string      `json:"id"`
+	Date      time.Time   `json:"date"`
+	HomeTeam  Team        `json:"home_team"`
+	AwayTeam  Team        `json:"away_team"`
+	HomeScore int         `json:"home_score"`
+	AwayScore int         `json:"away_score"`
+	Status    MatchStatus `json:"status"`
+	League    League      `json:"league"`
+}
+
+type HeadToHeadSummary struct {
+	HomeTeamID   string           `json:"home_team_id"`
+	AwayTeamID   string           `json:"away_team_id"`
+	TotalMatches int              `json:"total_matches"`
+	HomeWins     int              `json:"home_wins"`
+	AwayWins     int              `json:"away_wins"`
+	Draws        int              `json:"draws"`
+	Matches      []HeadToHeadItem `json:"matches"`
 }
 
 type MatchEvent struct {
@@ -89,7 +237,9 @@ type MatchEvent struct {
 	ExtraMinute int       `json:"extra_minute,omitempty"`
 	TeamSide    string    `json:"team_side"` // "HOME" or "AWAY"
 	PlayerName  string    `json:"player_name"`
+	PlayerPhoto string    `json:"player_photo,omitempty"`
 	AssistName  string    `json:"assist_name,omitempty"`
+	AssistPhoto string    `json:"assist_photo,omitempty"`
 	Detail      string    `json:"detail,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -155,11 +305,23 @@ type Match struct {
 	Stats       MatchStats  `json:"stats"`
 	Events      []MatchEvent `json:"events"`
 	Odds        *MatchOdds  `json:"odds,omitempty"`
+	Lineups     *MatchLineups `json:"lineups,omitempty"`
+	PlayerStats *MatchPlayerStats `json:"player_stats,omitempty"`
+	H2H         *HeadToHeadSummary `json:"h2h,omitempty"`
 	Venue       string      `json:"venue,omitempty"`
 	Referee     string      `json:"referee,omitempty"`
 	HasLiveAudio bool       `json:"has_live_audio,omitempty"`
 	IsDeleted   bool        `json:"is_deleted,omitempty"`
 	DeletedAt   *time.Time  `json:"deleted_at,omitempty"`
+}
+
+type APISportsQuota struct {
+	Plan        string    `json:"plan"`
+	RequestsDay int       `json:"requests_day"`
+	UsedDay     int       `json:"used_day"`
+	Remaining   int       `json:"remaining"`
+	ResetAt     time.Time `json:"reset_at"`
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 type BetLegStatus string
@@ -378,6 +540,8 @@ type IngestionMetrics struct {
 	OddsAPIPollingRateSec int     `json:"odds_api_polling_rate_sec"`
 	ESPNQuotaUsed       int       `json:"espn_quota_used"`
 	ESPNQuotaLimit      int       `json:"espn_quota_limit"`
+	APISportsQuotaUsed  int       `json:"api_sports_quota_used"`
+	APISportsQuotaLimit int       `json:"api_sports_quota_limit"`
 	OddsAPIQuotaUsed    int       `json:"odds_api_quota_used"`
 	OddsAPIQuotaLimit   int       `json:"odds_api_quota_limit"`
 	AvgIngestionLatencyMs float64 `json:"avg_ingestion_latency_ms"`
@@ -517,4 +681,82 @@ type AdminOverview struct {
 	Trend             []AdminTimePoint `json:"trend"`
 	SlipsByBookmaker  map[string]int   `json:"slips_by_bookmaker"`
 	PlanSplit         map[string]int   `json:"plan_split"`
+}
+
+// PushSubscription represents a browser Web Push subscription with established channel keys
+type PushSubscription struct {
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id,omitempty"`
+	Endpoint   string    `json:"endpoint"`
+	P256dh     string    `json:"p256dh"`
+	Auth       string    `json:"auth"`
+	DeviceType string    `json:"device_type"` // "android", "ios", "desktop"
+	Channels   []string  `json:"channels"`    // e.g. ["all", "live_matches", "goal_alerts"]
+	UserAgent  string    `json:"user_agent,omitempty"`
+	IPAddress  string    `json:"ip_address,omitempty"`
+	IsActive   bool      `json:"is_active"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
+}
+
+// PushNotificationPayload is the standardized structure sent to the Service Worker
+type PushNotificationPayload struct {
+	Title              string                 `json:"title"`
+	Body               string                 `json:"body"`
+	Icon               string                 `json:"icon,omitempty"`
+	Badge              string                 `json:"badge,omitempty"`
+	Tag                string                 `json:"tag,omitempty"`
+	URL                string                 `json:"url,omitempty"`
+	MatchID            string                 `json:"match_id,omitempty"`
+	Sport              string                 `json:"sport,omitempty"`
+	Type               string                 `json:"type,omitempty"` // "goal", "kickoff", "point", "broadcast", "live_activity"
+	Silent             bool                   `json:"silent,omitempty"`
+	Renotify           bool                   `json:"renotify,omitempty"`
+	RequireInteraction bool                   `json:"requireInteraction,omitempty"`
+	Vibrate            []int                  `json:"vibrate,omitempty"`
+	Data               map[string]interface{} `json:"data,omitempty"`
+}
+
+// BroadcastRequest is sent by admins to push messages to all or specific channels
+type BroadcastRequest struct {
+	Channel  string `json:"channel"` // "all", "live_matches", "goal_alerts", "breaking_news", "betslip_alerts"
+	Title    string `json:"title"`
+	Body     string `json:"body"`
+	URL      string `json:"url,omitempty"`
+	Icon     string `json:"icon,omitempty"`
+	MatchID  string `json:"match_id,omitempty"`
+	Urgency  string `json:"urgency,omitempty"` // "high", "normal"
+	SendTest bool   `json:"send_test,omitempty"`
+}
+
+// NotificationChannelInfo provides channel metadata and subscriber counts
+type NotificationChannelInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Icon        string `json:"icon"`
+	Subscribers int    `json:"subscribers"`
+}
+
+// NotificationStats aggregates live telemetry for push delivery
+type NotificationStats struct {
+	TotalSubscriptions int                       `json:"total_subscriptions"`
+	ActiveAndroid      int                       `json:"active_android"`
+	ActiveIOS          int                       `json:"active_ios"`
+	ActiveDesktop      int                       `json:"active_desktop"`
+	Channels           []NotificationChannelInfo `json:"channels"`
+	RecentBroadcasts   []BroadcastLog            `json:"recent_broadcasts"`
+}
+
+// BroadcastLog tracks sent notifications for auditing
+type BroadcastLog struct {
+	ID          string    `json:"id"`
+	Channel     string    `json:"channel"`
+	Title       string    `json:"title"`
+	Body        string    `json:"body"`
+	URL         string    `json:"url,omitempty"`
+	SentCount   int       `json:"sent_count"`
+	FailedCount int       `json:"failed_count"`
+	SentAt      time.Time `json:"sent_at"`
 }

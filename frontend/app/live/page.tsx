@@ -378,13 +378,29 @@ export default function HomePage() {
     betSlips.forEach((slip) => {
       slip.legs?.forEach((leg) => {
         const matchId = leg.match_id || leg.match?.id;
-        if (!matchId) return;
+        if (!matchId && !leg.match) return;
 
-        const liveMatch = tickingMatches.find((m) => m.id === matchId);
+        const homeName = leg.match?.home_team?.name?.toLowerCase() || '';
+        const awayName = leg.match?.away_team?.name?.toLowerCase() || '';
+
+        const liveMatch =
+          (matchId ? tickingMatches.find((m) => m.id === matchId) : null) ||
+          (homeName && awayName
+            ? tickingMatches.find((m) => {
+                const mHome = m.home_team?.name?.toLowerCase() || '';
+                const mAway = m.away_team?.name?.toLowerCase() || '';
+                return (
+                  (mHome.includes(homeName) || homeName.includes(mHome)) &&
+                  (mAway.includes(awayName) || awayName.includes(mAway))
+                );
+              })
+            : null);
+
+        const key = matchId || (liveMatch ? liveMatch.id : `${homeName}-${awayName}`);
         if (liveMatch) {
-          map.set(matchId, liveMatch);
+          map.set(key, liveMatch);
         } else if (leg.match) {
-          map.set(matchId, leg.match);
+          map.set(key, leg.match);
         }
       });
     });

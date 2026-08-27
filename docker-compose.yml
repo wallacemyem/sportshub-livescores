@@ -54,6 +54,9 @@ services:
       SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg3NzMxODMyLCJleHAiOjE5NDU0MTE4MzJ9.1hdl-Y_PDMuAfAijUMcugBqUPTlp0CyPstpl0gDGmPw}"
       SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODc3MzE4MzIsImV4cCI6MTk0NTQxMTgzMn0.JLb-XXh43TejaYqVgdEyOMpSae738CAY0E5qyw5xmpY}"
       SUPABASE_STORAGE_BUCKET: "${SUPABASE_STORAGE_BUCKET:-sports-assets}"
+      API_SPORTS_KEY: "${API_SPORTS_KEY:-be53f46efe6b3c6948b89c71b2fd56b0}"
+      API_FOOTBALL_KEY: "${API_FOOTBALL_KEY:-be53f46efe6b3c6948b89c71b2fd56b0}"
+      API_SPORTS_DAILY_CAP: "${API_SPORTS_DAILY_CAP:-100}"
       ESPN_API_BASE_URL: "https://site.web.api.espn.com/apis/site/v2/sports"
       ODDS_API_BASE_URL: "https://api.the-odds-api.com/v4"
       ODDS_API_KEY: "${ODDS_API_KEY:-68492c40a7eb4d001ed4899b75df648d}"
@@ -61,6 +64,7 @@ services:
       FLW_SECRET_HASH: "${FLW_SECRET_HASH:-flw_sports_secret_hash_token_18443}"
       CRYPTOMUS_MERCHANT_ID: "${CRYPTOMUS_MERCHANT_ID:-merch_88291a_sports}"
       CRYPTOMUS_PAYMENT_KEY: "${CRYPTOMUS_PAYMENT_KEY:-cryptomus_payment_api_key_secure_18443}"
+      STEALTH_SCRAPER_URL: "${STEALTH_SCRAPER_URL:-http://sports_stealth_scraper:8081}"
       FRONTEND_URL: "http://localhost:17080"
       ADMIN_URL: "http://localhost:19080"
       SIMULATION_ENABLED: "${SIMULATION_ENABLED:-false}"
@@ -74,7 +78,19 @@ services:
     networks:
       - sports_net
 
-  # 4. Next.js 14 Client Web Application (Non-Standard Port: 17080)
+  # 4. Stealth Headless Scraper Microservice (Akamai / Cloudflare Challenge Bypass)
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: sports_stealth_scraper
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+    networks:
+      - sports_net
+
+  # 5. Next.js 14 Client Web Application (Non-Standard Port: 17080)
   frontend:
     build:
       context: ./frontend

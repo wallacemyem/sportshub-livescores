@@ -70,12 +70,23 @@ export function EventTimeline({ events, homeTeamName, awayTeamName, sport = 'soc
                 )}
               </div>
 
-              {/* Event Content Box.
-                  min-w-0 down the left branch is what keeps a long player or team
-                  name from shoving the event badge out of the card. */}
+              {/* Event Content Box */}
               <div className="min-w-0 flex-1 rounded-lg border border-surface-border bg-surface-subtle p-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2">
+                    {ev.player_photo && (
+                      <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 shrink-0 border border-surface-border">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={ev.player_photo}
+                          alt={ev.player_name}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
                     {eventClock(ev) && (
                       <span className="shrink-0 font-mono font-bold text-red-500">{eventClock(ev)}</span>
                     )}

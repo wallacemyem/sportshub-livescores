@@ -12,12 +12,14 @@ import (
 	"github.com/sports/livescores/internal/cache"
 	"github.com/sports/livescores/internal/database"
 	"github.com/sports/livescores/internal/models"
+	"github.com/sports/livescores/internal/push"
 )
 
 type Simulator struct {
-	store *database.Store
-	redis *cache.RedisService
-	rnd   *rand.Rand
+	store       *database.Store
+	redis       *cache.RedisService
+	pushService *push.PushService
+	rnd         *rand.Rand
 }
 
 func NewSimulator(store *database.Store, redis *cache.RedisService) *Simulator {
@@ -26,6 +28,10 @@ func NewSimulator(store *database.Store, redis *cache.RedisService) *Simulator {
 		redis: redis,
 		rnd:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
+}
+
+func (s *Simulator) SetPushService(p *push.PushService) {
+	s.pushService = p
 }
 
 // TickLiveMatches performs one simulation step across all LIVE matches
@@ -140,6 +146,9 @@ func (s *Simulator) TickLiveMatches(ctx context.Context) {
 
 		if newEvent != nil && newEvent.Type == models.EventGoal {
 			delta.Type = models.DeltaScoreUpdate
+			if s.pushService != nil {
+				s.pushService.NotifyMatchScore(&matchCopy, newEvent.TeamSide, newEvent.PlayerName)
+			}
 		}
 
 		_ = s.redis.PublishDelta(ctx, matchCopy.ID, matchCopy.League.ID, delta)
@@ -199,6 +208,11 @@ func (s *Simulator) TriggerSimulatedGoal(ctx context.Context, matchID, teamSide,
 	}
 
 	_ = s.redis.PublishDelta(ctx, match.ID, match.League.ID, delta)
+
+	if s.pushService != nil {
+		s.pushService.NotifyMatchScore(match, teamSide, player)
+	}
+
 	return match, &event, nil
 }
 

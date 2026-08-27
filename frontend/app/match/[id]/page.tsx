@@ -36,10 +36,30 @@ export default function MatchDetailPage() {
   const [match, setMatch] = useState<Match | null>(() => {
     if (typeof window !== 'undefined') {
       const cached = getCachedData<Match[]>('matches');
-      return cached?.find((m) => m.id === matchId) || null;
+      const found = cached?.find((m) => m.id === matchId);
+      if (found) return found;
+
+      // Check all cached slips in localStorage
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('slips_')) {
+          try {
+            const slips = JSON.parse(localStorage.getItem(key) || '[]');
+            for (const s of slips) {
+              for (const leg of s.legs || []) {
+                if (leg.match_id === matchId || leg.match?.id === matchId) {
+                  return leg.match;
+                }
+              }
+            }
+          } catch {}
+        }
+      }
     }
     return null;
   });
+  const [isLoading, setIsLoading] = useState(!match);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pitch' | 'timeline' | 'stats' | 'lineups' | 'odds'>('stats');
 
   const { isConnected, subscribe } = useLiveMatchSocket(matchId);
@@ -64,30 +84,95 @@ export default function MatchDetailPage() {
     },
   });
 
-  // Fetch Match Data from Backend API
+  // Fetch Match Data from Backend API with Multi-Tier Resolution
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchMatch() {
       try {
         const apiBase = getApiBaseUrl();
+        // 1. Direct match fetch
         const res = await fetch(`${apiBase}/matches/${matchId}`);
         if (res.ok) {
           const data = await res.json();
-          setMatch(data);
-          prevScoreRef.current = {
-            home: data.home_score,
-            away: data.away_score,
-            status: data.status,
-          };
+          if (isMounted) {
+            setMatch(data);
+            setIsLoading(false);
+            setFetchError(null);
+            prevScoreRef.current = {
+              home: data.home_score,
+              away: data.away_score,
+              status: data.status,
+            };
+          }
+          return;
         }
-      } catch (err) {
+
+        // 2. Fallback: Search in all active matches feed
+        const allRes = await fetch(`${apiBase}/matches`);
+        if (allRes.ok) {
+          const allData = await allRes.json();
+          const cleanId = matchId.replace(/^(espn-|apif-|apif-event-|match-)/, '');
+          const matchItem = allData.matches?.find((m: Match) =>
+            m.id === matchId || m.id.endsWith(cleanId) || m.id.includes(cleanId)
+          );
+          if (matchItem && isMounted) {
+            setMatch(matchItem);
+            setIsLoading(false);
+            setFetchError(null);
+            prevScoreRef.current = {
+              home: matchItem.home_score,
+              away: matchItem.away_score,
+              status: matchItem.status,
+            };
+            return;
+          }
+        }
+
+        // 3. Fallback: Search in user bet slips
+        const slipRes = await fetch(`${apiBase}/betslip`);
+        if (slipRes.ok) {
+          const slipData = await slipRes.json();
+          for (const s of slipData.slips || []) {
+            for (const leg of s.legs || []) {
+              if (
+                leg.match_id === matchId ||
+                leg.match?.id === matchId ||
+                (leg.match && (leg.match.id.includes(matchId) || matchId.includes(leg.match.id)))
+              ) {
+                if (isMounted && leg.match) {
+                  setMatch(leg.match);
+                  setIsLoading(false);
+                  setFetchError(null);
+                  return;
+                }
+              }
+            }
+          }
+        }
+
+        if (isMounted && !match) {
+          setIsLoading(false);
+          setFetchError('Match fixture not found or feed concluded');
+        }
+      } catch (err: any) {
         console.warn('API fetch background sync:', err);
+        if (isMounted && !match) {
+          setIsLoading(false);
+          setFetchError('Could not connect to live match feed');
+        }
       }
     }
 
     if (matchId) {
       fetchMatch();
+      const interval = setInterval(fetchMatch, 10000);
+      return () => {
+        isMounted = false;
+        clearInterval(interval);
+      };
     }
-  }, [matchId]);
+  }, [matchId, match]);
 
   // Real-time WebSocket Deltas & Notifications
   useEffect(() => {
@@ -117,7 +202,6 @@ export default function MatchDetailPage() {
           ) {
             const isGoal = prev.sport === 'soccer';
             const scoringTeam = newHome > prevScoreRef.current.home ? prev.home_team.name : prev.away_team.name;
-            // Name the unit the way the sport does: goal, point, run or stroke.
             const term = isGoal ? 'GOAL!' : `${scoreNoun(prev.sport, 1).toUpperCase()}!`;
 
             triggerAlert(
@@ -153,13 +237,42 @@ export default function MatchDetailPage() {
   }, [matchId, subscribe, triggerAlert]);
 
   if (!match) {
+    if (isLoading) {
+      return (
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+            <p className="text-sm font-mono text-muted-foreground animate-pulse">
+              Connecting to Live Match Center API...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-          <p className="text-sm font-mono text-muted-foreground animate-pulse">
-            Connecting to Live Match Center API...
-          </p>
+        <div className="bg-surface rounded-2xl border border-surface-border p-6 sm:p-8 max-w-md w-full text-center space-y-4 shadow-subtle">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <Radio className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-foreground">
+              Match Center Unavailable
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {fetchError || 'This fixture could not be found in the current active live feed or has concluded.'}
+            </p>
+          </div>
+          <div className="pt-2 flex items-center justify-center gap-2.5">
+            <Link
+              href="/live"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Live Scores</span>
+            </Link>
+          </div>
         </div>
       </div>
     );

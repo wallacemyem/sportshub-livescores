@@ -18,18 +18,19 @@ import (
 )
 
 type Handlers struct {
-	Auth    *handlers.AuthHandler
-	Match   *handlers.MatchHandler
-	Odds    *handlers.OddsHandler
-	Bet     *handlers.BetSlipHandler
-	Pay     *handlers.PaymentHandler
-	Blog    *handlers.BlogHandler
-	Support *handlers.SupportHandler
-	Admin   *handlers.AdminHandler
-	Health  *handlers.HealthHandler
-	WS      *websocket.Hub
-	Store   *database.Store
-	Secret  string
+	Auth         *handlers.AuthHandler
+	Match        *handlers.MatchHandler
+	Odds         *handlers.OddsHandler
+	Bet          *handlers.BetSlipHandler
+	Pay          *handlers.PaymentHandler
+	Blog         *handlers.BlogHandler
+	Support      *handlers.SupportHandler
+	Admin        *handlers.AdminHandler
+	Notification *handlers.NotificationHandler
+	Health       *handlers.HealthHandler
+	WS           *websocket.Hub
+	Store        *database.Store
+	Secret       string
 }
 
 func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
@@ -77,6 +78,11 @@ func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
 		// Matches & Sports
 		api.Get("/matches", h.Match.GetMatches)
 		api.Get("/matches/{id}", h.Match.GetMatchByID)
+		api.Get("/matches/{id}/lineups", h.Match.GetMatchLineups)
+		api.Get("/matches/{id}/stats", h.Match.GetMatchStats)
+		api.Get("/matches/{id}/players", h.Match.GetMatchPlayerStats)
+		api.Get("/matches/{id}/h2h", h.Match.GetMatchH2H)
+		api.Get("/matches/quota", h.Match.GetAPISportsQuota)
 		api.Delete("/matches/{id}", h.Match.DeleteMatch)
 		api.Delete("/matches", h.Match.ClearAllMatches)
 		api.Get("/matches/{id}/odds", h.Odds.GetMatchOdds)
@@ -110,6 +116,13 @@ func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
 		api.Post("/payments/simulate", h.Pay.SimulatePayment)
 		api.Get("/users/{id}/subscription", h.Pay.GetUserSubscription)
 
+		// Web Push & Live Activity Notifications
+		api.Get("/notifications/vapid-key", h.Notification.GetVAPIDKey)
+		api.Post("/notifications/subscribe", h.Notification.Subscribe)
+		api.Post("/notifications/unsubscribe", h.Notification.Unsubscribe)
+		api.Get("/notifications/channels", h.Notification.GetChannels)
+		api.Post("/notifications/test", h.Notification.SendTestPush)
+
 		// Admin Management & Orchestrator (STRICT ADMIN AUTH MIDDLEWARE REQUIRED)
 		api.Route("/admin", func(adm chi.Router) {
 			adm.Use(AdminAuthMiddleware(jwtSecret, h.Store))
@@ -126,6 +139,11 @@ func SetupRouter(cfg *config.Config, h *Handlers) http.Handler {
 			adm.Get("/clients", h.Admin.GetClients)
 			adm.Post("/matches/{id}/override", h.Admin.OverrideMatch)
 			adm.Post("/matches/{id}/simulate-goal", h.Admin.SimulateGoal)
+
+			// Push Notifications & Live Broadcast
+			adm.Get("/notifications/stats", h.Notification.AdminGetStats)
+			adm.Get("/notifications/subscriptions", h.Notification.AdminGetStats)
+			adm.Post("/notifications/broadcast", h.Notification.AdminBroadcast)
 
 			// Finance & parser
 			adm.Get("/financials", h.Admin.GetFinancials)

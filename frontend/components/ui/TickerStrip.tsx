@@ -13,7 +13,7 @@ interface TickerStripProps {
 
 export function TickerStrip({ matches, onSelectMatch }: TickerStripProps) {
   const router = useRouter();
-  const liveMatches = matches.filter((m) => m.status === 'LIVE');
+  const liveMatches = matches.filter((m) => m.status === 'LIVE' || m.status === 'HALF_TIME');
 
   if (liveMatches.length === 0) {
     return null;

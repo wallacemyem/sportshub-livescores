@@ -15,12 +15,13 @@ import {
   Home,
   Shield,
   Gem,
+  Zap,
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { getPlanConfig } from '@/components/brand/PlanBadge';
 
-type NavKey = 'scores' | 'search' | 'tickets' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
+type NavKey = 'scores' | 'search' | 'tickets' | 'activities' | 'blog' | 'support' | 'pro' | 'account' | 'admin' | 'plan';
 
 interface MobileNavProps {
   onOpenProModal?: () => void;
@@ -34,6 +35,7 @@ interface MobileNavProps {
 /** Resolve the highlighted item from the route when the page does not pin one. */
 function resolveActive(pathname: string, activeNav?: NavKey): NavKey {
   if (activeNav) return activeNav;
+  if (pathname.startsWith('/activities')) return 'activities';
   if (pathname.startsWith('/tickets')) return 'tickets';
   if (pathname.startsWith('/search')) return 'search';
   if (pathname.startsWith('/account/plan')) return 'plan';
@@ -197,6 +199,14 @@ export function MobileNav({
             icon={Ticket}
             isActive={currentActive === 'tickets'}
             activeClass="bg-emerald-600 text-white shadow-md shadow-emerald-500/30"
+          />
+
+          <DockLink
+            href="/activities"
+            label="Native Lock Screen Activity"
+            icon={Zap}
+            isActive={currentActive === 'activities'}
+            activeClass="bg-indigo-600 text-white shadow-md shadow-indigo-500/30"
           />
 
           <span className="my-0.5 h-px w-6 bg-white/40 dark:bg-white/10" />

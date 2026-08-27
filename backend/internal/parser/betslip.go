@@ -1,15 +1,16 @@
 package parser
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/sports/livescores/internal/database"
 	"github.com/sports/livescores/internal/models"
 )
@@ -23,19 +24,22 @@ func NewBetSlipParser(store *database.Store) *BetSlipParser {
 	return &BetSlipParser{
 		store: store,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
+			Timeout: 15 * time.Second,
 		},
 	}
 }
 
 // SportyBet / MSport Share API Response Structs
 type SportyShareOutcome struct {
-	EventID           string `json:"eventId"`
-	GameID            string `json:"gameId"`
-	EstimateStartTime int64  `json:"estimateStartTime"`
-	MatchStatus       string `json:"matchStatus"`
-	HomeTeamName      string `json:"homeTeamName"`
-	AwayTeamName      string `json:"awayTeamName"`
+	EventID           string   `json:"eventId"`
+	GameID            string   `json:"gameId"`
+	EstimateStartTime int64    `json:"estimateStartTime"`
+	MatchStatus       string   `json:"matchStatus"`
+	PlayedSeconds     string   `json:"playedSeconds"`
+	SetScore          string   `json:"setScore"`
+	GameScore         []string `json:"gameScore"`
+	HomeTeamName      string   `json:"homeTeamName"`
+	AwayTeamName      string   `json:"awayTeamName"`
 	Sport             struct {
 		ID       string `json:"id"`
 		Name     string `json:"name"`
@@ -81,87 +85,65 @@ func (p *BetSlipParser) ParseBookingCodeForUser(bookmaker, code, userID string) 
 		return nil, fmt.Errorf("please provide a valid booking code")
 	}
 
-	// 1. Check if user already tracked this booking code
-	if userID != "" {
-		userSlips := p.store.GetBetSlipsByUser(userID)
-		for _, s := range userSlips {
-			if strings.EqualFold(s.BookingCode, cleanCode) {
-				return s, nil
-			}
-		}
-	} else {
-		if existing, ok := p.store.GetBetSlip(cleanCode); ok {
-			return existing, nil
-		}
-	}
-
-	// 2. Fetch real data from live bookmaker APIs
+	reqBookmaker := strings.ToLower(strings.TrimSpace(bookmaker))
 	var slip *models.BetSlip
 	var err error
 
-	reqBookmaker := strings.ToLower(strings.TrimSpace(bookmaker))
-
-	// If SportyBet or auto, query SportyBet regional endpoints
-	if reqBookmaker == "" || reqBookmaker == "auto" || reqBookmaker == "sportybet" {
+	// If a specific bookmaker was requested
+	switch reqBookmaker {
+	case "sportybet":
 		slip, err = p.fetchSportyBetLive(cleanCode)
-		if err == nil && slip != nil {
-			if userID != "" {
-				slip.UserID = userID
-				slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
-			}
-			p.store.SaveBetSlip(slip)
-			return slip, nil
-		}
-	}
-
-	// If MSport or auto, query MSport endpoints
-	if reqBookmaker == "" || reqBookmaker == "auto" || reqBookmaker == "msport" {
+	case "msport":
 		slip, err = p.fetchMSportLive(cleanCode)
-		if err == nil && slip != nil {
-			if userID != "" {
-				slip.UserID = userID
-				slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
-			}
-			p.store.SaveBetSlip(slip)
-			return slip, nil
-		}
-	}
-
-	// If Bet9ja, 1xBet, or BetKing, query live feeds
-	if reqBookmaker == "bet9ja" || reqBookmaker == "1xbet" || reqBookmaker == "betking" || reqBookmaker == "mozzartbet" {
-		slip, err = p.fetchOtherBookmakerLive(reqBookmaker, cleanCode)
-		if err == nil && slip != nil {
-			if userID != "" {
-				slip.UserID = userID
-				slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
-			}
-			p.store.SaveBetSlip(slip)
-			return slip, nil
-		}
-	}
-
-	// Try all bookmaker endpoints in sequence if auto
-	if reqBookmaker == "" || reqBookmaker == "auto" {
-		for _, bm := range []string{"sportybet", "msport", "bet9ja", "1xbet", "betking"} {
-			if bm == "sportybet" {
+	case "bet9ja":
+		slip, err = p.fetchBet9jaLive(cleanCode)
+	case "betking":
+		slip, err = p.fetchBetKingLive(cleanCode)
+	case "1xbet":
+		slip, err = p.fetch1xBetLive(cleanCode)
+	case "22bet", "melbet", "mozzartbet", "betway", "bangbet", "parimatch":
+		slip, err = p.fetchScraperGeneric(reqBookmaker, cleanCode)
+	default:
+		// Auto mode: probe supported sportsbook networks in sequence
+		for _, bm := range []string{"sportybet", "msport", "bet9ja", "betking", "1xbet", "22bet", "melbet", "mozzartbet", "betway", "bangbet", "parimatch"} {
+			switch bm {
+			case "sportybet":
 				slip, err = p.fetchSportyBetLive(cleanCode)
-			} else if bm == "msport" {
+			case "msport":
 				slip, err = p.fetchMSportLive(cleanCode)
-			} else {
-				slip, err = p.fetchOtherBookmakerLive(bm, cleanCode)
+			case "bet9ja":
+				slip, err = p.fetchBet9jaLive(cleanCode)
+			case "betking":
+				slip, err = p.fetchBetKingLive(cleanCode)
+			case "1xbet":
+				slip, err = p.fetch1xBetLive(cleanCode)
+			default:
+				slip, err = p.fetchScraperGeneric(bm, cleanCode)
 			}
 			if err == nil && slip != nil {
-				if userID != "" {
-					slip.UserID = userID
-					slip.ID = fmt.Sprintf("slip-%s-%s", userID, uuid.New().String()[:8])
-				}
-				p.store.SaveBetSlip(slip)
-				return slip, nil
+				break
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("booking code '%s' could not be found on %s or partner networks. Please verify the code on your slip", cleanCode, bookmaker)
+	if err == nil && slip != nil {
+		if userID != "" {
+			slip.UserID = userID
+			slip.ID = fmt.Sprintf("slip-%s-%s", userID, cleanCode)
+		}
+		p.store.SaveBetSlip(slip)
+		return slip, nil
+	}
+
+	// Fallback to check if already stored in memory
+	if existing, ok := p.store.GetBetSlip(cleanCode); ok {
+		return existing, nil
+	}
+
+	if reqBookmaker != "" && reqBookmaker != "auto" {
+		return nil, fmt.Errorf("booking code '%s' could not be resolved on %s (code expired, invalid, or blocked by bookmaker anti-bot protection)", cleanCode, strings.ToUpper(bookmaker))
+	}
+	return nil, fmt.Errorf("booking code '%s' could not be found on SportyBet, MSport, Bet9ja, or partner networks. Please verify the code on your slip", cleanCode)
 }
 
 // fetchSportyBetLive queries SportyBet's live sharing endpoints across Nigeria, Ghana, Kenya, and Uganda
@@ -171,6 +153,8 @@ func (p *BetSlipParser) fetchSportyBetLive(code string) (*models.BetSlip, error)
 		"https://www.sportybet.com/api/gh/orders/share/" + code,
 		"https://www.sportybet.com/api/ke/orders/share/" + code,
 		"https://www.sportybet.com/api/ug/orders/share/" + code,
+		"https://www.sportybet.com/api/tz/orders/share/" + code,
+		"https://www.sportybet.com/api/zm/orders/share/" + code,
 	}
 
 	for _, url := range endpoints {
@@ -210,6 +194,7 @@ func (p *BetSlipParser) fetchMSportLive(code string) (*models.BetSlip, error) {
 	endpoints := []string{
 		"https://www.msport.com/api/ng/orders/share/" + code,
 		"https://www.msport.com/api/gh/orders/share/" + code,
+		"https://www.msport.com/api/ug/orders/share/" + code,
 	}
 
 	for _, url := range endpoints {
@@ -244,18 +229,283 @@ func (p *BetSlipParser) fetchMSportLive(code string) (*models.BetSlip, error) {
 	return nil, fmt.Errorf("code not found on msport")
 }
 
-// fetchOtherBookmakerLive tries live bookmaker lookups
-func (p *BetSlipParser) fetchOtherBookmakerLive(bookmaker, code string) (*models.BetSlip, error) {
-	// First test sportybet & msport mirrors as cross-sportsbook share codes often resolve there
-	if slip, err := p.fetchSportyBetLive(code); err == nil {
-		slip.Bookmaker = bookmaker
-		return slip, nil
+// fetchBet9jaLive queries Bet9ja's coupon endpoints via Stealth Scraper Sidecar
+func (p *BetSlipParser) fetchBet9jaLive(code string) (*models.BetSlip, error) {
+	scraperURL := os.Getenv("STEALTH_SCRAPER_URL")
+	if scraperURL == "" {
+		scraperURL = "http://sports_stealth_scraper:8081"
 	}
-	if slip, err := p.fetchMSportLive(code); err == nil {
-		slip.Bookmaker = bookmaker
-		return slip, nil
+
+	reqBody, _ := json.Marshal(map[string]string{"code": code})
+	req, err := http.NewRequest("POST", scraperURL+"/api/scrape/bet9ja", bytes.NewBuffer(reqBody))
+	if err == nil {
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := p.httpClient.Do(req)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var scraperResp struct {
+					Success bool `json:"success"`
+					Data    struct {
+						D struct {
+							Items []struct {
+								EventID      int     `json:"EVENTID"`
+								EventName    string  `json:"EVENTNAME"`
+								HomeTeam     string  `json:"HOMETEAM"`
+								AwayTeam     string  `json:"AWAYTEAM"`
+								LeagueName   string  `json:"LEAGUENAME"`
+								Country      string  `json:"COUNTRY"`
+								EventDate    string  `json:"EVENTDATE"`
+								MarketName   string  `json:"MARKETNAME"`
+								OutcomeName  string  `json:"OUTCOMENAME"`
+								Odds         float64 `json:"ODDS"`
+								OddsStr      string  `json:"ODDS_STR"`
+								SetScore     string  `json:"SETSCORE"`
+								CurrentScore string  `json:"CURRENTSCORE"`
+							} `json:"ITEMS"`
+						} `json:"D"`
+						Data struct {
+							Outcomes []SportyShareOutcome `json:"outcomes"`
+						} `json:"data"`
+					} `json:"data"`
+				}
+				if err := json.NewDecoder(resp.Body).Decode(&scraperResp); err == nil {
+					if len(scraperResp.Data.Data.Outcomes) > 0 {
+						return p.convertSportyOutcomesToSlip("bet9ja", code, scraperResp.Data.Data.Outcomes)
+					}
+					if len(scraperResp.Data.D.Items) > 0 {
+						outcomes := make([]SportyShareOutcome, 0, len(scraperResp.Data.D.Items))
+						for _, item := range scraperResp.Data.D.Items {
+							var so SportyShareOutcome
+							so.EventID = fmt.Sprintf("%d", item.EventID)
+							so.HomeTeamName = item.HomeTeam
+							so.AwayTeamName = item.AwayTeam
+							if so.HomeTeamName == "" && strings.Contains(item.EventName, " - ") {
+								parts := strings.Split(item.EventName, " - ")
+								so.HomeTeamName = strings.TrimSpace(parts[0])
+								if len(parts) > 1 {
+									so.AwayTeamName = strings.TrimSpace(parts[1])
+								}
+							}
+							so.Sport.Category.Tournament.Name = item.LeagueName
+							so.Sport.Category.Name = item.Country
+							so.SetScore = item.SetScore
+							if so.SetScore == "" {
+								so.SetScore = item.CurrentScore
+							}
+							oddsStr := fmt.Sprintf("%.2f", item.Odds)
+							if item.Odds <= 0 && item.OddsStr != "" {
+								oddsStr = item.OddsStr
+							}
+							so.Markets = []struct {
+								ID       string `json:"id"`
+								Desc     string `json:"desc"`
+								Outcomes []struct {
+									ID   string `json:"id"`
+									Odds string `json:"odds"`
+									Desc string `json:"desc"`
+								} `json:"outcomes"`
+							}{
+								{
+									Desc: item.MarketName,
+									Outcomes: []struct {
+										ID   string `json:"id"`
+										Odds string `json:"odds"`
+										Desc string `json:"desc"`
+									}{
+										{
+											Desc: item.OutcomeName,
+											Odds: oddsStr,
+										},
+									},
+								},
+							}
+							outcomes = append(outcomes, so)
+						}
+						return p.convertSportyOutcomesToSlip("bet9ja", code, outcomes)
+					}
+				}
+			}
+		}
 	}
+
+	return nil, fmt.Errorf("code not found or invalid on bet9ja")
+}
+
+// fetchBetKingLive queries BetKing's coupon endpoints via Stealth Scraper Sidecar
+func (p *BetSlipParser) fetchBetKingLive(code string) (*models.BetSlip, error) {
+	scraperURL := os.Getenv("STEALTH_SCRAPER_URL")
+	if scraperURL == "" {
+		scraperURL = "http://sports_stealth_scraper:8081"
+	}
+
+	reqBody, _ := json.Marshal(map[string]string{"code": code})
+	req, err := http.NewRequest("POST", scraperURL+"/api/scrape/betking", bytes.NewBuffer(reqBody))
+	if err == nil {
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := p.httpClient.Do(req)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var bkResp struct {
+					Success bool `json:"success"`
+					Data    struct {
+						Data struct {
+							Outcomes []SportyShareOutcome `json:"outcomes"`
+						} `json:"data"`
+					} `json:"data"`
+				}
+				if err := json.NewDecoder(resp.Body).Decode(&bkResp); err == nil && len(bkResp.Data.Data.Outcomes) > 0 {
+					return p.convertSportyOutcomesToSlip("betking", code, bkResp.Data.Data.Outcomes)
+				}
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("code not found on betking")
+}
+
+// fetch1xBetLive queries 1xBet's share endpoints via Stealth Scraper
+func (p *BetSlipParser) fetch1xBetLive(code string) (*models.BetSlip, error) {
+	return p.fetchScraperGeneric("1xbet", code)
+}
+
+// fetchScraperGeneric queries any supported bookmaker via the Stealth Scraper Sidecar
+func (p *BetSlipParser) fetchScraperGeneric(bookmaker, code string) (*models.BetSlip, error) {
+	scraperURL := os.Getenv("STEALTH_SCRAPER_URL")
+	if scraperURL == "" {
+		scraperURL = "http://sports_stealth_scraper:8081"
+	}
+
+	reqBody, _ := json.Marshal(map[string]string{"code": code})
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/scrape/%s", scraperURL, bookmaker), bytes.NewBuffer(reqBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var genericResp struct {
+			Success bool `json:"success"`
+			Data    struct {
+				Data struct {
+					Outcomes []SportyShareOutcome `json:"outcomes"`
+					Items    []struct {
+						EventName   string  `json:"eventName"`
+						HomeTeam    string  `json:"homeTeam"`
+						AwayTeam    string  `json:"awayTeam"`
+						Tournament  string  `json:"tournament"`
+						Country     string  `json:"country"`
+						MarketName  string  `json:"marketName"`
+						OutcomeName string  `json:"outcomeName"`
+						Odds        float64 `json:"odds"`
+						Score       string  `json:"score"`
+					} `json:"items"`
+				} `json:"data"`
+				Outcomes []SportyShareOutcome `json:"outcomes"`
+				Items    []struct {
+					EventName   string  `json:"eventName"`
+					HomeTeam    string  `json:"homeTeam"`
+					AwayTeam    string  `json:"awayTeam"`
+					Tournament  string  `json:"tournament"`
+					Country     string  `json:"country"`
+					MarketName  string  `json:"marketName"`
+					OutcomeName string  `json:"outcomeName"`
+					Odds        float64 `json:"odds"`
+					Score       string  `json:"score"`
+				} `json:"items"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&genericResp); err == nil {
+			if len(genericResp.Data.Data.Outcomes) > 0 {
+				return p.convertSportyOutcomesToSlip(bookmaker, code, genericResp.Data.Data.Outcomes)
+			}
+			if len(genericResp.Data.Outcomes) > 0 {
+				return p.convertSportyOutcomesToSlip(bookmaker, code, genericResp.Data.Outcomes)
+			}
+			items := genericResp.Data.Items
+			if len(items) == 0 {
+				items = genericResp.Data.Data.Items
+			}
+			if len(items) > 0 {
+				outcomes := make([]SportyShareOutcome, 0, len(items))
+				for i, itm := range items {
+					var so SportyShareOutcome
+					so.EventID = fmt.Sprintf("%d", i+1)
+					so.HomeTeamName = itm.HomeTeam
+					so.AwayTeamName = itm.AwayTeam
+					if so.HomeTeamName == "" && strings.Contains(itm.EventName, " - ") {
+						parts := strings.Split(itm.EventName, " - ")
+						so.HomeTeamName = strings.TrimSpace(parts[0])
+						if len(parts) > 1 {
+							so.AwayTeamName = strings.TrimSpace(parts[1])
+						}
+					}
+					so.Sport.Category.Tournament.Name = itm.Tournament
+					so.Sport.Category.Name = itm.Country
+					so.SetScore = itm.Score
+					oddsVal := itm.Odds
+					if oddsVal <= 0 {
+						oddsVal = 1.50
+					}
+					so.Markets = []struct {
+						ID       string `json:"id"`
+						Desc     string `json:"desc"`
+						Outcomes []struct {
+							ID   string `json:"id"`
+							Odds string `json:"odds"`
+							Desc string `json:"desc"`
+						} `json:"outcomes"`
+					}{
+						{
+							Desc: itm.MarketName,
+							Outcomes: []struct {
+								ID   string `json:"id"`
+								Odds string `json:"odds"`
+								Desc string `json:"desc"`
+							}{
+								{
+									Desc: itm.OutcomeName,
+									Odds: fmt.Sprintf("%.2f", oddsVal),
+								},
+							},
+						},
+					}
+					outcomes = append(outcomes, so)
+				}
+				return p.convertSportyOutcomesToSlip(bookmaker, code, outcomes)
+			}
+		}
+	}
+
 	return nil, fmt.Errorf("code not found on %s", bookmaker)
+}
+
+// findExistingLiveMatch looks for an active matching fixture in the store
+func (p *BetSlipParser) findExistingLiveMatch(homeName, awayName string) *models.Match {
+	if p.store == nil {
+		return nil
+	}
+	hNorm := strings.ToLower(strings.TrimSpace(homeName))
+	aNorm := strings.ToLower(strings.TrimSpace(awayName))
+
+	matches := p.store.GetAllMatches("", "")
+	for _, m := range matches {
+		mHome := strings.ToLower(m.HomeTeam.Name)
+		mAway := strings.ToLower(m.AwayTeam.Name)
+
+		if (strings.Contains(mHome, hNorm) || strings.Contains(hNorm, mHome)) &&
+			(strings.Contains(mAway, aNorm) || strings.Contains(aNorm, mAway)) {
+			return &m
+		}
+	}
+	return nil
 }
 
 // convertSportyOutcomesToSlip transforms raw live bookmaker outcomes into SlipRadar match fixtures and bet slip legs
@@ -306,75 +556,148 @@ func (p *BetSlipParser) convertSportyOutcomesToSlip(bookmaker, code string, outc
 		if outcome.EstimateStartTime > 0 {
 			startTime = time.UnixMilli(outcome.EstimateStartTime)
 		} else {
-			startTime = time.Now().Add(time.Duration(i*30) * time.Minute)
+			startTime = time.Now()
 		}
 
-		// Determine match status from live clock
+		// 1. Parse Real Scores directly from bookmaker API (setScore e.g. "1:0", "2:1")
+		homeScore := 0
+		awayScore := 0
+		if outcome.SetScore != "" && strings.Contains(outcome.SetScore, ":") {
+			parts := strings.Split(outcome.SetScore, ":")
+			if len(parts) == 2 {
+				if h, err := strconv.Atoi(strings.TrimSpace(parts[0])); err == nil {
+					homeScore = h
+				}
+				if a, err := strconv.Atoi(strings.TrimSpace(parts[1])); err == nil {
+					awayScore = a
+				}
+			}
+		}
+
+		// 2. Parse Match Status & Clock from bookmaker payload
 		matchStatus := models.StatusScheduled
 		minute := 0
 		period := "PRE"
-		homeScore := 0
-		awayScore := 0
-		now := time.Now()
+		displayClock := ""
 
-		if now.After(startTime) {
-			diff := now.Sub(startTime)
-			if diff < 105*time.Minute {
+		stUpper := strings.ToUpper(strings.TrimSpace(outcome.MatchStatus))
+		switch {
+		case stUpper == "ENDED" || stUpper == "FT" || stUpper == "FINISHED":
+			matchStatus = models.StatusFinished
+			period = "FT"
+			minute = 90
+			displayClock = "FT"
+		case stUpper == "HT" || stUpper == "HALF TIME":
+			matchStatus = models.StatusHalfTime
+			period = "HT"
+			minute = 45
+			displayClock = "HT"
+		case stUpper == "H1" || stUpper == "1H" || stUpper == "FIRST HALF":
+			matchStatus = models.StatusLive
+			period = "1H"
+			minute = 25
+			displayClock = "1H"
+		case stUpper == "H2" || stUpper == "2H" || stUpper == "SECOND HALF":
+			matchStatus = models.StatusLive
+			period = "2H"
+			minute = 75
+			displayClock = "2H"
+		case time.Now().After(startTime):
+			diff := time.Since(startTime)
+			if diff < 110*time.Minute {
 				matchStatus = models.StatusLive
 				minute = int(diff.Minutes())
-				if minute > 90 {
-					minute = 90
-				}
 				if minute > 45 && minute < 60 {
 					period = "HT"
+					displayClock = "HT"
 				} else if minute >= 60 {
 					period = "2H"
+					displayClock = fmt.Sprintf("%d'", minute)
 				} else {
 					period = "1H"
+					displayClock = fmt.Sprintf("%d'", minute)
 				}
 			} else {
 				matchStatus = models.StatusFinished
 				period = "FT"
 				minute = 90
+				displayClock = "FT"
 			}
 		}
 
-		matchID := "match-" + strings.ToLower(strings.ReplaceAll(homeName, " ", "-")) + "-" + strings.ToLower(strings.ReplaceAll(awayName, " ", "-"))
-		matchID = strings.Map(func(r rune) rune {
-			if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' {
-				return r
+		// Parse playedSeconds e.g. "89:33"
+		if outcome.PlayedSeconds != "" {
+			secParts := strings.Split(outcome.PlayedSeconds, ":")
+			if len(secParts) == 2 {
+				if minVal, err := strconv.Atoi(secParts[0]); err == nil {
+					minute = minVal
+					if matchStatus == models.StatusLive {
+						displayClock = fmt.Sprintf("%d'", minVal)
+					}
+				}
 			}
-			return -1
-		}, matchID)
+		}
 
-		// Create Match
-		match := models.Match{
-			ID:    matchID,
-			Sport: sportType,
-			League: models.League{
-				ID:      "lg-" + strings.ToLower(strings.ReplaceAll(leagueName, " ", "-")),
-				Name:    leagueName,
-				Sport:   sportType,
-				Country: country,
-			},
-			HomeTeam: models.Team{
-				ID:        "team-" + strings.ToLower(strings.ReplaceAll(homeName, " ", "-")),
-				Name:      homeName,
-				ShortName: getShortName(homeName),
-				Country:   country,
-			},
-			AwayTeam: models.Team{
-				ID:        "team-" + strings.ToLower(strings.ReplaceAll(awayName, " ", "-")),
-				Name:      awayName,
-				ShortName: getShortName(awayName),
-				Country:   country,
-			},
-			HomeScore: homeScore,
-			AwayScore: awayScore,
-			Status:    matchStatus,
-			Period:    period,
-			Minute:    minute,
-			StartTime: startTime,
+		// 3. Link with existing API-Sports match if already present in live store
+		var match models.Match
+		if existingMatch := p.findExistingLiveMatch(homeName, awayName); existingMatch != nil {
+			match = *existingMatch
+			if match.HomeScore > 0 || match.AwayScore > 0 {
+				homeScore = match.HomeScore
+				awayScore = match.AwayScore
+			}
+			if match.Minute > 0 {
+				minute = match.Minute
+			}
+			if match.DisplayClock != "" {
+				displayClock = match.DisplayClock
+			}
+			matchStatus = match.Status
+		} else {
+			cleanEventID := strings.TrimPrefix(outcome.EventID, "sr:match:")
+			if cleanEventID == "" {
+				cleanEventID = fmt.Sprintf("%d", i+1)
+			}
+			matchID := fmt.Sprintf("apif-event-%s", cleanEventID)
+
+			periodScores := make([]string, 0)
+			if len(outcome.GameScore) > 0 {
+				for _, gs := range outcome.GameScore {
+					periodScores = append(periodScores, strings.ReplaceAll(gs, ":", "-"))
+				}
+			}
+
+			match = models.Match{
+				ID:    matchID,
+				Sport: sportType,
+				League: models.League{
+					ID:      "apif-league-" + strings.ToLower(strings.ReplaceAll(leagueName, " ", "-")),
+					Name:    leagueName,
+					Sport:   sportType,
+					Country: country,
+				},
+				HomeTeam: models.Team{
+					ID:        "apif-team-" + strings.ToLower(strings.ReplaceAll(homeName, " ", "-")),
+					Name:      homeName,
+					ShortName: getShortName(homeName),
+					Country:   country,
+				},
+				AwayTeam: models.Team{
+					ID:        "apif-team-" + strings.ToLower(strings.ReplaceAll(awayName, " ", "-")),
+					Name:      awayName,
+					ShortName: getShortName(awayName),
+					Country:   country,
+				},
+				HomeScore:    homeScore,
+				AwayScore:    awayScore,
+				PeriodScores: periodScores,
+				Status:       matchStatus,
+				Period:       period,
+				Minute:       minute,
+				DisplayClock: displayClock,
+				StartTime:    startTime,
+			}
+			p.store.SaveMatch(&match)
 		}
 
 		// Extract market, selection, and odds from live outcome
@@ -398,18 +721,46 @@ func (p *BetSlipParser) convertSportyOutcomesToSlip(bookmaker, code string, outc
 			}
 		}
 
+		// Evaluate leg state
 		legStatus := models.LegPending
-		if matchStatus == models.StatusLive {
+		if matchStatus == models.StatusLive || matchStatus == models.StatusHalfTime {
 			legStatus = models.LegRunning
 		} else if matchStatus == models.StatusFinished {
 			legStatus = models.LegWon
+			// 1X2 evaluation
+			selLower := strings.ToLower(selectionDesc)
+			if selLower == "home" || selLower == "1" {
+				if homeScore > awayScore {
+					legStatus = models.LegWon
+				} else {
+					legStatus = models.LegLost
+				}
+			} else if selLower == "away" || selLower == "2" {
+				if awayScore > homeScore {
+					legStatus = models.LegWon
+				} else {
+					legStatus = models.LegLost
+				}
+			} else if selLower == "draw" || selLower == "x" {
+				if homeScore == awayScore {
+					legStatus = models.LegWon
+				} else {
+					legStatus = models.LegLost
+				}
+			}
 		}
 
 		scoreStr := fmt.Sprintf("%d-%d", homeScore, awayScore)
 		if matchStatus == models.StatusScheduled {
 			scoreStr = "Upcoming"
+		} else if matchStatus == models.StatusHalfTime {
+			scoreStr = fmt.Sprintf("%d-%d (HT)", homeScore, awayScore)
 		} else if matchStatus == models.StatusLive {
-			scoreStr = fmt.Sprintf("%d-%d (%d')", homeScore, awayScore, minute)
+			if displayClock != "" {
+				scoreStr = fmt.Sprintf("%d-%d (%s)", homeScore, awayScore, displayClock)
+			} else {
+				scoreStr = fmt.Sprintf("%d-%d (%d')", homeScore, awayScore, minute)
+			}
 		} else if matchStatus == models.StatusFinished {
 			scoreStr = fmt.Sprintf("%d-%d (FT)", homeScore, awayScore)
 		}
@@ -423,11 +774,8 @@ func (p *BetSlipParser) convertSportyOutcomesToSlip(bookmaker, code string, outc
 			Odds:           oddsVal,
 			Status:         legStatus,
 			CurrentScore:   scoreStr,
-			FulfillmentPct: 50.0,
+			FulfillmentPct: 80.0,
 		}
-
-		// Save match to active store so it appears in Live Scores board immediately!
-		p.store.SaveMatch(&match)
 
 		legs = append(legs, leg)
 		totalOdds *= oddsVal
@@ -435,12 +783,29 @@ func (p *BetSlipParser) convertSportyOutcomesToSlip(bookmaker, code string, outc
 
 	totalOdds = math.Round(totalOdds*100) / 100
 
+	slipStatus := models.SlipRunning
+	allWon := true
+	hasLost := false
+	for _, l := range legs {
+		if l.Status == models.LegLost {
+			hasLost = true
+		}
+		if l.Status != models.LegWon {
+			allWon = false
+		}
+	}
+	if hasLost {
+		slipStatus = models.SlipLost
+	} else if allWon {
+		slipStatus = models.SlipWon
+	}
+
 	slip := &models.BetSlip{
-		ID:          "slip-" + uuid.New().String()[:8],
+		ID:          fmt.Sprintf("slip-%s-%s", bookmaker, code),
 		Bookmaker:   bookmaker,
 		BookingCode: code,
 		TotalOdds:   totalOdds,
-		Status:      models.SlipRunning,
+		Status:      slipStatus,
 		Legs:        legs,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -449,24 +814,16 @@ func (p *BetSlipParser) convertSportyOutcomesToSlip(bookmaker, code string, outc
 	return slip, nil
 }
 
-func getShortName(fullName string) string {
-	parts := strings.Fields(fullName)
-	if len(parts) == 0 {
-		return fullName
-	}
+func getShortName(name string) string {
+	parts := strings.Fields(name)
 	if len(parts) == 1 {
-		if len(parts[0]) > 8 {
-			return parts[0][:7] + "."
+		if len(name) > 6 {
+			return name[:6]
 		}
+		return name
+	}
+	if len(parts) >= 2 {
 		return parts[0]
 	}
-	p1 := parts[0]
-	if len(p1) > 3 {
-		p1 = p1[:3]
-	}
-	p2 := parts[1]
-	if len(p2) > 3 {
-		p2 = p2[:3]
-	}
-	return p1 + " " + p2
+	return name
 }

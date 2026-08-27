@@ -200,6 +200,33 @@ ALTER TABLE support_tickets ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH T
 ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
 ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;
 
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id VARCHAR(100) PRIMARY KEY,
+    user_id VARCHAR(100) DEFAULT '',
+    endpoint TEXT UNIQUE NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    device_type VARCHAR(50) DEFAULT 'desktop',
+    channels JSONB DEFAULT '["all", "live_matches", "goal_alerts"]'::jsonb,
+    user_agent TEXT DEFAULT '',
+    ip_address VARCHAR(100) DEFAULT '',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS broadcast_logs (
+    id VARCHAR(100) PRIMARY KEY,
+    channel VARCHAR(100) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    url VARCHAR(255) DEFAULT '',
+    sent_count INT DEFAULT 0,
+    failed_count INT DEFAULT 0,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_matches_sport_status ON matches (sport_id, status);
 CREATE INDEX IF NOT EXISTS idx_matches_league ON matches (league_id);
 CREATE INDEX IF NOT EXISTS idx_events_match ON match_events (match_id, minute);
@@ -212,6 +239,10 @@ CREATE INDEX IF NOT EXISTS idx_blog_category ON blog_posts (category);
 CREATE INDEX IF NOT EXISTS idx_blog_published ON blog_posts (published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_support_user ON support_tickets (user_id);
 CREATE INDEX IF NOT EXISTS idx_support_status ON support_tickets (status);
+CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions (user_id);
+CREATE INDEX IF NOT EXISTS idx_push_active ON push_subscriptions (is_active);
+CREATE INDEX IF NOT EXISTS idx_push_device ON push_subscriptions (device_type);
+CREATE INDEX IF NOT EXISTS idx_broadcast_sent ON broadcast_logs (sent_at DESC);
 
 -- Enable Supabase Realtime Replication & REPLICA IDENTITY
 ALTER TABLE matches REPLICA IDENTITY FULL;
@@ -220,13 +251,14 @@ ALTER TABLE odds_snapshots REPLICA IDENTITY FULL;
 ALTER TABLE bet_slips REPLICA IDENTITY FULL;
 ALTER TABLE blog_posts REPLICA IDENTITY FULL;
 ALTER TABLE support_tickets REPLICA IDENTITY FULL;
+ALTER TABLE push_subscriptions REPLICA IDENTITY FULL;
 
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-        CREATE PUBLICATION supabase_realtime FOR TABLE matches, match_events, odds_snapshots, bet_slips, blog_posts, support_tickets;
+        CREATE PUBLICATION supabase_realtime FOR TABLE matches, match_events, odds_snapshots, bet_slips, blog_posts, support_tickets, push_subscriptions;
     ELSE
-        ALTER PUBLICATION supabase_realtime ADD TABLE matches, match_events, odds_snapshots, bet_slips, blog_posts, support_tickets;
+        ALTER PUBLICATION supabase_realtime ADD TABLE matches, match_events, odds_snapshots, bet_slips, blog_posts, support_tickets, push_subscriptions;
     END IF;
 EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE 'Supabase realtime publication note: %', SQLERRM;

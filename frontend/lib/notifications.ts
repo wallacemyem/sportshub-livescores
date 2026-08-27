@@ -90,15 +90,18 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * Dispatch a native system notification
+ * Dispatch a native system notification via ServiceWorker or Notification API
  */
-export function sendMatchNotification(title: string, options: {
-  body: string;
-  icon?: string;
-  tag?: string;
-  url?: string;
-  type?: 'goal' | 'kickoff' | 'point' | 'event';
-}) {
+export async function sendMatchNotification(
+  title: string,
+  options: {
+    body: string;
+    icon?: string;
+    tag?: string;
+    url?: string;
+    type?: 'goal' | 'kickoff' | 'point' | 'event';
+  }
+) {
   if (typeof window === 'undefined') return;
 
   // Play audio alert
@@ -106,14 +109,29 @@ export function sendMatchNotification(title: string, options: {
 
   // Trigger browser notification if permitted
   if ('Notification' in window && Notification.permission === 'granted') {
-    try {
-      const n = new Notification(title, {
-        body: options.body,
-        icon: options.icon || '/favicon.ico',
-        tag: options.tag,
-        badge: '/favicon.ico',
-      });
+    const notifOptions: NotificationOptions = {
+      body: options.body,
+      icon: options.icon || '/icons/icon-192.png',
+      badge: '/icons/badge-72.png',
+      tag: options.tag,
+      data: { url: options.url || '/live' },
+    };
 
+    // Prefer ServiceWorker showNotification for cross-platform stability
+    if ('serviceWorker' in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg) {
+          await reg.showNotification(title, notifOptions);
+          return;
+        }
+      } catch {
+        // Fallback to Window Notification constructor
+      }
+    }
+
+    try {
+      const n = new Notification(title, notifOptions);
       if (options.url) {
         n.onclick = () => {
           window.focus();
@@ -122,7 +140,7 @@ export function sendMatchNotification(title: string, options: {
         };
       }
     } catch (err) {
-      console.warn('Browser notification error', err);
+      console.warn('[Notification] Dispatch error:', err);
     }
   }
 }

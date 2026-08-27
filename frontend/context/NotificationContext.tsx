@@ -2,13 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, BellOff, X, Radio, ArrowRight, Zap } from 'lucide-react';
+import { Radio, ArrowRight, Zap, X } from 'lucide-react';
 import Link from 'next/link';
+import { sendMatchNotification, playMatchAlertSound } from '@/lib/notifications';
 import {
-  sendMatchNotification,
-  requestNotificationPermission,
-  playMatchAlertSound,
-} from '@/lib/notifications';
+  subscribeToPush,
+  unsubscribeFromPush,
+  checkPushSubscriptionState,
+  getDevicePlatform,
+  isStandalonePWA,
+} from '@/lib/pushManager';
+import { useAuth } from '@/context/AuthContext';
 
 export interface MatchAlert {
   id: string;
@@ -26,6 +30,12 @@ interface NotificationContextType {
   requestPermission: () => Promise<boolean>;
   activeToast: MatchAlert | null;
   dismissToast: () => void;
+  isPushSubscribed: boolean;
+  permission: NotificationPermission | 'unsupported';
+  subscribePush: (channels?: string[]) => Promise<boolean>;
+  unsubscribePush: () => Promise<boolean>;
+  devicePlatform: 'ios' | 'android' | 'desktop';
+  isStandalone: boolean;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
@@ -35,20 +45,65 @@ const NotificationContext = createContext<NotificationContextType>({
   requestPermission: async () => false,
   activeToast: null,
   dismissToast: () => {},
+  isPushSubscribed: false,
+  permission: 'default',
+  subscribePush: async () => false,
+  unsubscribePush: async () => false,
+  devicePlatform: 'desktop',
+  isStandalone: false,
 });
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth();
   const [alertsEnabled, setAlertsEnabled] = useState<boolean>(true);
   const [activeToast, setActiveToast] = useState<MatchAlert | null>(null);
+  const [isPushSubscribed, setIsPushSubscribed] = useState<boolean>(false);
+  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const [devicePlatform, setDevicePlatform] = useState<'ios' | 'android' | 'desktop'>('desktop');
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
 
-  // Load alert preference from localStorage
+  // Detect platform and check initial push subscription state
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      setDevicePlatform(getDevicePlatform());
+      setIsStandalone(isStandalonePWA());
+
       const saved = localStorage.getItem('slipradar_alerts_enabled');
       if (saved !== null) {
         setAlertsEnabled(saved === 'true');
       }
+
+      checkPushSubscriptionState().then((state) => {
+        setIsPushSubscribed(state.isSubscribed);
+        setPermission(state.permission);
+      });
     }
+  }, []);
+
+  const subscribePushHandler = useCallback(
+    async (channels?: string[]) => {
+      const res = await subscribeToPush({ channels, token });
+      if (res.success) {
+        setIsPushSubscribed(true);
+        setPermission('granted');
+        setAlertsEnabled(true);
+        localStorage.setItem('slipradar_alerts_enabled', 'true');
+        return true;
+      }
+      if (res.permission) {
+        setPermission(res.permission);
+      }
+      return false;
+    },
+    [token]
+  );
+
+  const unsubscribePushHandler = useCallback(async () => {
+    const ok = await unsubscribeFromPush();
+    if (ok) {
+      setIsPushSubscribed(false);
+    }
+    return ok;
   }, []);
 
   const handleSetAlertsEnabled = (enabled: boolean) => {
@@ -57,7 +112,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       localStorage.setItem('slipradar_alerts_enabled', String(enabled));
     }
     if (enabled) {
-      requestNotificationPermission();
+      subscribePushHandler();
     }
   };
 
@@ -101,9 +156,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         alertsEnabled,
         setAlertsEnabled: handleSetAlertsEnabled,
         triggerAlert,
-        requestPermission: requestNotificationPermission,
+        requestPermission: () => subscribePushHandler(),
         activeToast,
         dismissToast,
+        isPushSubscribed,
+        permission,
+        subscribePush: subscribePushHandler,
+        unsubscribePush: unsubscribePushHandler,
+        devicePlatform,
+        isStandalone,
       }}
     >
       {children}

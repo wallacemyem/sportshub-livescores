@@ -62,13 +62,20 @@ export interface ActivityOptions {
 /**
  * Post or update the activity for one match.
  *
- * Called on every poll for every tracked live match. Updates are silent; only
- * a score change alerts.
+ * ONLY triggers an OS notification if alert === true (actual score change / goal).
+ * Quiet polls will never pop up unwanted notification banners.
  */
 export async function updateLiveActivity(
   match: Match,
   options: ActivityOptions = {}
 ): Promise<void> {
+  const { alert = false, scoringSide } = options;
+
+  // Crucial: Only show OS notification when an actual score/goal event occurs
+  if (!alert) {
+    return;
+  }
+
   const registration = await getRegistration();
   if (!registration) return;
 
@@ -77,26 +84,20 @@ export async function updateLiveActivity(
     return;
   }
 
-  const { alert = false, scoringSide } = options;
-
   const scorer =
     scoringSide === 'HOME' ? match.home_team.name : scoringSide === 'AWAY' ? match.away_team.name : '';
   const unit = scoreNoun(match.sport, 1).toUpperCase();
 
-  const title = alert
-    ? `${match.sport === 'soccer' ? 'GOAL' : unit}! ${scorer}`
-    : `${match.home_team.short_name || match.home_team.name} v ${match.away_team.short_name || match.away_team.name}`;
+  const title = `${match.sport === 'soccer' ? '⚽ GOAL' : unit}! ${scorer || match.home_team.name}`;
 
   try {
     await registration.showNotification(title, {
       body: activityBody(match),
       tag: tagFor(match.id),
-      // A quiet in-place refresh unless something actually happened.
-      silent: !alert,
-      renotify: alert,
-      // Keeps the card on screen for the duration of the match on platforms
-      // that honour it, which is what makes it read as an ongoing activity.
+      silent: false,
+      renotify: true,
       requireInteraction: true,
+      vibrate: [200, 100, 200],
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-72.png',
       timestamp: Date.now(),
@@ -105,12 +106,15 @@ export async function updateLiveActivity(
         matchId: match.id,
         kind: 'live-activity',
       },
+      actions: [
+        { action: 'open_match', title: '⚡ Match Center' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
     } as NotificationOptions);
 
     active.add(match.id);
   } catch {
-    // Some browsers reject requireInteraction or renotify without a tag;
-    // an activity is a nicety, so failure is not surfaced.
+    // Graceful degrade
   }
 }
 
@@ -132,9 +136,7 @@ export async function endLiveActivity(matchId: string): Promise<void> {
 /**
  * Reconcile the set of activities against the matches that should have one.
  *
- * Anything previously shown that is no longer live, or no longer in the
- * tracked set, is closed. This is what stops finished matches leaving a stale
- * card pinned in the shade.
+ * Only fires notifications for matches that had a score change in scoredIds.
  */
 export async function syncLiveActivities(
   liveMatches: Match[],
@@ -149,14 +151,18 @@ export async function syncLiveActivities(
     if (!shouldBeActive.has(id)) await endLiveActivity(id);
   }
 
-  await Promise.all(
-    liveMatches.map((m) =>
-      updateLiveActivity(m, {
-        alert: scoredIds.has(m.id),
-        scoringSide: scoredIds.get(m.id),
-      })
-    )
-  );
+  // Only dispatch if there are matches that actually scored
+  if (scoredIds.size > 0) {
+    const scoringMatches = liveMatches.filter((m) => scoredIds.has(m.id));
+    await Promise.all(
+      scoringMatches.map((m) =>
+        updateLiveActivity(m, {
+          alert: true,
+          scoringSide: scoredIds.get(m.id),
+        })
+      )
+    );
+  }
 }
 
 /** Close every activity, e.g. when the user turns alerts off. */

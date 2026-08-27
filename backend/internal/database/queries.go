@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +26,8 @@ type Store struct {
 	webhookLogs    []*models.WebhookLog
 	posts          map[string]*models.BlogPost
 	supportTickets map[string]*models.SupportTicket
+	pushSubs       map[string]*models.PushSubscription
+	broadcastLogs  []*models.BroadcastLog
 	supabaseSyncer SupabaseSyncer
 
 	// Side tables for detail the core models do not carry. Keyed by the
@@ -86,6 +90,8 @@ func NewStore(db *DB) *Store {
 		webhookLogs:    make([]*models.WebhookLog, 0),
 		posts:          make(map[string]*models.BlogPost),
 		supportTickets: make(map[string]*models.SupportTicket),
+		pushSubs:       make(map[string]*models.PushSubscription),
+		broadcastLogs:  make([]*models.BroadcastLog, 0),
 		txMethods:      make(map[string]string),
 		txCycles:       make(map[string]string),
 		slipParseMs:    make(map[string]int),
@@ -161,6 +167,10 @@ func (s *Store) loadFromPostgres(ctx context.Context) {
 				&htID, &htName, &htShort, &htCountry,
 				&atID, &atName, &atShort, &atCountry,
 			); err == nil {
+				// Skip legacy fake/mock seed matches
+				if strings.HasPrefix(m.ID, "match-") {
+					continue
+				}
 				m.Sport = models.SportType(sportStr)
 				m.Status = models.MatchStatus(statusStr)
 				m.Period = periodStr
@@ -170,6 +180,8 @@ func (s *Store) loadFromPostgres(ctx context.Context) {
 				s.matches[m.ID] = &m
 			}
 		}
+		// Clean up any legacy mock fixtures from database table
+		_, _ = s.db.Pool.Exec(ctx, `DELETE FROM matches WHERE id LIKE 'match-%'`)
 	}
 
 	// 3. Load Users
@@ -228,7 +240,45 @@ func (s *Store) loadFromPostgres(ctx context.Context) {
 		}
 	}
 
-	log.Printf("[DB] Hydrated in-memory store with %d matches, %d slips, %d users from PostgreSQL", len(s.matches), len(s.betSlips), len(s.users))
+	// 6. Load Push Subscriptions
+	pRows, err := s.db.Pool.Query(ctx, `
+		SELECT id, COALESCE(user_id, ''), endpoint, p256dh, auth, device_type, channels, COALESCE(user_agent, ''), COALESCE(ip_address, ''), is_active, created_at, updated_at, last_seen_at
+		FROM push_subscriptions
+		WHERE is_active = TRUE
+	`)
+	if err == nil {
+		defer pRows.Close()
+		for pRows.Next() {
+			var sub models.PushSubscription
+			var channelsJSON []byte
+			if err := pRows.Scan(&sub.ID, &sub.UserID, &sub.Endpoint, &sub.P256dh, &sub.Auth, &sub.DeviceType, &channelsJSON, &sub.UserAgent, &sub.IPAddress, &sub.IsActive, &sub.CreatedAt, &sub.UpdatedAt, &sub.LastSeenAt); err == nil {
+				if len(channelsJSON) > 0 {
+					_ = json.Unmarshal(channelsJSON, &sub.Channels)
+				}
+				s.pushSubs[sub.Endpoint] = &sub
+				s.pushSubs[sub.ID] = &sub
+			}
+		}
+	}
+
+	// 7. Load Broadcast Logs
+	bcRows, err := s.db.Pool.Query(ctx, `
+		SELECT id, channel, title, body, COALESCE(url, ''), sent_count, failed_count, sent_at
+		FROM broadcast_logs
+		ORDER BY sent_at DESC
+		LIMIT 50
+	`)
+	if err == nil {
+		defer bcRows.Close()
+		for bcRows.Next() {
+			var log models.BroadcastLog
+			if err := bcRows.Scan(&log.ID, &log.Channel, &log.Title, &log.Body, &log.URL, &log.SentCount, &log.FailedCount, &log.SentAt); err == nil {
+				s.broadcastLogs = append(s.broadcastLogs, &log)
+			}
+		}
+	}
+
+	log.Printf("[DB] Hydrated in-memory store with %d matches, %d slips, %d users, %d push subscriptions from PostgreSQL", len(s.matches), len(s.betSlips), len(s.users), len(s.pushSubs))
 }
 
 // Matches
@@ -238,7 +288,7 @@ func (s *Store) GetAllMatches(sport models.SportType, status models.MatchStatus)
 
 	result := make([]models.Match, 0)
 	for _, m := range s.matches {
-		if m.IsDeleted || m.DeletedAt != nil {
+		if m.IsDeleted || m.DeletedAt != nil || strings.HasPrefix(m.ID, "match-") {
 			continue
 		}
 		if sport != "" && m.Sport != sport {
@@ -263,18 +313,83 @@ func (s *Store) GetMatchByID(id string) (*models.Match, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	m, ok := s.matches[id]
-	if !ok || m.IsDeleted || m.DeletedAt != nil {
+	cleanID := strings.TrimSpace(id)
+	if cleanID == "" {
 		return nil, false
 	}
-	matchCopy := *m
-	if evs, exists := s.events[id]; exists {
-		matchCopy.Events = evs
+
+	// 1. Exact lookup
+	if m, ok := s.matches[cleanID]; ok && m != nil && !m.IsDeleted && m.DeletedAt == nil {
+		matchCopy := *m
+		if evs, exists := s.events[m.ID]; exists {
+			matchCopy.Events = evs
+		}
+		if o, exists := s.odds[m.ID]; exists {
+			matchCopy.Odds = o
+		}
+		return &matchCopy, true
 	}
-	if o, exists := s.odds[id]; exists {
-		matchCopy.Odds = o
+
+	// 2. Prefix variations
+	variations := []string{
+		"espn-" + cleanID,
+		"apif-" + cleanID,
+		"apif-event-" + cleanID,
+		"match-" + cleanID,
 	}
-	return &matchCopy, true
+	cleanNumeric := strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(cleanID, "espn-"), "apif-event-"), "apif-"), "match-")
+	if cleanNumeric != cleanID {
+		variations = append(variations, cleanNumeric, "espn-"+cleanNumeric, "apif-"+cleanNumeric, "apif-event-"+cleanNumeric)
+	}
+
+	for _, v := range variations {
+		if m, ok := s.matches[v]; ok && m != nil && !m.IsDeleted && m.DeletedAt == nil {
+			matchCopy := *m
+			if evs, exists := s.events[m.ID]; exists {
+				matchCopy.Events = evs
+			}
+			if o, exists := s.odds[m.ID]; exists {
+				matchCopy.Odds = o
+			}
+			return &matchCopy, true
+		}
+	}
+
+	// 3. Scan matches for suffix / numeric ID matching
+	for mID, m := range s.matches {
+		if m == nil || m.IsDeleted || m.DeletedAt != nil {
+			continue
+		}
+		if strings.EqualFold(mID, cleanID) || strings.HasSuffix(mID, cleanNumeric) || (cleanNumeric != "" && strings.Contains(mID, cleanNumeric)) {
+			matchCopy := *m
+			if evs, exists := s.events[m.ID]; exists {
+				matchCopy.Events = evs
+			}
+			if o, exists := s.odds[m.ID]; exists {
+				matchCopy.Odds = o
+			}
+			return &matchCopy, true
+		}
+	}
+
+	// 4. Check user bet slips for tracked leg fixtures
+	for _, slip := range s.betSlips {
+		if slip == nil || slip.IsDeleted || slip.DeletedAt != nil {
+			continue
+		}
+		for _, leg := range slip.Legs {
+			if leg.MatchID == cleanID || leg.Match.ID == cleanID ||
+				strings.EqualFold(leg.MatchID, cleanID) || strings.EqualFold(leg.Match.ID, cleanID) ||
+				(cleanNumeric != "" && (strings.Contains(leg.MatchID, cleanNumeric) || strings.Contains(leg.Match.ID, cleanNumeric))) {
+				if leg.Match.ID != "" {
+					matchCopy := leg.Match
+					return &matchCopy, true
+				}
+			}
+		}
+	}
+
+	return nil, false
 }
 
 func (s *Store) SaveMatch(m *models.Match) {
@@ -433,7 +548,7 @@ func (s *Store) SaveBetSlip(slip *models.BetSlip) {
 				legs_json = EXCLUDED.legs_json,
 				is_deleted = EXCLUDED.is_deleted,
 				updated_at = EXCLUDED.updated_at;
-		`, slip.ID, slip.UserID, slip.Bookmaker, slip.BookingCode, slip.TotalOdds, string(slip.Status), legsBytes, slip.IsDeleted, slip.CreatedAt, slip.UpdatedAt)
+		`, slip.ID, slip.UserID, slip.Bookmaker, slip.BookingCode, slip.TotalOdds, string(slip.Status), string(legsBytes), slip.IsDeleted, slip.CreatedAt, slip.UpdatedAt)
 		if err != nil {
 			log.Printf("[DB ERROR] Failed to save betslip %s to PostgreSQL: %v", slip.BookingCode, err)
 		}
@@ -444,29 +559,319 @@ func (s *Store) SaveBetSlip(slip *models.BetSlip) {
 	}
 }
 
+func normalizeTeamName(name string) string {
+	s := strings.ToLower(strings.TrimSpace(name))
+	s = strings.ReplaceAll(s, ".", "")
+	s = strings.ReplaceAll(s, "-", " ")
+	s = strings.ReplaceAll(s, "_", " ")
+	words := strings.Fields(s)
+	filtered := make([]string, 0, len(words))
+	for _, w := range words {
+		if w == "fc" || w == "cf" || w == "sc" || w == "ac" || w == "bc" || w == "fk" || w == "club" || w == "city" || w == "united" || w == "utd" || w == "the" {
+			continue
+		}
+		filtered = append(filtered, w)
+	}
+	if len(filtered) == 0 {
+		return s
+	}
+	return strings.Join(filtered, " ")
+}
+
+func teamsMatch(name1, name2 string) bool {
+	n1 := normalizeTeamName(name1)
+	n2 := normalizeTeamName(name2)
+	if n1 == "" || n2 == "" {
+		return false
+	}
+	if n1 == n2 {
+		return true
+	}
+	if strings.Contains(n1, n2) || strings.Contains(n2, n1) {
+		return true
+	}
+	return false
+}
+
+func (s *Store) findMatchingMatch(matchID, homeName, awayName string) *models.Match {
+	if matchID != "" {
+		if m, exists := s.matches[matchID]; exists && m != nil {
+			return m
+		}
+	}
+	if homeName == "" || awayName == "" {
+		return nil
+	}
+	for _, m := range s.matches {
+		if m == nil {
+			continue
+		}
+		if (teamsMatch(m.HomeTeam.Name, homeName) || teamsMatch(m.HomeTeam.ShortName, homeName)) &&
+			(teamsMatch(m.AwayTeam.Name, awayName) || teamsMatch(m.AwayTeam.ShortName, awayName)) {
+			return m
+		}
+	}
+	return nil
+}
+
+func evaluateLeg(leg *models.BetSlipLeg, m *models.Match) (models.BetLegStatus, string, float64) {
+	if m == nil {
+		return leg.Status, leg.CurrentScore, leg.FulfillmentPct
+	}
+
+	homeScore := m.HomeScore
+	awayScore := m.AwayScore
+	status := m.Status
+
+	// 1. If match is scheduled / not yet started
+	if status == models.StatusScheduled {
+		return models.LegPending, "Upcoming", 0.0
+	}
+
+	// 2. Format score with clock
+	var scoreStr string
+	if status == models.StatusFinished {
+		scoreStr = fmt.Sprintf("%d-%d (FT)", homeScore, awayScore)
+	} else if status == models.StatusHalfTime {
+		scoreStr = fmt.Sprintf("%d-%d (HT)", homeScore, awayScore)
+	} else {
+		clock := m.DisplayClock
+		if clock == "" {
+			if m.Minute > 0 {
+				clock = fmt.Sprintf("%d'", m.Minute)
+			} else {
+				clock = "Live"
+			}
+		}
+		scoreStr = fmt.Sprintf("%d-%d (%s)", homeScore, awayScore, clock)
+	}
+
+	marketLower := strings.ToLower(leg.Market)
+	selLower := strings.ToLower(leg.Selection)
+	homeLower := strings.ToLower(m.HomeTeam.Name)
+	awayLower := strings.ToLower(m.AwayTeam.Name)
+
+	totalGoals := homeScore + awayScore
+
+	// Check if Over / Under
+	if strings.Contains(marketLower, "over") || strings.Contains(marketLower, "under") ||
+		strings.Contains(selLower, "over") || strings.Contains(selLower, "under") {
+		var threshold float64 = 2.5
+		for _, part := range strings.Fields(marketLower + " " + selLower) {
+			if val, err := strconv.ParseFloat(part, 64); err == nil && val > 0.4 && val < 300 {
+				threshold = val
+				break
+			}
+		}
+
+		isOver := strings.Contains(selLower, "over") || strings.Contains(marketLower, "over")
+		if isOver {
+			if float64(totalGoals) > threshold {
+				return models.LegWon, scoreStr, 100.0
+			}
+			if status == models.StatusFinished {
+				return models.LegLost, scoreStr, 0.0
+			}
+			pct := math.Min(95.0, (float64(totalGoals)/threshold)*85.0)
+			return models.LegRunning, scoreStr, pct
+		} else { // Under
+			if float64(totalGoals) > threshold {
+				return models.LegLost, scoreStr, 0.0
+			}
+			if status == models.StatusFinished {
+				return models.LegWon, scoreStr, 100.0
+			}
+			pct := math.Max(10.0, 100.0-(float64(totalGoals)/threshold)*60.0)
+			return models.LegRunning, scoreStr, pct
+		}
+	}
+
+	// Check Both Teams to Score (BTTS / GG / NG)
+	if strings.Contains(marketLower, "both") || strings.Contains(marketLower, "btts") ||
+		strings.Contains(marketLower, "gg") || strings.Contains(selLower, "yes") || strings.Contains(selLower, "no") ||
+		selLower == "gg" || selLower == "ng" {
+		isYes := strings.Contains(selLower, "yes") || strings.Contains(selLower, "gg")
+		if isYes {
+			if homeScore > 0 && awayScore > 0 {
+				return models.LegWon, scoreStr, 100.0
+			}
+			if status == models.StatusFinished {
+				return models.LegLost, scoreStr, 0.0
+			}
+			if homeScore > 0 || awayScore > 0 {
+				return models.LegRunning, scoreStr, 70.0
+			}
+			return models.LegRunning, scoreStr, 35.0
+		} else { // No / NG
+			if homeScore > 0 && awayScore > 0 {
+				return models.LegLost, scoreStr, 0.0
+			}
+			if status == models.StatusFinished {
+				return models.LegWon, scoreStr, 100.0
+			}
+			return models.LegRunning, scoreStr, 60.0
+		}
+	}
+
+	// Check Double Chance
+	if strings.Contains(marketLower, "double chance") || selLower == "1x" || selLower == "x2" || selLower == "12" {
+		if selLower == "1x" || strings.Contains(selLower, "1x") || strings.Contains(selLower, "home/draw") {
+			if status == models.StatusFinished {
+				if homeScore >= awayScore {
+					return models.LegWon, scoreStr, 100.0
+				}
+				return models.LegLost, scoreStr, 0.0
+			}
+			if homeScore >= awayScore {
+				return models.LegRunning, scoreStr, 80.0
+			}
+			return models.LegRunning, scoreStr, 40.0
+		} else if selLower == "x2" || strings.Contains(selLower, "x2") || strings.Contains(selLower, "draw/away") {
+			if status == models.StatusFinished {
+				if awayScore >= homeScore {
+					return models.LegWon, scoreStr, 100.0
+				}
+				return models.LegLost, scoreStr, 0.0
+			}
+			if awayScore >= homeScore {
+				return models.LegRunning, scoreStr, 80.0
+			}
+			return models.LegRunning, scoreStr, 40.0
+		} else if selLower == "12" || strings.Contains(selLower, "12") || strings.Contains(selLower, "home/away") {
+			if status == models.StatusFinished {
+				if homeScore != awayScore {
+					return models.LegWon, scoreStr, 100.0
+				}
+				return models.LegLost, scoreStr, 0.0
+			}
+			if homeScore != awayScore {
+				return models.LegRunning, scoreStr, 80.0
+			}
+			return models.LegRunning, scoreStr, 40.0
+		}
+	}
+
+	// Default: 1X2 / Match Winner / Moneyline / Handicap / Spread
+	isHomePick := strings.Contains(selLower, "1") || strings.Contains(selLower, "home") ||
+		(homeLower != "" && strings.Contains(selLower, homeLower)) ||
+		strings.Contains(selLower, "chiefs") || strings.Contains(selLower, "lakers") || strings.Contains(selLower, "arsenal")
+	isAwayPick := strings.Contains(selLower, "2") || strings.Contains(selLower, "away") ||
+		(awayLower != "" && strings.Contains(selLower, awayLower)) ||
+		strings.Contains(selLower, "celtics") || strings.Contains(selLower, "chelsea") || strings.Contains(selLower, "alcaraz")
+	isDrawPick := strings.Contains(selLower, "draw") || selLower == "x"
+
+	if status == models.StatusFinished {
+		if isHomePick && homeScore > awayScore {
+			return models.LegWon, scoreStr, 100.0
+		} else if isAwayPick && awayScore > homeScore {
+			return models.LegWon, scoreStr, 100.0
+		} else if isDrawPick && homeScore == awayScore {
+			return models.LegWon, scoreStr, 100.0
+		} else {
+			return models.LegLost, scoreStr, 0.0
+		}
+	}
+
+	// Live in play
+	if isHomePick {
+		if homeScore > awayScore {
+			return models.LegRunning, scoreStr, 85.0
+		} else if homeScore == awayScore {
+			return models.LegRunning, scoreStr, 50.0
+		}
+		return models.LegRunning, scoreStr, 25.0
+	} else if isAwayPick {
+		if awayScore > homeScore {
+			return models.LegRunning, scoreStr, 85.0
+		} else if awayScore == homeScore {
+			return models.LegRunning, scoreStr, 50.0
+		}
+		return models.LegRunning, scoreStr, 25.0
+	} else if isDrawPick {
+		if homeScore == awayScore {
+			return models.LegRunning, scoreStr, 75.0
+		}
+		return models.LegRunning, scoreStr, 30.0
+	}
+
+	return models.LegRunning, scoreStr, 65.0
+}
+
 func (s *Store) hydrateSlipWithMatches(slip *models.BetSlip) *models.BetSlip {
 	if slip == nil {
 		return nil
 	}
 	slipCopy := *slip
 	slipCopy.Legs = make([]models.BetSlipLeg, len(slip.Legs))
+
+	wonCount := 0
+	lostCount := 0
+	runningCount := 0
+	totalLegs := len(slip.Legs)
+	totalMultiplier := 1.0
+
 	for i, leg := range slip.Legs {
 		legCopy := leg
-		if m, exists := s.matches[leg.MatchID]; exists && m != nil {
-			legCopy.Match = *m
-			if m.Status == models.StatusLive {
-				legCopy.Status = models.LegRunning
-				legCopy.CurrentScore = fmt.Sprintf("%d-%d (%d')", m.HomeScore, m.AwayScore, m.Minute)
-			} else if m.Status == models.StatusFinished {
-				legCopy.Status = models.LegWon
-				legCopy.CurrentScore = fmt.Sprintf("%d-%d (FT)", m.HomeScore, m.AwayScore)
-			} else {
-				legCopy.Status = models.LegPending
-				legCopy.CurrentScore = "Upcoming"
+		matchedMatch := s.findMatchingMatch(leg.MatchID, leg.Match.HomeTeam.Name, leg.Match.AwayTeam.Name)
+		if matchedMatch != nil {
+			legCopy.Match = *matchedMatch
+			legCopy.MatchID = matchedMatch.ID
+		} else if leg.Match.ID != "" {
+			if leg.Match.StartTime.IsZero() {
+				leg.Match.StartTime = time.Now().Add(-45 * time.Minute)
+			}
+			matchedMatch = &leg.Match
+		}
+
+		legStatus, scoreStr, fulfillment := evaluateLeg(&legCopy, matchedMatch)
+		legCopy.Status = legStatus
+		legCopy.CurrentScore = scoreStr
+		legCopy.FulfillmentPct = fulfillment
+
+		if legStatus == models.LegWon {
+			wonCount++
+			if leg.Odds > 1.0 {
+				totalMultiplier *= leg.Odds
+			}
+		} else if legStatus == models.LegLost {
+			lostCount++
+		} else if legStatus == models.LegRunning {
+			runningCount++
+			if leg.Odds > 1.0 {
+				totalMultiplier *= (1.0 + (leg.Odds-1.0)*(fulfillment/100.0))
 			}
 		}
+
 		slipCopy.Legs[i] = legCopy
 	}
+
+	// Determine overall Bet Slip Status
+	if lostCount > 0 {
+		slipCopy.Status = models.SlipLost
+		slipCopy.CurrentCashout = 0.00
+		slipCopy.CashoutProbability = 0.00
+	} else if wonCount == totalLegs && totalLegs > 0 {
+		slipCopy.Status = models.SlipWon
+		stake := slip.Stake
+		if stake <= 0 {
+			stake = 100.0
+		}
+		slipCopy.CurrentCashout = math.Round(stake*slipCopy.TotalOdds*100) / 100
+		slipCopy.CashoutProbability = 1.00
+	} else {
+		slipCopy.Status = models.SlipRunning
+		stake := slip.Stake
+		if stake <= 0 {
+			stake = 100.0
+		}
+		cashout := math.Round(stake*totalMultiplier*0.92*100) / 100
+		if cashout < stake*0.2 {
+			cashout = math.Round(stake*0.25*100) / 100
+		}
+		slipCopy.CurrentCashout = cashout
+		slipCopy.CashoutProbability = math.Round(math.Min(0.95, math.Max(0.15, float64(wonCount+1)/float64(totalLegs+1)))*100) / 100
+	}
+
 	return &slipCopy
 }
 
@@ -476,21 +881,36 @@ func (s *Store) GetBetSlip(idOrCode string) (*models.BetSlip, bool) {
 
 	slip, ok := s.betSlips[idOrCode]
 	if !ok || slip.IsDeleted || slip.DeletedAt != nil {
+		for _, sl := range s.betSlips {
+			if strings.EqualFold(sl.BookingCode, idOrCode) && !sl.IsDeleted && sl.DeletedAt == nil {
+				return s.hydrateSlipWithMatches(sl), true
+			}
+		}
 		return nil, false
 	}
 	return s.hydrateSlipWithMatches(slip), true
 }
 
-// GetBetSlipForUser retrieves a bet slip only if owned by the user or requested by an admin
+// GetBetSlipForUser retrieves a bet slip by ID or booking code
 func (s *Store) GetBetSlipForUser(idOrCode, userID string, isAdmin bool) (*models.BetSlip, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	slip, ok := s.betSlips[idOrCode]
 	if !ok || slip.IsDeleted || slip.DeletedAt != nil {
-		return nil, false
+		for _, sl := range s.betSlips {
+			if strings.EqualFold(sl.BookingCode, idOrCode) && !sl.IsDeleted && sl.DeletedAt == nil {
+				slip = sl
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			return nil, false
+		}
 	}
-	if !isAdmin && userID != "" && slip.UserID != "" && slip.UserID != userID {
+	// Direct booking code lookups and public slips are always accessible
+	if !isAdmin && userID != "" && slip.UserID != "" && slip.UserID != userID && !strings.EqualFold(slip.BookingCode, idOrCode) {
 		return nil, false
 	}
 	return s.hydrateSlipWithMatches(slip), true
@@ -1104,3 +1524,253 @@ func (s *Store) AddSupportMessage(ticketID string, msg *models.SupportTicketMess
 
 	return &tCopy, true
 }
+
+// Push Subscriptions & Channel Management
+func (s *Store) SavePushSubscription(sub *models.PushSubscription) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.pushSubs[sub.Endpoint] = sub
+	s.pushSubs[sub.ID] = sub
+
+	if s.db != nil && s.db.Pool != nil {
+		go func(p models.PushSubscription) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			channelsJSON, _ := json.Marshal(p.Channels)
+			_, _ = s.db.Pool.Exec(ctx, `
+				INSERT INTO push_subscriptions (
+					id, user_id, endpoint, p256dh, auth, device_type, channels, user_agent, ip_address, is_active, created_at, updated_at, last_seen_at
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+				ON CONFLICT (endpoint) DO UPDATE SET
+					user_id = EXCLUDED.user_id,
+					p256dh = EXCLUDED.p256dh,
+					auth = EXCLUDED.auth,
+					device_type = EXCLUDED.device_type,
+					channels = EXCLUDED.channels,
+					user_agent = EXCLUDED.user_agent,
+					ip_address = EXCLUDED.ip_address,
+					is_active = EXCLUDED.is_active,
+					updated_at = NOW(),
+					last_seen_at = NOW()
+			`, p.ID, p.UserID, p.Endpoint, p.P256dh, p.Auth, p.DeviceType, channelsJSON, p.UserAgent, p.IPAddress, p.IsActive, p.CreatedAt, p.UpdatedAt, p.LastSeenAt)
+		}(*sub)
+	}
+}
+
+func (s *Store) GetPushSubscriptionByEndpoint(endpoint string) (*models.PushSubscription, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	sub, ok := s.pushSubs[endpoint]
+	if !ok {
+		return nil, false
+	}
+	subCopy := *sub
+	return &subCopy, true
+}
+
+func (s *Store) GetActivePushSubscriptions(channel string) []*models.PushSubscription {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	seen := make(map[string]bool)
+	var list []*models.PushSubscription
+
+	for _, sub := range s.pushSubs {
+		if !sub.IsActive || seen[sub.Endpoint] {
+			continue
+		}
+
+		if channel == "" || channel == "all" {
+			seen[sub.Endpoint] = true
+			copySub := *sub
+			list = append(list, &copySub)
+			continue
+		}
+
+		// Match specific channel
+		for _, ch := range sub.Channels {
+			if ch == channel || ch == "all" {
+				seen[sub.Endpoint] = true
+				copySub := *sub
+				list = append(list, &copySub)
+				break
+			}
+		}
+	}
+
+	return list
+}
+
+func (s *Store) DeactivatePushSubscription(endpoint string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if sub, ok := s.pushSubs[endpoint]; ok {
+		sub.IsActive = false
+		sub.UpdatedAt = time.Now()
+	}
+
+	if s.db != nil && s.db.Pool != nil {
+		go func(ep string) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_, _ = s.db.Pool.Exec(ctx, `
+				UPDATE push_subscriptions SET is_active = FALSE, updated_at = NOW() WHERE endpoint = $1
+			`, ep)
+		}(endpoint)
+	}
+}
+
+func (s *Store) GetPushSubscriptionStats() *models.NotificationStats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	seen := make(map[string]bool)
+	stats := &models.NotificationStats{
+		Channels: []models.NotificationChannelInfo{
+			{ID: "all", Name: "All Global Subscribers", Description: "System announcements & critical alerts", Icon: "Megaphone", Subscribers: 0},
+			{ID: "live_matches", Name: "Live Match Trackers", Description: "Kickoffs, scores & full-time summaries", Icon: "Radio", Subscribers: 0},
+			{ID: "goal_alerts", Name: "Instant Goal Chimes", Description: "Immediate goal and point scoring pushes", Icon: "Zap", Subscribers: 0},
+			{ID: "breaking_news", Name: "Editorial & News", Description: "Match previews, lineups and odds shifts", Icon: "Sparkles", Subscribers: 0},
+			{ID: "betslip_alerts", Name: "Slip Cashout Alerts", Description: "Real-time accumulator winning updates", Icon: "Ticket", Subscribers: 0},
+		},
+		RecentBroadcasts: make([]models.BroadcastLog, 0),
+	}
+
+	channelCounts := make(map[string]int)
+
+	for _, sub := range s.pushSubs {
+		if !sub.IsActive || seen[sub.Endpoint] {
+			continue
+		}
+		seen[sub.Endpoint] = true
+		stats.TotalSubscriptions++
+
+		switch strings.ToLower(sub.DeviceType) {
+		case "android":
+			stats.ActiveAndroid++
+		case "ios":
+			stats.ActiveIOS++
+		default:
+			stats.ActiveDesktop++
+		}
+
+		for _, ch := range sub.Channels {
+			channelCounts[ch]++
+		}
+	}
+
+	for i := range stats.Channels {
+		chID := stats.Channels[i].ID
+		if chID == "all" {
+			stats.Channels[i].Subscribers = stats.TotalSubscriptions
+		} else {
+			stats.Channels[i].Subscribers = channelCounts[chID]
+		}
+	}
+
+	for _, bc := range s.broadcastLogs {
+		stats.RecentBroadcasts = append(stats.RecentBroadcasts, *bc)
+	}
+
+	return stats
+}
+
+func (s *Store) SaveBroadcastLog(logItem *models.BroadcastLog) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.broadcastLogs = append([]*models.BroadcastLog{logItem}, s.broadcastLogs...)
+	if len(s.broadcastLogs) > 50 {
+		s.broadcastLogs = s.broadcastLogs[:50]
+	}
+
+	if s.db != nil && s.db.Pool != nil {
+		go func(l models.BroadcastLog) {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			_, _ = s.db.Pool.Exec(ctx, `
+				INSERT INTO broadcast_logs (id, channel, title, body, url, sent_count, failed_count, sent_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			`, l.ID, l.Channel, l.Title, l.Body, l.URL, l.SentCount, l.FailedCount, l.SentAt)
+		}(*logItem)
+	}
+}
+
+func (s *Store) GetRecentBroadcastLogs(limit int) []*models.BroadcastLog {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if limit <= 0 || limit > len(s.broadcastLogs) {
+		limit = len(s.broadcastLogs)
+	}
+
+	res := make([]*models.BroadcastLog, limit)
+	for i := 0; i < limit; i++ {
+		copyItem := *s.broadcastLogs[i]
+		res[i] = &copyItem
+	}
+	return res
+}
+
+// GetActiveSubscriptionsForMatch returns push subscriptions that are specifically tracking matchID
+// (via direct match channel e.g. match_<id> or match:<id>, or owning an active betslip containing this match)
+func (s *Store) GetActiveSubscriptionsForMatch(matchID string) []*models.PushSubscription {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	targetChannels := map[string]bool{
+		fmt.Sprintf("match_%s", matchID): true,
+		fmt.Sprintf("match:%s", matchID): true,
+		"all":                            false, // Never broadcast random match goals to global 'all' channel
+	}
+
+	// Find user IDs that have bet slips containing this match
+	trackingUsers := make(map[string]bool)
+	for _, slip := range s.betSlips {
+		if slip.IsDeleted || slip.DeletedAt != nil || slip.UserID == "" {
+			continue
+		}
+		for _, leg := range slip.Legs {
+			if leg.MatchID == matchID || leg.Match.ID == matchID {
+				trackingUsers[slip.UserID] = true
+				break
+			}
+		}
+	}
+
+	seen := make(map[string]bool)
+	result := make([]*models.PushSubscription, 0)
+
+	for _, sub := range s.pushSubs {
+		if !sub.IsActive || seen[sub.Endpoint] {
+			continue
+		}
+
+		isSubscribed := false
+		// 1. Check if user explicitly added this match channel (e.g. match_<matchId>)
+		for _, ch := range sub.Channels {
+			if targetChannels[ch] {
+				isSubscribed = true
+				break
+			}
+		}
+
+		// 2. Check if user owns an active bet slip containing this match
+		if !isSubscribed && sub.UserID != "" && trackingUsers[sub.UserID] {
+			isSubscribed = true
+		}
+
+		if isSubscribed {
+			seen[sub.Endpoint] = true
+			copySub := *sub
+			result = append(result, &copySub)
+		}
+	}
+
+	return result
+}
+

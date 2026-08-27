@@ -24,6 +24,13 @@ import {
   CheckCircle2,
   ExternalLink,
   ShieldAlert,
+  Bell,
+  Smartphone,
+  Megaphone,
+  Zap,
+  Sparkles,
+  SendHorizontal,
+  RefreshCw,
 } from 'lucide-react';
 import Link from 'next/link';
 import { AdminShell, type AdminSection } from '@/components/admin/AdminShell';
@@ -51,11 +58,14 @@ import type {
   AdminTransactionRow,
   AdminUserRow,
   SupportTicket,
+  NotificationStats,
+  PushSubscriptionItem,
+  BroadcastLogItem,
 } from '@/types';
 import { formatClock } from '@/lib/sportFormat';
 import type { Match } from '@/types';
 
-type SectionId = 'overview' | 'users' | 'slips' | 'transactions' | 'live' | 'support';
+type SectionId = 'overview' | 'users' | 'slips' | 'transactions' | 'live' | 'notifications' | 'support';
 
 const REFRESH_MS = 15000;
 
@@ -71,9 +81,11 @@ export default function AdminConsolePage() {
   const [transactions, setTransactions] = useState<AdminTransactionRow[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
-  // Live ops
+  // Live ops & push notifications
   const [telemetry, setTelemetry] = useState<any | null>(null);
   const [matches, setMatches] = useState<any[]>([]);
+  const [pushStats, setPushStats] = useState<NotificationStats | null>(null);
+  const [pushSubs, setPushSubs] = useState<PushSubscriptionItem[]>([]);
 
   // UI state
   const [isLoading, setIsLoading] = useState(true);
@@ -119,7 +131,7 @@ export default function AdminConsolePage() {
     };
 
     try {
-      const [ov, us, sl, tx, tk, tel, mt] = await Promise.all([
+      const [ov, us, sl, tx, tk, tel, mt, ps] = await Promise.all([
         getJSON('/admin/overview'),
         getJSON('/admin/users'),
         getJSON('/admin/slips'),
@@ -127,6 +139,7 @@ export default function AdminConsolePage() {
         getJSON('/support/tickets'),
         getJSON('/admin/telemetry'),
         getJSON('/matches'),
+        getJSON('/admin/notifications/stats').catch(() => null),
       ]);
 
       setOverview(ov);
@@ -136,13 +149,14 @@ export default function AdminConsolePage() {
       setTickets(tk.tickets ?? []);
       setTelemetry(tel);
       setMatches(mt.matches ?? []);
+      if (ps) {
+        setPushStats(ps.stats ?? null);
+        setPushSubs(ps.subscriptions ?? []);
+      }
 
       setOffline(false);
       setLastUpdated(new Date());
     } catch (err) {
-      // The console shows an explicit offline banner and empty tables rather
-      // than substituting placeholder figures. An operator must never be shown
-      // a number that did not come from the API.
       console.warn('Admin data unavailable:', err);
       setOffline(true);
     } finally {
@@ -317,6 +331,12 @@ export default function AdminConsolePage() {
     },
     { id: 'live', label: 'Live ops', icon: Radio, badge: liveMatchCount },
     {
+      id: 'notifications',
+      label: 'Push & Broadcast',
+      icon: Bell,
+      badge: pushStats?.total_subscriptions,
+    },
+    {
       id: 'support',
       label: 'Support',
       icon: Headphones,
@@ -346,10 +366,37 @@ export default function AdminConsolePage() {
       title: 'Live operations',
       description: 'Feed health, and manual control over in-play fixtures.',
     },
+    notifications: {
+      title: 'Push Notifications & Broadcast',
+      description: 'Manage active subscriber channels, device keys, and dispatch instant live alerts.',
+    },
     support: {
       title: 'Support',
       description: 'The inbound queue, and the conversation on each ticket.',
     },
+  };
+
+  const triggerBroadcast = async (payload: {
+    channel: string;
+    title: string;
+    body: string;
+    url?: string;
+  }) => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/admin/notifications/broadcast`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const result = await res.json();
+      notify(`Broadcast dispatched: ${result.sent_count} sent, ${result.failed_count} failed`);
+      fetchAll();
+      return true;
+    } catch {
+      notify('Failed to dispatch broadcast notification.');
+      return false;
+    }
   };
 
   return (
@@ -409,6 +456,17 @@ export default function AdminConsolePage() {
           isLoading={isLoading}
           onSimulateGoal={triggerGoal}
           onAdjustScore={adjustScore}
+        />
+      )}
+
+      {section === 'notifications' && (
+        <NotificationsSection
+          stats={pushStats}
+          subscriptions={pushSubs}
+          isLoading={isLoading}
+          onBroadcast={triggerBroadcast}
+          onRefresh={fetchAll}
+          notify={notify}
         />
       )}
 
@@ -1226,6 +1284,540 @@ function ScoreStep({
     >
       <Icon className="h-3 w-3" />
     </button>
+  );
+}
+
+/* =========================================================================== */
+/* Push Notifications & Broadcast Channel Manager                               */
+/* =========================================================================== */
+
+function NotificationsSection({
+  stats,
+  subscriptions,
+  isLoading,
+  onBroadcast,
+  onRefresh,
+  notify,
+}: {
+  stats: NotificationStats | null;
+  subscriptions: PushSubscriptionItem[];
+  isLoading: boolean;
+  onBroadcast: (payload: { channel: string; title: string; body: string; url?: string }) => Promise<boolean>;
+  onRefresh: () => void;
+  notify: (msg: string) => void;
+}) {
+  const [channel, setChannel] = useState<string>('all');
+  const [title, setTitle] = useState<string>('⚽ GOAL! Arsenal 1 - 0 Chelsea (Saka 23\')');
+  const [body, setBody] = useState<string>('Clinical finish into the top right corner! Live cashout updated.');
+  const [url, setUrl] = useState<string>('/live');
+  const [isBroadcasting, setIsBroadcasting] = useState<boolean>(false);
+  const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'composer' | 'logs' | 'subscribers'>('composer');
+
+  const templates = [
+    {
+      label: '⚽ Goal Alert',
+      channel: 'goal_alerts',
+      title: '⚽ GOAL! Arsenal 1 - 0 Chelsea (Saka 23\')',
+      body: 'Clinical finish into the top right corner! Live cashout updated.',
+      url: '/live',
+    },
+    {
+      label: '⚡ Kick-Off',
+      channel: 'live_matches',
+      title: '⚡ Kick-Off! Real Madrid vs Barcelona',
+      body: 'El Clásico is officially underway. Track live odds and leg settlements.',
+      url: '/live',
+    },
+    {
+      label: '🏆 Full-Time',
+      channel: 'live_matches',
+      title: '🏆 Full-Time: Man City 2 - 1 Liverpool',
+      body: 'Match concluded. Accumulators containing this leg are settling now.',
+      url: '/tickets',
+    },
+    {
+      label: '🔥 Hot Slip Alert',
+      channel: 'betslip_alerts',
+      title: '🔥 Accumulator Cashout Surge!',
+      body: '4 of 5 legs have settled green. Check your live cashout value now.',
+      url: '/tickets',
+    },
+    {
+      label: '📢 Announcement',
+      channel: 'all',
+      title: '📢 System Update: Instant Live PWA Alerts Active',
+      body: 'Track every fixture live on your home screen and notification center.',
+      url: '/live',
+    },
+  ];
+
+  const handleApplyTemplate = (tpl: typeof templates[0]) => {
+    setChannel(tpl.channel);
+    setTitle(tpl.title);
+    setBody(tpl.body);
+    setUrl(tpl.url);
+  };
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !body.trim()) {
+      notify('Title and body are required.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to broadcast this push notification to channel '${channel}'?`)) {
+      return;
+    }
+
+    setIsBroadcasting(true);
+    try {
+      await onBroadcast({ channel, title: title.trim(), body: body.trim(), url: url.trim() || '/live' });
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  const handleTestDevice = async () => {
+    setIsTesting(true);
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission !== 'granted') {
+          await Notification.requestPermission();
+        }
+        if (Notification.permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon: '/icons/icon-192.png',
+            badge: '/icons/badge-72.png',
+            data: { url: url || '/live' },
+          });
+          notify('Local push preview triggered on this browser!');
+        } else {
+          notify('Notification permission not granted on this browser.');
+        }
+      }
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const logColumns: Column<BroadcastLogItem>[] = [
+    {
+      key: 'title',
+      header: 'Notification',
+      cell: (l) => (
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-bold text-foreground">{l.title}</span>
+          <span className="block truncate text-[11px] text-muted-foreground">{l.body}</span>
+        </span>
+      ),
+      sortValue: (l) => l.title.toLowerCase(),
+    },
+    {
+      key: 'channel',
+      header: 'Channel',
+      cell: (l) => (
+        <Chip tone={l.channel === 'all' ? 'brand' : l.channel === 'goal_alerts' ? 'danger' : 'info'}>
+          {l.channel}
+        </Chip>
+      ),
+      sortValue: (l) => l.channel,
+    },
+    {
+      key: 'sent',
+      header: 'Delivered',
+      align: 'right',
+      cell: (l) => (
+        <span className="font-mono text-xs font-bold text-emerald-500">
+          {num(l.sent_count)}
+        </span>
+      ),
+      sortValue: (l) => l.sent_count,
+    },
+    {
+      key: 'failed',
+      header: 'Failed',
+      align: 'right',
+      cell: (l) => (
+        <span className={`font-mono text-xs font-bold ${l.failed_count > 0 ? 'text-rose-500' : 'text-muted-foreground'}`}>
+          {num(l.failed_count)}
+        </span>
+      ),
+      sortValue: (l) => l.failed_count,
+    },
+    {
+      key: 'sent_at',
+      header: 'Sent',
+      align: 'right',
+      cell: (l) => <span className="text-muted-foreground text-xs">{relTime(l.sent_at)}</span>,
+      sortValue: (l) => new Date(l.sent_at).getTime(),
+    },
+  ];
+
+  const subColumns: Column<PushSubscriptionItem>[] = [
+    {
+      key: 'id',
+      header: 'Subscriber / Endpoint',
+      cell: (s) => (
+        <span className="min-w-0">
+          <span className="block font-mono text-xs font-bold text-foreground">{s.id}</span>
+          <span className="block truncate max-w-[280px] text-[10px] text-muted-foreground font-mono">
+            {s.endpoint}
+          </span>
+        </span>
+      ),
+      sortValue: (s) => s.id,
+    },
+    {
+      key: 'device',
+      header: 'Platform',
+      cell: (s) => (
+        <Chip tone={s.device_type === 'ios' ? 'brand' : s.device_type === 'android' ? 'positive' : 'info'}>
+          {s.device_type.toUpperCase()}
+        </Chip>
+      ),
+      sortValue: (s) => s.device_type,
+    },
+    {
+      key: 'channels',
+      header: 'Channels',
+      cell: (s) => (
+        <span className="flex flex-wrap gap-1">
+          {s.channels?.map((ch) => (
+            <span key={ch} className="text-[10px] bg-surface-subtle border border-surface-border px-1.5 py-0.5 rounded text-foreground font-mono">
+              {ch}
+            </span>
+          ))}
+        </span>
+      ),
+    },
+    {
+      key: 'last_seen',
+      header: 'Last Seen',
+      align: 'right',
+      cell: (s) => <span className="text-muted-foreground text-xs">{relTime(s.last_seen_at || s.updated_at)}</span>,
+      sortValue: (s) => new Date(s.last_seen_at || s.updated_at).getTime(),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* 1. KPI Telemetry Bar */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Total push subscribers"
+          value={num(stats?.total_subscriptions ?? 0)}
+          sub="Registered browser endpoints"
+          icon={Bell}
+          tone="brand"
+        />
+        <KpiCard
+          label="Android devices"
+          value={num(stats?.active_android ?? 0)}
+          sub="Chrome / Edge / Samsung PWA"
+          icon={Smartphone}
+          tone="positive"
+        />
+        <KpiCard
+          label="iOS devices"
+          value={num(stats?.active_ios ?? 0)}
+          sub="Installed Home Screen PWAs"
+          icon={Smartphone}
+          tone="info"
+        />
+        <KpiCard
+          label="Desktop endpoints"
+          value={num(stats?.active_desktop ?? 0)}
+          sub="Mac / Windows / Linux browsers"
+          icon={Server}
+          tone="neutral"
+        />
+      </div>
+
+      {/* 2. Channel Breakdown Registry */}
+      <Panel
+        title="Active notification channels & keys"
+        description="Broadcast routing channels established across client subscriptions."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {stats?.channels?.map((ch) => (
+            <div
+              key={ch.id}
+              onClick={() => {
+                setChannel(ch.id);
+                setActiveTab('composer');
+              }}
+              className={`rounded-2xl border p-3.5 transition-all cursor-pointer ${
+                channel === ch.id
+                  ? 'border-indigo-500 bg-indigo-500/10 shadow-sm shadow-indigo-500/20'
+                  : 'border-surface-border bg-surface-subtle hover:bg-surface-hover hover:border-surface-border/80'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400">
+                  #{ch.id}
+                </span>
+                <span className="font-mono text-xs font-black bg-surface px-2 py-0.5 rounded-full border border-surface-border text-foreground">
+                  {num(ch.subscribers)}
+                </span>
+              </div>
+              <p className="mt-1.5 text-xs font-bold text-foreground leading-snug">{ch.name}</p>
+              <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">{ch.description}</p>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      {/* 3. Tab Switcher (Composer / Broadcast Logs / Subscribers) */}
+      <div className="flex items-center gap-2 border-b border-surface-border pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('composer')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'composer'
+              ? 'bg-brand-gradient text-white shadow-sm'
+              : 'bg-surface text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Megaphone className="w-3.5 h-3.5" />
+          <span>Broadcast Composer</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('logs')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'logs'
+              ? 'bg-brand-gradient text-white shadow-sm'
+              : 'bg-surface text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Radio className="w-3.5 h-3.5" />
+          <span>Broadcast Logs ({stats?.recent_broadcasts?.length ?? 0})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('subscribers')}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === 'subscribers'
+              ? 'bg-brand-gradient text-white shadow-sm'
+              : 'bg-surface text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Device Registry ({subscriptions.length})</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Broadcast Composer */}
+      {activeTab === 'composer' && (
+        <div className="grid gap-5 xl:grid-cols-5">
+          {/* Form */}
+          <div className="min-w-0 xl:col-span-3">
+            <Panel
+              title="Compose Web Push broadcast"
+              description="Dispatches high-urgency RFC 8291 Web Push notifications to connected browser endpoints."
+            >
+              {/* Quick Template Pills */}
+              <div className="mb-4">
+                <label className="block text-[11px] font-mono font-bold uppercase text-muted-foreground mb-1.5">
+                  Quick Templates
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {templates.map((tpl) => (
+                    <button
+                      key={tpl.label}
+                      type="button"
+                      onClick={() => handleApplyTemplate(tpl)}
+                      className="text-xs bg-surface-subtle hover:bg-surface-hover border border-surface-border rounded-xl px-2.5 py-1 font-semibold text-foreground transition-colors cursor-pointer"
+                    >
+                      {tpl.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={handleSendBroadcast} className="space-y-4">
+                {/* Target Channel */}
+                <div>
+                  <label htmlFor="bc-channel" className="block text-xs font-bold text-foreground mb-1">
+                    Target Notification Channel
+                  </label>
+                  <select
+                    id="bc-channel"
+                    value={channel}
+                    onChange={(e) => setChannel(e.target.value)}
+                    className="w-full rounded-xl border border-surface-border bg-surface-subtle p-2.5 text-xs text-foreground focus:border-indigo-500 focus:outline-none"
+                  >
+                    <option value="all">All Global Subscribers (all)</option>
+                    <option value="live_matches">Live Match Trackers (live_matches)</option>
+                    <option value="goal_alerts">Instant Goal Chimes (goal_alerts)</option>
+                    <option value="breaking_news">Editorial & Breaking News (breaking_news)</option>
+                    <option value="betslip_alerts">Slip Cashout Alerts (betslip_alerts)</option>
+                  </select>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label htmlFor="bc-title" className="block text-xs font-bold text-foreground mb-1">
+                    Push Notification Title
+                  </label>
+                  <input
+                    id="bc-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. ⚽ GOAL! Arsenal 1 - 0 Chelsea"
+                    className="w-full rounded-xl border border-surface-border bg-surface-subtle p-2.5 text-xs text-foreground focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Body Message */}
+                <div>
+                  <label htmlFor="bc-body" className="block text-xs font-bold text-foreground mb-1">
+                    Notification Message Body
+                  </label>
+                  <textarea
+                    id="bc-body"
+                    rows={3}
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    placeholder="e.g. Clinical finish from inside the box. Leg 3 has green tick settlement!"
+                    className="w-full resize-none rounded-xl border border-surface-border bg-surface-subtle p-2.5 text-xs text-foreground focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* URL Redirect */}
+                <div>
+                  <label htmlFor="bc-url" className="block text-xs font-bold text-foreground mb-1">
+                    Click Action URL Redirect
+                  </label>
+                  <input
+                    id="bc-url"
+                    type="text"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="/live or /match/:id"
+                    className="w-full rounded-xl border border-surface-border bg-surface-subtle p-2.5 text-xs text-foreground focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Submit / Test Buttons */}
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleTestDevice}
+                    disabled={isTesting}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-surface-border bg-surface-subtle hover:bg-surface-hover py-2.5 px-3 text-xs font-bold text-foreground transition-all cursor-pointer"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>Test on My Device</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isBroadcasting || !title.trim() || !body.trim()}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-gradient py-2.5 px-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/20 hover:opacity-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isBroadcasting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <SendHorizontal className="w-3.5 h-3.5" />
+                    )}
+                    <span>Dispatch Broadcast</span>
+                  </button>
+                </div>
+              </form>
+            </Panel>
+          </div>
+
+          {/* Live Mobile Lock-Screen Preview */}
+          <div className="min-w-0 xl:col-span-2">
+            <Panel
+              title="Mobile lock-screen preview"
+              description="How this notification renders across iOS and Android lock-screen notifications."
+            >
+              <div className="rounded-3xl border border-surface-border bg-slate-950 p-4 shadow-xl text-white space-y-3">
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                  <span>SLIPRADAR PWA</span>
+                  <span>NOW</span>
+                </div>
+
+                <div className="flex items-start gap-3 bg-white/5 border border-white/10 rounded-2xl p-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
+                    <Zap className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-xs text-white leading-tight truncate">{title || 'Notification Title'}</h4>
+                    <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">{body || 'Notification message text...'}</p>
+                    <span className="inline-block mt-2 text-[10px] font-bold text-indigo-400">
+                      Tap to open: {url || '/live'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[10px] text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    Channel: #{channel}
+                  </span>
+                  <span>Urgency: HIGH</span>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Broadcast Logs */}
+      {activeTab === 'logs' && (
+        <DataTable
+          rows={stats?.recent_broadcasts ?? []}
+          columns={logColumns}
+          rowKey={(l) => l.id}
+          searchFields={(l) => `${l.title} ${l.body} ${l.channel} ${l.id}`}
+          searchPlaceholder="Search broadcasts..."
+          defaultSort={{ key: 'sent_at', dir: 'desc' }}
+          pageSize={8}
+          itemLabel="broadcasts"
+          isLoading={isLoading}
+          emptyTitle="No broadcasts logged yet"
+          emptyBody="Use the Broadcast Composer to send alerts to all or specific channels."
+          minWidth="min-w-[700px]"
+        />
+      )}
+
+      {/* Tab 3: Device Registry */}
+      {activeTab === 'subscribers' && (
+        <DataTable
+          rows={subscriptions}
+          columns={subColumns}
+          rowKey={(s) => s.endpoint}
+          searchFields={(s) => `${s.id} ${s.endpoint} ${s.device_type} ${s.channels?.join(' ')}`}
+          searchPlaceholder="Search by ID, platform or channel..."
+          filters={[
+            {
+              key: 'device_type',
+              label: 'Platform',
+              options: [
+                { value: 'android', label: 'Android' },
+                { value: 'ios', label: 'iOS' },
+                { value: 'desktop', label: 'Desktop' },
+              ],
+            },
+          ]}
+          filterValue={(s) => s.device_type}
+          defaultSort={{ key: 'last_seen', dir: 'desc' }}
+          pageSize={8}
+          itemLabel="devices"
+          isLoading={isLoading}
+          emptyTitle="No push subscribers"
+          emptyBody="Subscribers appear once users grant notification permission on mobile or desktop."
+          minWidth="min-w-[800px]"
+        />
+      )}
+    </div>
   );
 }
 

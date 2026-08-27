@@ -18,6 +18,7 @@ export interface League {
   sport: SportType;
   country: string;
   logo: string;
+  flag?: string;
 }
 
 export interface MatchStats {
@@ -40,6 +41,153 @@ export interface MatchStats {
   attacking_pressure?: 'HOME' | 'AWAY' | 'NEUTRAL';
   ball_position_x?: number; // 0 to 100 on pitch
   ball_position_y?: number; // 0 to 100 on pitch
+
+  // Comprehensive Soccer Stats
+  passes_home?: number;
+  passes_away?: number;
+  pass_accuracy_home?: number;
+  pass_accuracy_away?: number;
+  tackles_home?: number;
+  tackles_away?: number;
+  saves_home?: number;
+  saves_away?: number;
+  offsides_home?: number;
+  offsides_away?: number;
+  shots_blocked_home?: number;
+  shots_blocked_away?: number;
+  big_chances_home?: number;
+  big_chances_away?: number;
+
+  // Basketball & Other Sports
+  field_goals_home?: string;
+  field_goals_away?: string;
+  three_pointers_home?: string;
+  three_pointers_away?: string;
+  free_throws_home?: string;
+  free_throws_away?: string;
+  rebounds_home?: number;
+  rebounds_away?: number;
+  assists_home?: number;
+  assists_away?: number;
+  steals_home?: number;
+  steals_away?: number;
+  blocks_home?: number;
+  blocks_away?: number;
+  turnovers_home?: number;
+  turnovers_away?: number;
+  points_in_paint_home?: number;
+  points_in_paint_away?: number;
+  fast_break_home?: number;
+  fast_break_away?: number;
+
+  // NFL
+  total_yards_home?: number;
+  total_yards_away?: number;
+  passing_yards_home?: string;
+  passing_yards_away?: string;
+  rushing_yards_home?: string;
+  rushing_yards_away?: string;
+  first_downs_home?: number;
+  first_downs_away?: number;
+  time_of_poss_home?: string;
+  time_of_poss_away?: string;
+
+  // Baseball
+  hits_home?: number;
+  hits_away?: number;
+  errors_home?: number;
+  errors_away?: number;
+  home_runs_home?: number;
+  home_runs_away?: number;
+  strikeouts_home?: number;
+  strikeouts_away?: number;
+  walks_home?: number;
+  walks_away?: number;
+}
+
+export interface Player {
+  id: string;
+  name: string;
+  number: number;
+  pos: string;
+  photo?: string;
+  grid?: string;
+  rating?: number;
+  age?: number;
+  nationality?: string;
+  is_captain?: boolean;
+}
+
+export interface Coach {
+  id?: string;
+  name: string;
+  photo?: string;
+}
+
+export interface TeamLineup {
+  team_id: string;
+  team_name: string;
+  formation: string;
+  coach: Coach;
+  starting_xi: Player[];
+  substitutes: Player[];
+}
+
+export interface MatchLineups {
+  match_id: string;
+  home: TeamLineup;
+  away: TeamLineup;
+}
+
+export interface PlayerMatchStat {
+  player: Player;
+  minutes: number;
+  rating: number;
+  goals: number;
+  assists: number;
+  shots_total: number;
+  shots_on_target: number;
+  passes_total: number;
+  pass_accuracy: number;
+  tackles: number;
+  duels_won: number;
+  fouls_committed: number;
+  yellow_cards: number;
+  red_cards: number;
+  saves: number;
+}
+
+export interface TeamPlayerStats {
+  team_id: string;
+  team_name: string;
+  players: PlayerMatchStat[];
+}
+
+export interface MatchPlayerStats {
+  match_id: string;
+  home: TeamPlayerStats;
+  away: TeamPlayerStats;
+}
+
+export interface HeadToHeadItem {
+  id: string;
+  date: string;
+  home_team: Team;
+  away_team: Team;
+  home_score: number;
+  away_score: number;
+  status: MatchStatus;
+  league: League;
+}
+
+export interface HeadToHeadSummary {
+  home_team_id: string;
+  away_team_id: string;
+  total_matches: number;
+  home_wins: number;
+  away_wins: number;
+  draws: number;
+  matches: HeadToHeadItem[];
 }
 
 export interface MatchEvent {
@@ -50,7 +198,9 @@ export interface MatchEvent {
   extra_minute?: number;
   team_side: 'HOME' | 'AWAY';
   player_name: string;
+  player_photo?: string;
   assist_name?: string;
+  assist_photo?: string;
   detail?: string;
   created_at: string;
 }
@@ -116,6 +266,9 @@ export interface Match {
   stats: MatchStats;
   events: MatchEvent[];
   odds?: MatchOdds;
+  lineups?: MatchLineups;
+  player_stats?: MatchPlayerStats;
+  h2h?: HeadToHeadSummary;
   venue?: string;
   referee?: string;
   has_live_audio?: boolean;
@@ -317,4 +470,46 @@ export interface AdminOverview {
   trend: AdminTimePoint[];
   slips_by_bookmaker: Record<string, number>;
   plan_split: Record<string, number>;
+}
+
+export interface PushSubscriptionItem {
+  id: string;
+  user_id?: string;
+  endpoint: string;
+  device_type: 'android' | 'ios' | 'desktop';
+  channels: string[];
+  user_agent?: string;
+  ip_address?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_seen_at: string;
+}
+
+export interface NotificationChannelInfo {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  subscribers: number;
+}
+
+export interface BroadcastLogItem {
+  id: string;
+  channel: string;
+  title: string;
+  body: string;
+  url?: string;
+  sent_count: number;
+  failed_count: number;
+  sent_at: string;
+}
+
+export interface NotificationStats {
+  total_subscriptions: number;
+  active_android: number;
+  active_ios: number;
+  active_desktop: number;
+  channels: NotificationChannelInfo[];
+  recent_broadcasts: BroadcastLogItem[];
 }

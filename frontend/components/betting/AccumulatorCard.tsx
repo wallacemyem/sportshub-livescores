@@ -58,15 +58,21 @@ export function AccumulatorCard({ slip, onDelete }: AccumulatorCardProps) {
       </div>
 
       {/* Slip Overview Bar: Total Odds & Legs Summary */}
-      <div className="grid grid-cols-2 gap-2 bg-surface-subtle p-3 rounded-xl border border-surface-border font-mono text-xs text-center">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-surface-subtle p-3 rounded-xl border border-surface-border font-mono text-xs text-center">
         <div>
-          <span className="text-[10px] text-muted-foreground block uppercase font-bold">Total Combined Odds</span>
+          <span className="text-[10px] text-muted-foreground block uppercase font-bold">Total Odds</span>
           <span className="text-amber-600 dark:text-amber-400 font-black text-sm">{slip.total_odds?.toFixed(2) || '1.00'}x</span>
         </div>
         <div>
           <span className="text-[10px] text-muted-foreground block uppercase font-bold">Accumulator Legs</span>
           <span className="text-foreground font-black text-sm">
             {totalLegs} {totalLegs === 1 ? 'Leg' : 'Legs'} ({wonCount} Won{lostCount > 0 ? `, ${lostCount} Lost` : ''})
+          </span>
+        </div>
+        <div className="col-span-2 sm:col-span-1">
+          <span className="text-[10px] text-muted-foreground block uppercase font-bold">Live Cashout</span>
+          <span className={`font-black text-sm ${slip.current_cashout && slip.current_cashout > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+            {slip.current_cashout && slip.current_cashout > 0 ? `$${slip.current_cashout.toFixed(2)}` : '-'}
           </span>
         </div>
       </div>

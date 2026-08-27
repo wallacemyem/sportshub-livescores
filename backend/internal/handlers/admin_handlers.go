@@ -9,20 +9,23 @@ import (
 	"github.com/sports/livescores/internal/database"
 	"github.com/sports/livescores/internal/ingestion"
 	"github.com/sports/livescores/internal/models"
+	"github.com/sports/livescores/internal/push"
 	"github.com/sports/livescores/internal/websocket"
 )
 
 type AdminHandler struct {
-	store   *database.Store
-	worker  *ingestion.IngestionWorker
-	wsHub   *websocket.Hub
+	store       *database.Store
+	worker      *ingestion.IngestionWorker
+	wsHub       *websocket.Hub
+	pushService *push.PushService
 }
 
-func NewAdminHandler(store *database.Store, worker *ingestion.IngestionWorker, wsHub *websocket.Hub) *AdminHandler {
+func NewAdminHandler(store *database.Store, worker *ingestion.IngestionWorker, wsHub *websocket.Hub, pushService *push.PushService) *AdminHandler {
 	return &AdminHandler{
-		store:  store,
-		worker: worker,
-		wsHub:  wsHub,
+		store:       store,
+		worker:      worker,
+		wsHub:       wsHub,
+		pushService: pushService,
 	}
 }
 
@@ -95,6 +98,10 @@ func (h *AdminHandler) OverrideMatch(w http.ResponseWriter, r *http.Request) {
 		Timestamp: time.Now().UnixMilli(),
 	})
 
+	if h.pushService != nil {
+		h.pushService.NotifyMatchScore(match, "", "Admin Override")
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(match)
 }
@@ -118,6 +125,14 @@ func (h *AdminHandler) SimulateGoal(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusBadRequest)
 		return
+	}
+
+	if h.pushService != nil && match != nil {
+		detail := ""
+		if event != nil && event.PlayerName != "" {
+			detail = event.PlayerName
+		}
+		h.pushService.NotifyMatchScore(match, req.TeamSide, detail)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

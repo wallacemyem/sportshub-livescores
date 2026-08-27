@@ -16,6 +16,7 @@ import (
 	"github.com/sports/livescores/internal/ingestion"
 	"github.com/sports/livescores/internal/parser"
 	"github.com/sports/livescores/internal/payments"
+	"github.com/sports/livescores/internal/push"
 	"github.com/sports/livescores/internal/router"
 	"github.com/sports/livescores/internal/supabase"
 	"github.com/sports/livescores/internal/websocket"
@@ -60,6 +61,8 @@ func main() {
 	ingestionWorker := ingestion.NewIngestionWorker(
 		store,
 		redisSvc,
+		cfg.APISportsKey,
+		cfg.APISportsDailyCap,
 		cfg.ESPNAPIBaseURL,
 		cfg.OddsAPIBaseURL,
 		cfg.OddsAPIKey,
@@ -73,26 +76,36 @@ func main() {
 	flwSvc := payments.NewFlutterwaveService(cfg.FlutterwaveSecret, cfg.FlutterwaveHash, store)
 	cryptSvc := payments.NewCryptomusService(cfg.CryptomusMerchant, cfg.CryptomusAPIKey, store)
 
+	// 5b. Web Push & Live Activity Broadcast Engine
+	vapidContact := os.Getenv("VAPID_CONTACT")
+	if vapidContact == "" {
+		vapidContact = "mailto:admin@slipradar.app"
+	}
+	pushService := push.NewPushService(store, os.Getenv("VAPID_PUBLIC_KEY"), os.Getenv("VAPID_PRIVATE_KEY"), vapidContact)
+	ingestionWorker.SetPushService(pushService)
+
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		jwtSecret = "slipradar_secure_jwt_secret_key_2026"
 	}
 	authHandler := handlers.NewAuthHandler(store, jwtSecret)
+	notifHandler := handlers.NewNotificationHandler(store, pushService, jwtSecret)
 
 	// 6. Handlers
 	h := &router.Handlers{
-		Auth:    authHandler,
-		Match:   handlers.NewMatchHandler(store),
-		Odds:    handlers.NewOddsHandler(store),
-		Bet:     handlers.NewBetSlipHandler(store, betParser, jwtSecret),
-		Pay:     handlers.NewPaymentHandler(store, flwSvc, cryptSvc),
-		Blog:    handlers.NewBlogHandler(store),
-		Support: handlers.NewSupportHandler(store),
-		Admin:   handlers.NewAdminHandler(store, ingestionWorker, wsHub),
-		Health:  handlers.NewHealthHandler(db, redisSvc),
-		WS:      wsHub,
-		Store:   store,
-		Secret:  jwtSecret,
+		Auth:         authHandler,
+		Match:        handlers.NewMatchHandler(store, redisSvc, ingestionWorker.GetAPISportsClient(), jwtSecret),
+		Odds:         handlers.NewOddsHandler(store),
+		Bet:          handlers.NewBetSlipHandler(store, betParser, jwtSecret),
+		Pay:          handlers.NewPaymentHandler(store, flwSvc, cryptSvc),
+		Blog:         handlers.NewBlogHandler(store),
+		Support:      handlers.NewSupportHandler(store),
+		Admin:        handlers.NewAdminHandler(store, ingestionWorker, wsHub, pushService),
+		Notification: notifHandler,
+		Health:       handlers.NewHealthHandler(db, redisSvc),
+		WS:           wsHub,
+		Store:        store,
+		Secret:       jwtSecret,
 	}
 
 	// 7. HTTP Server Setup
